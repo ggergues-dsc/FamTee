@@ -43,8 +43,8 @@ json.dump({"version": sys.argv[2], "commit": "selftest", "tree": "selftest", "su
 PY
   echo "$dir"
 }
-old=$(make_release 2026.01.01-fffffff)
-new=$(make_release 2026.01.01-0000000)
+old=$(make_release 2026.01.01.00.00-fffffff)
+new=$(make_release 2026.01.01.00.00-0000000)
 
 echo "== UAT self-test on port $FAMTEE_UAT_PORT (live UAT untouched)"
 # The history that once broke live UAT: the old release deployed until 5 sites exist,
@@ -64,7 +64,7 @@ check "after alternating deploys the last one is served" '[[ $(served) == $(base
 check "only the 5 newest sites are kept" '(( $(ls -1d "$FAMTEE_UAT_DIR"/site-*/ | wc -l) == 5 ))'
 check "the served site still exists" '[[ -d $FAMTEE_UAT_DIR/$(readlink "$FAMTEE_UAT_DIR/current") ]]'
 
-bad=$(make_release 2026.01.01-baaaaad)
+bad=$(make_release 2026.01.01.00.00-baaaaad)
 echo "tampered" >> "$bad/famtee.html"
 check "a release with bad checksums is refused" '! devops/uat.sh deploy "$bad" >/dev/null 2>&1'
 check "the previous release stays live" '[[ $(served) == $(basename "$new") ]]'
