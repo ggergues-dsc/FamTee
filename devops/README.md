@@ -20,7 +20,7 @@ devops/ci.sh --ref <commit> --release   # ... and deliver releases/<version>/
 | prepare image | cached `famtee-test:local` image (Python + Firefox ESR) |
 | test | full suite in the disposable container |
 | build | `famtee.html` + every sample, with `SHA256SUMS` (byte-for-byte reproducible) |
-| deliver | `releases/<YYYY.MM.DD>-<sha7>/` with artifacts, `ci.log`, `manifest.json`; `releases/latest` |
+| deliver | `releases/<YYYY.MM.DD.HH.MM>-<sha7>/` (commit time, UTC) with artifacts, `ci.log`, `manifest.json`; `releases/latest` |
 | devops self-test (merge, if `devops/` changed) | the PR's own `devops/selftest.sh`, run from the merge result |
 | UAT (merge only) | deploy the release to the UAT server and verify what it serves |
 
