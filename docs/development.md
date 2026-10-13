@@ -39,6 +39,8 @@ divorce, adoption and a cousin marriage. Append `#g=<graphId>&sel=<nodeId>` to t
 | Add partner, child, parent | Buttons in the person panel; "+ Child" asks which partnership |
 | Add person / sub-graph, rename | Panel with nothing selected (click empty canvas or press Esc) |
 | Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person |
+| Move a card | Drag it (one undoable step). "Reset position" in the panel, or "Reset layout" for the whole graph |
+| Pan / zoom | Drag the background; scroll wheel or pinch; + / − / Fit buttons; keys `+` `-` `0` |
 | Undo / redo | Toolbar, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or Ctrl+Y |
 | Save | Ctrl/⌘+S or Save. Chromium overwrites the file you pick; Firefox/Safari download a new copy |
 | Export / import | Export JSON writes `.famtee.json`; Import… reads `.famtee.json` or a FamTee `.html` (undoable) |
@@ -81,6 +83,8 @@ src/
     autosave.js       localStorage drafts + debounce
     import.js         read .famtee.json or FamTee .html
   ui/
+    viewport.js       pan/zoom transform math: zoom at point, fit, screen→world
+    interaction.js    Pointer Events: pan, pinch, wheel zoom, card drag (ADR 0012)
     panel.js          side panel: person / partnership / graph editing forms
     toolbar.js        undo, redo, save, export, import, save state
     dom.js            h() element helper, two-click confirm button
@@ -116,12 +120,9 @@ Not supported (the build fails with a clear message): default imports/exports, `
 
 ## Current limitations
 
-- No pan/zoom yet. Graphs are fitted to the window and never drawn above 1:1. Interactive pan/zoom is planned
-  with vendored `d3-zoom` (ADR 0007), which needs the build to support vendored UMD scripts.
 - Top-down orientation only (left-to-right is reserved as a layout option).
-- Pinned nodes (`attrs.pos`) are placed after the automatic layout. Their neighbours don't move out of the way,
-  so a pinned card can overlap others.
-- No drag-to-move yet (the `attrs.pos` override and "Reset position" exist, but nothing sets positions).
+- Moved cards (`attrs.nudge`) are offset after the automatic layout; neighbours don't move out of the way, so a
+  card can be dragged on top of another. No momentum panning.
 - No UI yet for cross-graph links (`same-as`), groups, or editing/deleting a sub-graph tile in place. Clicking a
   tile opens the graph, and the graph can be renamed or deleted from there.
 - GEDCOM import/export (ADR 0010) is not implemented.

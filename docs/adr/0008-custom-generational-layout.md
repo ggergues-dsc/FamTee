@@ -15,7 +15,8 @@ Implement a small layered layout in `src/layout/`:
 2. **Order**: within each rank, order nodes to keep partners adjacent and reduce crossings (barycentre heuristic,
    a few sweeps — cheap at this scale).
 3. **Place**: x-coordinates with partner spacing and children centred under their union; y = rank × row height.
-4. **Overrides**: nodes with `attrs.pos` keep their manual position (user dragged them); layout flows around them.
+4. **Overrides**: nodes the user dragged keep their manual position; layout flows around them.
+   *(Amended by [0012](0012-hand-written-pointer-events-pan-zoom-drag.md): stored as an offset `attrs.nudge`, not an absolute `attrs.pos`.)*
 5. Option per graph: orientation (top-down / left-right) and "auto vs manual".
 
 Overview graphs of `graphRef` tiles can use a simple grid or (later) d3-force.
@@ -44,7 +45,7 @@ Implemented in `src/layout/layout.js`, with refinements found while testing agai
 - **Placement** resolves each row with cluster merging: overlapping blocks merge and sit at the mean of their
   desired positions. This centres sibling groups under their parents automatically. The passes run down, up,
   then down again.
-- **Pins** are applied after layout rather than having the layout flow around them (simpler; revisit when
-  dragging is implemented). An unpinned union follows its pinned partners.
+- **Pins** are applied after layout rather than having the layout flow around them (simpler). An unpinned union
+  follows its pinned partners. Pins became relative offsets (`attrs.nudge`) when dragging was implemented, see ADR 0012.
 - **Connector lanes** (renderer): child connectors from different unions in the same row are given separate
   heights where their horizontal spans overlap. Otherwise a remarried parent's two families read as one.

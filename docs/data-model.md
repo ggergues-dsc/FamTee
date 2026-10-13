@@ -54,7 +54,7 @@ must not contain `:` since links use `graphId:nodeId`.
     "death": null,
     "notes": "",
     "photo": "data:image/webp;base64,...",
-    "pos": { "x": 120, "y": 340 }       // optional manual layout override (ADR 0008)
+    "nudge": { "dx": 40, "dy": 0 }     // optional: offset from the automatic layout, set by dragging (ADR 0012)
   }
 }
 ```

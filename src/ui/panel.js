@@ -67,7 +67,7 @@ export function createPanel(container, ctx) {
       const body = node?.type === 'person' ? personPanel(graphId, selected)
         : node?.type === 'union' ? unionPanel(graphId, selected)
         : graphPanel(graphId);
-      container.replaceChildren(...body);
+      container.replaceChildren(...body.filter(Boolean));
       if (readOnly) for (const el of container.querySelectorAll('input, select, textarea, button')) el.disabled = true;
     }
     for (const refresh of refreshers) refresh();
@@ -143,8 +143,8 @@ export function createPanel(container, ctx) {
     });
 
     const resetPosition = h('button', { type: 'button', onclick: () =>
-      ctx.edit('Reset position', (doc) => updateNodeAttrs(doc, graphId, personId, { pos: undefined })) }, 'Reset position');
-    refreshers.push(() => { resetPosition.hidden = !attrs().pos; });
+      ctx.edit('Reset position', (doc) => updateNodeAttrs(doc, graphId, personId, { nudge: undefined })) }, 'Reset position');
+    refreshers.push(() => { resetPosition.hidden = !attrs().nudge; });
 
     return [
       h('h2', {}, 'Person'),
@@ -213,13 +213,24 @@ export function createPanel(container, ctx) {
             });
             if (id) ctx.open(id);
           } }, '+ Sub-graph'))),
-      h('p', { class: 'muted hint' }, 'Select a person to edit them and add relatives.'),
+      resetLayoutButton(graphId),
+      h('p', { class: 'muted hint' }, 'Select a person to edit them and add relatives. Drag cards to move them; drag the background to pan, scroll or pinch to zoom.'),
       isRoot ? null : h('section', { class: 'row danger' },
         confirmButton('Delete this graph', 'Click again to delete', () => {
           ctx.back();
           ctx.edit('Delete graph', (d) => removeGraph(d, graphId));
         })),
     ];
+  }
+
+  // Clears every manual move (attrs.nudge) in the graph as one undoable step.
+  function resetLayoutButton(graphId) {
+    const nudged = () => Object.entries(ctx.store.doc.graphs[graphId]?.nodes ?? {}).filter(([, n]) => n.attrs.nudge);
+    const button = h('button', { type: 'button', onclick: () => ctx.edit('Reset layout', (d) => {
+      for (const [id] of nudged()) updateNodeAttrs(d, graphId, id, { nudge: undefined });
+    }) }, 'Reset layout');
+    refreshers.push(() => { button.hidden = nudged().length === 0; });
+    return h('div', { class: 'row' }, button);
   }
 
   return { render };

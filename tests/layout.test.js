@@ -127,13 +127,35 @@ test('pedigree collapse and odd generations still lay out', () => {
   assert(Object.values(layout.nodes).every((n) => Number.isFinite(n.x) && Number.isFinite(n.y)));
 });
 
-test('manual positions are kept and unions follow pinned partners', () => {
-  const { doc, g, mum, dad, union } = smallFamily();
-  updateNodeAttrs(doc, g, mum, { pos: { x: 1000, y: 500 } });
-  updateNodeAttrs(doc, g, dad, { pos: { x: 1400, y: 500 } });
+test('nudges offset nodes from their automatic position; unions follow', () => {
+  const { doc, g, mum, dad, union, kid } = smallFamily();
+  const auto = layoutGraph(doc.graphs[g]).nodes;
+  updateNodeAttrs(doc, g, mum, { nudge: { dx: 0, dy: -100 } });
+  updateNodeAttrs(doc, g, dad, { nudge: { dx: 0, dy: -100 } });
   const { nodes } = layoutGraph(doc.graphs[g]);
-  assertEqual([nodes[mum].x, nodes[mum].y, nodes[mum].pinned], [1000, 500, true]);
-  assertEqual([nodes[union].x, nodes[union].y], [1200, 500]);
+  assertEqual([nodes[mum].x, nodes[mum].y, nodes[mum].nudged], [auto[mum].x, auto[mum].y - 100, true]);
+  assertEqual([nodes[union].x, nodes[union].y], [auto[union].x, auto[union].y - 100]);
+  assertEqual([nodes[kid].x, nodes[kid].y], [auto[kid].x, auto[kid].y], 'others stay put');
+});
+
+test('nudged cards travel with the family when the layout shifts', () => {
+  const { doc, g, kid, union } = smallFamily();
+  updateNodeAttrs(doc, g, kid, { nudge: { dx: 30, dy: 0 } });
+  const before = layoutGraph(doc.graphs[g]).nodes;
+  const sibling = addPerson(doc, g);
+  addChild(doc, g, union, sibling);
+  const after = layoutGraph(doc.graphs[g]).nodes;
+  const offset = (nodes) => nodes[kid].x - nodes[union].x;
+  assert(Math.abs(offset(after) - offset(before)) < 200, 'stays near its parents');
+});
+
+test('drag preview offsets add to stored nudges without changing the document', () => {
+  const { doc, g, kid } = smallFamily();
+  updateNodeAttrs(doc, g, kid, { nudge: { dx: 10, dy: 0 } });
+  const base = layoutGraph(doc.graphs[g]).nodes[kid];
+  const moved = layoutGraph(doc.graphs[g], { preview: { [kid]: { dx: 5, dy: 7 } } }).nodes[kid];
+  assertEqual([moved.x - base.x, moved.y - base.y], [5, 7]);
+  assertEqual(doc.graphs[g].nodes[kid].attrs.nudge, { dx: 10, dy: 0 });
 });
 
 test('graphRefs and loose persons are placed; groups are not', () => {

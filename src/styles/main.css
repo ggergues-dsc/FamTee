@@ -53,6 +53,14 @@ body {
 #canvas { display: block; }
 
 /* --- graph (ADR 0003 layers) --- */
+.famtee-canvas {
+  background: var(--bg);
+  touch-action: none; /* pointer events handle pan and pinch (ADR 0012) */
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.famtee-canvas:active { cursor: grabbing; }
 .famtee-canvas .background { fill: var(--bg); }
 .famtee-canvas .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
 .famtee-canvas .edge.kind-adopted,
@@ -62,6 +70,7 @@ body {
 .famtee-canvas .edge.edge-custom { stroke-dasharray: 1 5; stroke-linecap: round; }
 .famtee-canvas .union { fill: var(--edge); }
 .famtee-canvas .card { stroke: var(--card-stroke); stroke-width: 1; cursor: pointer; }
+.famtee-canvas .card.dragging { cursor: grabbing; opacity: 0.85; stroke: var(--accent); stroke-width: 2; }
 .famtee-canvas .person.sex-M { fill: var(--card-m); }
 .famtee-canvas .person.sex-F { fill: var(--card-f); }
 .famtee-canvas .person.sex-U { fill: var(--card-u); }
@@ -123,7 +132,15 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .notice.error { color: var(--error); background: var(--card-f); border-color: var(--error); }
 .notice > button.link:last-child { margin-left: auto; }
 
-#app { display: flex; }
+#app { display: flex; position: relative; }
+.zoom-controls {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  gap: 0.25rem;
+}
+.zoom-controls button { min-width: 2.2rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 #canvas { flex: 1; min-width: 0; height: auto; }
 .panel {
   width: 300px;

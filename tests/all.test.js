@@ -12,5 +12,7 @@ import './render.test.js';
 import './family.test.js';
 import './persist.test.js';
 import './ui.test.js';
+import './viewport.test.js';
+import './interaction.test.js';
 
 run();

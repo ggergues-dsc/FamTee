@@ -59,10 +59,10 @@ flowchart LR
   through command objects (`addPerson`, `link`, `movePosition`, …) so undo/redo and dirty-tracking are free.
   Validates referential integrity, runs `schemaVersion` migrations on load.
 - **Layout** — pure function `(graph, overrides) → positions`. Custom generational algorithm (ADR 0008).
-  Manually dragged nodes keep their stored `pos`.
+  Dragged nodes keep their stored offset (`attrs.nudge`, ADR 0012).
 - **Renderer** — draws one graph at a time into an `<svg>` with fixed layers (ADR 0003). Re-renders from
   Store + Layout; no hidden state.
-- **Interaction** — pan/zoom (`d3-zoom`), selection, side-panel edit forms, breadcrumb navigation between
+- **Interaction** — pan/zoom and card drag on Pointer Events (ADR 0012), selection, side-panel edit forms, breadcrumb navigation between
   graph levels (drill into `graphRef` nodes, follow cross-graph `links`).
 - **Persistence** — serializes the Store and writes the whole HTML back with the data block replaced (ADR 0006).
 - **Import/Export** — `.famtee.json` (native, lossless), GEDCOM 5.5.1/7 (lossy adapter, ADR 0010), standalone
@@ -81,7 +81,7 @@ src/
   persist/          # fsa.js, download.js, autosave.js
   io/               # json.js, gedcom.js, svg-export.js
   styles/           # CSS (themable via custom properties)
-vendor/             # pinned d3 modules + LICENSE files (ADR 0007)
+vendor/             # vendored libraries + LICENSE files, if ever needed (ADR 0007; none yet)
 build/build.py      # bundles + inlines everything into dist/famtee.html (ADR 0011)
 samples/            # example .famtee.json files
 tests/              # browser test harness + suites, Python build tests, run.py

@@ -115,6 +115,8 @@ test('union panel edits the partnership', () => {
 
 test('graph panel renames, adds people and sub-graphs', () => {
   const s = setup();
+  assert(!/\bnull\b|undefined/.test(s.container.textContent), 'no stray null/undefined text');
+  assert(!button(s.container, 'Delete this graph'), 'root graph cannot be deleted');
   change(field(s.container, 'doc-title'), 'The Lees');
   change(field(s.container, 'graph-title'), 'Main line');
   assertEqual(s.store.doc.meta.title, 'The Lees');
@@ -125,6 +127,22 @@ test('graph panel renames, adds people and sub-graphs', () => {
   button(s.container, '+ Sub-graph').click();
   assertEqual(s.view.path.length, 2);
   assertEqual(s.store.doc.graphs[s.view.path[1]].title, 'New family');
+  assert(button(s.container, 'Delete this graph'), 'sub-graphs can be deleted');
+  s.container.remove();
+});
+
+test('Reset layout clears all manual moves in one step', () => {
+  const s = setup();
+  const reset = button(s.container, 'Reset layout');
+  assert(reset.hidden, 'hidden while nothing was moved');
+  s.store.apply('move', (d) => {
+    d.graphs[s.g].nodes[s.mum].attrs.nudge = { dx: 5, dy: 0 };
+    d.graphs[s.g].nodes[s.kid].attrs.nudge = { dx: 0, dy: 9 };
+  });
+  assert(!reset.hidden);
+  reset.click();
+  assert(!node(s, s.mum).attrs.nudge && !node(s, s.kid).attrs.nudge);
+  assertEqual(s.store.undoStack.at(-1).label, 'Reset layout');
   s.container.remove();
 });
 

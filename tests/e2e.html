@@ -108,6 +108,51 @@ test('export JSON and import it back', async () => {
   assertEqual(app.store.doc.meta.title, 'Changed', 'import is undoable');
 });
 
+test('drag moves a card (undoably); pan and zoom never touch the document', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  const svg = doc.getElementById('canvas');
+  const fire = (type, target, x, y) => target.dispatchEvent(new win.PointerEvent(type, {
+    bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y,
+  }));
+  const cardX = () => Number(doc.querySelector('rect.card[data-id="p-leo"]').getAttribute('x'));
+  const k = app.getTransform().k;
+  const x0 = cardX();
+  const r = doc.querySelector('rect.card[data-id="p-leo"]').getBoundingClientRect();
+  const [cx, cy] = [r.left + r.width / 2, r.top + r.height / 2];
+
+  fire('pointerdown', doc.querySelector('rect.card[data-id="p-leo"]'), cx, cy);
+  fire('pointermove', svg, cx + 30, cy);
+  fire('pointermove', svg, cx + 60, cy);
+  assert(doc.querySelector('rect.card.dragging'), 'live preview while dragging');
+  assert(!app.store.dirty, 'nothing stored until drop');
+  fire('pointerup', svg, cx + 60, cy);
+  const nudge = app.store.doc.graphs['g-hanna'].nodes['p-leo'].attrs.nudge;
+  assertEqual(nudge, { dx: Math.round(60 / k), dy: 0 });
+  assert(Math.abs(cardX() - x0 - 60 / k) <= 1, 'card drawn at the new place');
+  assertEqual(app.store.undoStack.at(-1).label, 'Move person');
+  assertEqual(app.view.selection.size, 0, 'drop does not select');
+  app.store.undo();
+  assertEqual(cardX(), x0);
+
+  const t1 = app.getTransform();
+  const undoDepth = app.store.undoStack.length;
+  const sr = svg.getBoundingClientRect();
+  fire('pointerdown', svg, sr.left + 5, sr.top + 5);
+  fire('pointermove', svg, sr.left + 45, sr.top + 25);
+  fire('pointerup', svg, sr.left + 45, sr.top + 25);
+  assertEqual(app.getTransform(), { ...t1, x: t1.x + 40, y: t1.y + 20 });
+  assertEqual(app.store.undoStack.length, undoDepth, 'panning is not an edit');
+
+  byText(doc, '+').click();
+  assert(Math.abs(app.getTransform().k - t1.k * 1.25) < 1e-9);
+  const zoomed = app.getTransform();
+  app.ctx.select('p-leo');
+  change(doc.querySelector('[name="surname"]'), 'Moved');
+  assertEqual(app.getTransform(), zoomed, 'view kept across edits');
+  byText(doc, 'Fit').click();
+  assertEqual(app.getTransform(), t1, 'Fit returns to the initial fitted view');
+});
+
 run();
 </script>
 </body>

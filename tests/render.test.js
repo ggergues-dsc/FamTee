@@ -50,7 +50,21 @@ test('renders cards, unions, edges and labels', () => {
   const names = all(layer(svg, 'labels'), '.name').map((t) => t.textContent);
   assertEqual(names.sort(), ['Ann', 'Bob', 'Cid']);
   assert(all(layer(svg, 'labels'), '.dates').some((t) => t.textContent === 'b. 1950'));
-  assert(/^-?[\d.]+ -?[\d.]+ [\d.]+ [\d.]+$/.test(svg.getAttribute('viewBox')));
+  assert(!svg.hasAttribute('viewBox'), 'pan/zoom uses a transform, not the viewBox');
+  svg.remove();
+});
+
+test('setTransform positions the viewport; drag previews mark the card', () => {
+  const svg = canvas();
+  const { doc, g, kid } = smallFamily();
+  const renderer = createRenderer(svg);
+  renderer.setTransform({ x: 10, y: -20, k: 0.5 });
+  assertEqual(svg.querySelector('.viewport').getAttribute('transform'), 'translate(10 -20) scale(0.5)');
+  const plain = renderer.render(doc, g).nodes[kid];
+  const moved = renderer.render(doc, g, { preview: { [kid]: { dx: 40, dy: 0 } } }).nodes[kid];
+  assertEqual(moved.x - plain.x, 40);
+  assert(svg.querySelector(`.card.dragging[data-id="${kid}"]`));
+  assertEqual(svg.querySelector('.viewport').getAttribute('transform'), 'translate(10 -20) scale(0.5)', 'render keeps the transform');
   svg.remove();
 });
 
@@ -104,11 +118,12 @@ test('overlapping child connectors get separate lanes', () => {
   const u2 = addUnion(doc, g, [mum, addPerson(doc, g)]);
   const kid2 = addPerson(doc, g);
   addChild(doc, g, u2, kid2);
-  // Pin each child beyond the other union so the connectors' horizontal spans overlap.
+  // Nudge each child beyond the other union so the connectors' horizontal spans overlap.
   const { nodes } = layoutGraph(doc.graphs[g]);
   const side = Math.sign(nodes[u2].x - nodes[union].x);
-  updateNodeAttrs(doc, g, kid, { pos: { x: 900 * side, y: 300 } });
-  updateNodeAttrs(doc, g, kid2, { pos: { x: -900 * side, y: 300 } });
+  const to = (id, x) => ({ nudge: { dx: x - nodes[id].x, dy: 300 - nodes[id].y } });
+  updateNodeAttrs(doc, g, kid, to(kid, 900 * side));
+  updateNodeAttrs(doc, g, kid2, to(kid2, -900 * side));
   createRenderer(svg).render(doc, g);
   const busY = (childId) => {
     const x = (childId === kid ? 900 : -900) * side;

@@ -1,11 +1,13 @@
-// Bootstrap and wiring: Store ↔ renderer, editing panel, toolbar, persistence.
+// Bootstrap and wiring: Store ↔ renderer, pan/zoom and drag, editing panel, toolbar,
+// persistence.
 // Navigation: drill into graphRef cards, jump across link badges, breadcrumb back,
-// #g=<graphId>&sel=<nodeId> deep links. Clicking a card selects it for editing.
+// #g=<graphId>&sel=<nodeId> deep links. Clicking a card selects it for editing;
+// dragging it moves it (stored as attrs.nudge); dragging the background pans.
 
 import { captureTemplate, isSelfContained, documentContents, writeFile, fileName, FORMATS } from './persist/save.js';
 import { saveDraft, findNewerDraft, clearDraft, debounce } from './persist/autosave.js';
 import { parseImport } from './persist/import.js';
-import { createDocument } from './store/model.js';
+import { createDocument, updateNodeAttrs } from './store/model.js';
 import { replaceDocument, removePerson } from './store/family.js';
 import { loadDocument, readEmbedded } from './store/serialize.js';
 import { Store } from './store/store.js';
@@ -13,6 +15,8 @@ import { createRenderer } from './render/renderer.js';
 import { createPanel } from './ui/panel.js';
 import { createToolbar } from './ui/toolbar.js';
 import { h } from './ui/dom.js';
+import { createInteraction } from './ui/interaction.js';
+import { IDENTITY, fitTransform, zoomAt } from './ui/viewport.js';
 
 // Must run before anything changes the DOM: this is what "Save" writes back.
 const TEMPLATE = captureTemplate();
@@ -150,6 +154,65 @@ function boot() {
     importFile,
   });
 
+  // --- canvas: rendering, pan/zoom, drag ------------------------------------------
+  const svg = renderer.svg;
+  const transforms = new Map(); // graph id → pan/zoom transform, kept while navigating
+  let drag = null; // { id, dx, dy } while a card is being dragged
+  let layout = null;
+
+  function renderCanvas() {
+    const graphId = currentGraph();
+    layout = renderer.render(store.doc, graphId, {
+      selection: view.selection,
+      preview: drag ? { [drag.id]: { dx: drag.dx, dy: drag.dy } } : null,
+    });
+    if (!transforms.has(graphId)) transforms.set(graphId, fitTransform(layout.bounds, svg.clientWidth, svg.clientHeight));
+    renderer.setTransform(transforms.get(graphId));
+  }
+
+  const getTransform = () => transforms.get(currentGraph()) ?? IDENTITY;
+  const setTransform = (t) => {
+    transforms.set(currentGraph(), t);
+    renderer.setTransform(t);
+  };
+  const fit = () => setTransform(fitTransform(layout.bounds, svg.clientWidth, svg.clientHeight));
+  const zoomBy = (factor) => {
+    const t = getTransform();
+    setTransform(zoomAt(t, t.k * factor, svg.clientWidth / 2, svg.clientHeight / 2));
+  };
+
+  const interaction = createInteraction(svg, {
+    getTransform,
+    setTransform,
+    draggableId: (target) => (store.readOnly ? null : target.closest?.('rect.card[data-id]')?.dataset.id ?? null),
+    onDragMove(id, dx, dy) {
+      drag = { id, dx, dy };
+      renderCanvas();
+    },
+    onDrop(id, dx, dy) {
+      drag = null;
+      const [rdx, rdy] = [Math.round(dx), Math.round(dy)];
+      if (!rdx && !rdy) return renderCanvas();
+      const graphId = currentGraph();
+      const node = store.doc.graphs[graphId].nodes[id];
+      ctx.edit(node.type === 'person' ? 'Move person' : 'Move tile', (d) => {
+        const old = d.graphs[graphId].nodes[id].attrs.nudge ?? { dx: 0, dy: 0 };
+        const next = { dx: old.dx + rdx, dy: old.dy + rdy };
+        updateNodeAttrs(d, graphId, id, { nudge: next.dx || next.dy ? next : undefined });
+      });
+    },
+    onDragCancel() {
+      drag = null;
+      renderCanvas();
+    },
+  });
+
+  const zoomButton = (label, title, onclick) => h('button', { type: 'button', title, 'aria-label': title, onclick }, label);
+  svg.after(h('div', { class: 'zoom-controls' },
+    zoomButton('+', 'Zoom in (+)', () => zoomBy(1.25)),
+    zoomButton('−', 'Zoom out (−)', () => zoomBy(0.8)),
+    zoomButton('Fit', 'Fit to window (0)', fit)));
+
   function update() {
     const { doc } = store;
     view.path = view.path.filter((g) => doc.graphs[g]);
@@ -159,13 +222,13 @@ function boot() {
     document.getElementById('doc-title').textContent = doc.meta.title;
     document.title = `${store.dirty ? '• ' : ''}${doc.meta.title} — FamTee`;
     renderBreadcrumb(doc, view, update);
-    renderer.render(doc, currentGraph(), { selection: view.selection });
+    renderCanvas();
     panel.render();
     toolbar.render(store);
   }
 
-  // --- canvas interaction ------------------------------------------------------
-  renderer.svg.addEventListener('click', (event) => {
+  // Clicks (a press without movement; pans and drags swallow their click).
+  svg.addEventListener('click', (event) => {
     const ref = event.target.closest('[data-ref-graph]');
     const badge = event.target.closest('[data-link-graph]');
     const node = event.target.closest('[data-id]');
@@ -201,7 +264,15 @@ function boot() {
         event.preventDefault();
         ctx.edit('Delete person', (d) => removePerson(d, currentGraph(), id));
       }
-    } else if (event.key === 'Escape') {
+    } else if (mod || event.altKey) {
+      return;
+    } else if (event.key === '+' || event.key === '=') {
+      zoomBy(1.25);
+    } else if (event.key === '-' || event.key === '_') {
+      zoomBy(0.8);
+    } else if (event.key === '0') {
+      fit();
+    } else if (event.key === 'Escape' && !event.defaultPrevented) {
       ctx.select(null);
     }
   });
@@ -234,7 +305,7 @@ function boot() {
     ]);
   }
 
-  window.famtee = { store, view, ctx, save };
+  window.famtee = { store, view, ctx, save, interaction, getTransform, setTransform, fit };
   update();
 }
 

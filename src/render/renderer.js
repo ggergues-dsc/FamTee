@@ -5,6 +5,7 @@
 import { layoutGraph } from '../layout/layout.js';
 import { parseEndpoint } from '../store/schema.js';
 import { displayName, lifespan, fitText } from './format.js';
+import { transformAttr } from '../ui/viewport.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 export const LAYERS = ['background', 'edges', 'nodes', 'labels', 'annotations', 'overlay', 'ui'];
@@ -23,38 +24,39 @@ export function svgEl(tag, attrs = {}, parent = null) {
 
 export function createRenderer(svg) {
   svg.classList.add('famtee-canvas');
+  svg.removeAttribute('viewBox');
   svg.replaceChildren();
   const viewport = svgEl('g', { class: 'viewport' }, svg);
   const layers = Object.fromEntries(LAYERS.map((name) => [name, svgEl('g', { class: `layer layer-${name}` }, viewport)]));
 
-  function render(doc, graphId, { selection = new Set(), layoutOptions } = {}) {
+  // `preview` holds extra { dx, dy } offsets for nodes being dragged (not stored).
+  function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions } = {}) {
     const graph = doc.graphs[graphId];
     if (!graph) throw new Error(`Unknown graph: ${graphId}`);
-    const layout = layoutGraph(graph, layoutOptions);
+    const layout = layoutGraph(graph, { ...layoutOptions, preview });
     for (const layer of Object.values(layers)) layer.replaceChildren();
 
-    // Fit the graph, but never scale it above 1:1 (small graphs stay readable-sized).
     const { bounds } = layout;
-    const width = Math.max(bounds.width + 2 * MARGIN, svg.clientWidth || 0);
-    const height = Math.max(bounds.height + 2 * MARGIN, svg.clientHeight || 0);
-    const box = {
-      x: bounds.x + bounds.width / 2 - width / 2,
-      y: bounds.y + bounds.height / 2 - height / 2,
-      width,
-      height,
-    };
-    svgEl('rect', { class: 'background', ...box }, layers.background);
-    svg.setAttribute('viewBox', `${box.x} ${box.y} ${box.width} ${box.height}`);
+    svgEl('rect', {
+      class: 'background',
+      x: bounds.x - MARGIN, y: bounds.y - MARGIN,
+      width: bounds.width + 2 * MARGIN, height: bounds.height + 2 * MARGIN,
+    }, layers.background);
 
     drawGroups(graph, layout, layers);
     drawEdges(graph, layout, layers.edges);
-    drawNodes(doc, graph, layout, layers);
+    drawNodes(doc, graph, layout, layers, preview);
     drawLinkBadges(doc, graphId, layout, layers.annotations);
     drawSelection(selection, layout, layers.ui);
     return layout;
   }
 
-  return { svg, layers, render };
+  // Pan/zoom (ADR 0012): the transform maps layout coordinates to screen pixels.
+  function setTransform(t) {
+    viewport.setAttribute('transform', transformAttr(t));
+  }
+
+  return { svg, layers, render, setTransform };
 }
 
 function drawGroups(graph, layout, layers) {
@@ -138,7 +140,7 @@ function busLanes(graph, layout) {
   return offsets;
 }
 
-function drawNodes(doc, graph, layout, layers) {
+function drawNodes(doc, graph, layout, layers, preview) {
   for (const [id, node] of Object.entries(graph.nodes)) {
     const pos = layout.nodes[id];
     if (!pos) continue;
@@ -166,6 +168,7 @@ function drawNodes(doc, graph, layout, layers) {
       cls = `card person sex-${sex}`;
     }
 
+    if (preview?.[id]) cls += ' dragging';
     const card = svgEl('rect', {
       class: cls, 'data-id': id, ...extra,
       x: left, y: top, width: pos.width, height: pos.height, rx: 8,

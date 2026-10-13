@@ -1,6 +1,6 @@
 # 0007 — Vendored micro-dependencies (d3 modules) only
 
-- **Status**: Accepted
+- **Status**: Accepted for the dependency policy; the d3-zoom choice is superseded by [0012](0012-hand-written-pointer-events-pan-zoom-drag.md)
 - **Date**: 2026-10-12
 
 ## Context

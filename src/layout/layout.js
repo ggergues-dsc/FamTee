@@ -4,7 +4,8 @@
 //   2. order  — partners kept adjacent in "blocks"; blocks ordered by barycentre sweeps
 //   3. place  — x by centring children under their union and parents over their children,
 //               resolving overlaps per row; y = rank × row height
-//   4. pin    — nodes with attrs.pos keep that position; unions follow pinned partners
+//   4. nudge  — attrs.nudge {dx, dy} offsets a node from its automatic position (set by
+//               dragging); a union between nudged partners follows them
 
 export const LAYOUT_DEFAULTS = {
   cardWidth: 160,
@@ -13,6 +14,7 @@ export const LAYOUT_DEFAULTS = {
   gap: 24, // minimum horizontal gap between blocks
   rankGap: 72, // vertical gap between generations
   sweeps: 4,
+  preview: null, // { [nodeId]: { dx, dy } } extra offsets while a drag is in progress
 };
 
 export function layoutGraph(graph, options = {}) {
@@ -39,7 +41,7 @@ export function layoutGraph(graph, options = {}) {
       }
     }
   }
-  applyPins(graph, rel, nodes);
+  applyNudges(graph, rel, nodes, o.preview);
   return { nodes, bounds: bounds(nodes), options: o };
 }
 
@@ -303,23 +305,28 @@ export function resolveRow(blocks, desired, gap) {
   }
 }
 
-// --- 4. manual positions ---------------------------------------------------------
+// --- 4. manual nudges -------------------------------------------------------------
 
-const isPos = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+// Offsets are relative to the automatic position, so a moved card travels with its
+// family when the automatic layout shifts (e.g. after adding someone on the left).
+const isNudge = (n) => n && Number.isFinite(n.dx) && Number.isFinite(n.dy);
 
-function applyPins(graph, rel, nodes) {
+function applyNudges(graph, rel, nodes, preview) {
   for (const [id, n] of Object.entries(nodes)) {
-    const pos = graph.nodes[id].attrs?.pos;
-    if (isPos(pos)) {
-      n.x = pos.x;
-      n.y = pos.y;
-      n.pinned = true;
+    const stored = graph.nodes[id].attrs?.nudge;
+    const extra = preview?.[id];
+    const dx = (isNudge(stored) ? stored.dx : 0) + (isNudge(extra) ? extra.dx : 0);
+    const dy = (isNudge(stored) ? stored.dy : 0) + (isNudge(extra) ? extra.dy : 0);
+    if (dx || dy) {
+      n.x += dx;
+      n.y += dy;
+      n.nudged = true;
     }
   }
   for (const [id, n] of Object.entries(nodes)) {
-    if (n.kind !== 'union' || n.pinned) continue;
+    if (n.kind !== 'union' || n.nudged) continue;
     const partners = rel.partners(id).filter((p) => nodes[p]);
-    if (partners.some((p) => nodes[p].pinned)) {
+    if (partners.some((p) => nodes[p].nudged)) {
       n.x = partners.reduce((s, p) => s + nodes[p].x, 0) / partners.length;
       n.y = partners.reduce((s, p) => s + nodes[p].y, 0) / partners.length;
     }
