@@ -25,6 +25,8 @@ import { startScreen } from './ui/start.js';
 import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
 import { createSnapshot } from './ui/snapshot.js';
+import { createConnectDialog, applyConnection, CONNECT_LABELS } from './ui/connect.js';
+import { svgEl } from './render/renderer.js';
 import { createInteraction } from './ui/interaction.js';
 import { IDENTITY, fitTransform, zoomAt } from './ui/viewport.js';
 
@@ -325,19 +327,82 @@ async function boot() {
   // Read-only person summary beside the card under the pointer.
   const snapshot = createSnapshot(document.getElementById('app'), document.getElementById('canvas'));
 
+  // Connecting two people already in the graph: a line drawn from one card to another
+  // (Ctrl/⌘+drag, or the handle on the selected person), or C then a click; then a
+  // popover asks how they are related.
+  const connectDialog = createConnectDialog(document.getElementById('app'), document.getElementById('canvas'));
+  let linking = null; // { from, over, x, y } while the line is being drawn (layout coordinates)
+  let pickFrom = null; // person waiting for "connect to…" after pressing C
+  let pair = null; // { subject, anchor } while the popover is open
+  const personAt = (event) => {
+    const el = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('rect.card.person[data-id]');
+    return el && svg.contains(el) ? el.dataset.id : null;
+  };
+  const onlySelectedPerson = () => {
+    const [id] = view.selection;
+    return view.selection.size === 1 && store.doc.graphs[currentGraph()].nodes[id]?.type === 'person' ? id : null;
+  };
+  function endPick() {
+    if (pickFrom === null) return;
+    pickFrom = null;
+    svg.classList.remove('picking');
+    if (notice.classList.contains('hint')) notice.hidden = true;
+  }
+  function openConnect(subject, anchor) {
+    endPick();
+    const graphId = currentGraph();
+    pair = { subject, anchor };
+    renderCanvas();
+    const anchorEl = svg.querySelector(`rect.card[data-id="${anchor}"]`);
+    if (!anchorEl) { pair = null; return; }
+    connectDialog.open({
+      graph: store.doc.graphs[graphId], subject, anchor, anchorEl,
+      onConnect(op) {
+        const done = ctx.edit(CONNECT_LABELS[op.how], (d) => applyConnection(d, graphId, subject, anchor, op));
+        if (done === undefined) return false; // rejected: the notice says why; the popover stays
+        pair = null;
+        ctx.select(subject);
+        return true;
+      },
+      onCancel() {
+        pair = null;
+        renderCanvas();
+      },
+    });
+  }
+
   function renderCanvas() {
     snapshot.hide(); // cards are redrawn (and may move)
     const graphId = currentGraph();
     layout = renderer.render(store.doc, graphId, {
       selection: view.selection,
       preview: drag ? { [drag.id]: { dx: drag.dx, dy: drag.dy } } : null,
+      connectHandle: !store.readOnly && !drag && !pair,
     });
+    drawConnectState();
     // A new graph, or a changed orientation, starts fitted to the window.
     if (!transforms.has(graphId) || fittedOrientation.get(graphId) !== layout.options.orientation) {
       transforms.set(graphId, fitTransform(layout.bounds, svg.clientWidth, svg.clientHeight));
       fittedOrientation.set(graphId, layout.options.orientation);
     }
     renderer.setTransform(transforms.get(graphId));
+  }
+
+  // The line being drawn, and the two people being connected, on top of the graph.
+  function drawConnectState() {
+    const mark = (id, cls) => svg.querySelector(`rect.card[data-id="${id}"]`)?.classList.add(cls);
+    const from = linking?.from ?? pair?.subject ?? pickFrom;
+    const to = linking?.over ?? pair?.anchor;
+    if (from) mark(from, 'connect-source');
+    if (to) mark(to, 'connect-target');
+    const a = from && layout?.nodes[from];
+    if (!a || !(linking || pair)) return;
+    const b = to ? layout.nodes[to] : { x: linking.x, y: linking.y, width: 0 };
+    const sx = a.x + (b.x < a.x ? -a.width / 2 : a.width / 2);
+    const ex = to ? b.x + (sx < b.x ? -b.width / 2 : b.width / 2) : b.x;
+    const mx = (sx + ex) / 2;
+    svgEl('path', { class: 'connect-line', d: `M ${sx} ${a.y} C ${mx} ${a.y} ${mx} ${b.y} ${ex} ${b.y}` }, renderer.layers.ui);
+    svgEl('circle', { class: 'connect-end', cx: ex, cy: b.y, r: 4 }, renderer.layers.ui);
   }
 
   const getTransform = () => transforms.get(currentGraph()) ?? IDENTITY;
@@ -364,6 +429,12 @@ async function boot() {
     };
   };
   const onTap = (tap) => {
+    if (pickFrom !== null) {
+      const node = tap?.id && store.doc.graphs[currentGraph()].nodes[tap.id];
+      if (node?.type === 'person' && tap.id !== pickFrom) openConnect(pickFrom, tap.id);
+      else { endPick(); renderCanvas(); }
+      return;
+    }
     if (tap?.refGraph) ctx.open(tap.refGraph);
     else if (tap?.link) ctx.openNode(tap.link.graph, tap.link.node);
     else ctx.select(tap?.id ?? null);
@@ -375,6 +446,32 @@ async function boot() {
     describe,
     onTap,
     draggableId: (target) => (store.readOnly ? null : target.closest?.('rect.card[data-id]')?.dataset.id ?? null),
+    linkFrom(target, event) {
+      if (store.readOnly) return null;
+      const handle = target.closest?.('[data-connect-from]');
+      if (handle) return handle.dataset.connectFrom;
+      if (!(event.ctrlKey || event.metaKey)) return null;
+      return target.closest?.('rect.card.person[data-id]')?.dataset.id ?? null;
+    },
+    onLinkMove(from, event) {
+      connectDialog.close();
+      pair = null;
+      endPick();
+      const rect = svg.getBoundingClientRect();
+      const t = getTransform();
+      const over = personAt(event);
+      linking = {
+        from, over: over && over !== from ? over : null,
+        x: (event.clientX - rect.left - t.x) / t.k, y: (event.clientY - rect.top - t.y) / t.k,
+      };
+      renderCanvas();
+    },
+    onLinkEnd(from, event) {
+      const to = event ? personAt(event) : null;
+      linking = null;
+      if (to && to !== from) openConnect(from, to);
+      else renderCanvas();
+    },
     onDragMove(id, dx, dy) {
       drag = { id, dx, dy };
       renderCanvas();
@@ -399,7 +496,7 @@ async function boot() {
 
   // Snapshot on hover (mouse and pen; touch has no hover, a tap opens the editor).
   svg.addEventListener('pointerover', (event) => {
-    if (event.pointerType === 'touch' || event.buttons || interaction.dragging) return;
+    if (event.pointerType === 'touch' || event.buttons || interaction.dragging || interaction.linking) return;
     const card = event.target.closest?.('rect.card.person[data-id]');
     if (card) snapshot.show(store.doc, currentGraph(), card.dataset.id, card);
   });
@@ -420,6 +517,8 @@ async function boot() {
     if (!view.path.length) view.path = [doc.meta.rootGraph];
     const graph = doc.graphs[currentGraph()];
     view.selection = new Set([...view.selection].filter((id) => graph.nodes[id]));
+    if (pair && !(graph.nodes[pair.subject] && graph.nodes[pair.anchor])) { connectDialog.close(); pair = null; }
+    if (pickFrom !== null && !graph.nodes[pickFrom]) endPick();
     document.getElementById('doc-title').textContent = doc.meta.title;
     document.title = `${store.dirty ? '• ' : ''}${doc.meta.title} — FamTee`;
     renderBreadcrumb(doc, view, update);
@@ -463,7 +562,16 @@ async function boot() {
       zoomBy(0.8);
     } else if (event.key === '0') {
       fit();
+    } else if ((event.key === 'c' || event.key === 'C') && !store.readOnly && onlySelectedPerson()) {
+      // Connect the selected person to someone: the next click picks who.
+      pickFrom = onlySelectedPerson();
+      svg.classList.add('picking');
+      const name = svg.querySelector(`rect.card[data-id="${pickFrom}"] title`)?.textContent.split('\n')[0] ?? 'this person';
+      showNotice(`Connect ${name} to…: click the other person. Esc cancels.`, 'hint');
+      renderCanvas();
     } else if (event.key === 'Escape' && !event.defaultPrevented) {
+      if (connectDialog.cancel()) return;
+      if (pickFrom !== null) { endPick(); renderCanvas(); return; }
       ctx.select(null);
     }
   });

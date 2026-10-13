@@ -4,6 +4,8 @@
 //   - two fingers               → pinch-zoom (and pan)
 //   - wheel / trackpad pinch    → zoom around the cursor
 //   - drag a card (editable)    → move it; reported live and once on drop
+//   - Ctrl/⌘+drag a card, or drag a connect handle → draw a line to another card
+//     (opts.linkFrom says where one starts; onLinkMove / onLinkEnd report it)
 //   - press and release without moving → a tap, reported with what was under the
 //     pointer AT PRESS TIME (opts.describe), so a redraw between press and release
 //     (e.g. a field committing as it loses focus) can't redirect it
@@ -18,6 +20,9 @@ export function createInteraction(svg, opts) {
   const { getTransform, setTransform, draggableId, onDragMove, onDrop, onDragCancel } = opts;
   const describe = opts.describe ?? (() => null);
   const onTap = opts.onTap ?? (() => {});
+  const linkFrom = opts.linkFrom ?? (() => null);
+  const onLinkMove = opts.onLinkMove ?? (() => {});
+  const onLinkEnd = opts.onLinkEnd ?? (() => {});
   const pointers = new Map(); // pointerId → { x, y } in svg-local px
   let gesture = null;
   let swallowClickUntil = 0;
@@ -51,6 +56,13 @@ export function createInteraction(svg, opts) {
     if (pointers.size === 2) return startPinch();
     if (pointers.size > 2) return;
     const tap = describe(event.target);
+    const from = linkFrom(event.target, event);
+    if (from) {
+      event.preventDefault();
+      gesture = { type: 'link', id: from, start: point, moved: false };
+      onLinkMove(from, event);
+      return;
+    }
     const id = draggableId(event.target);
     if (id) gesture = { type: 'press', id, start: point, t0: getTransform(), moved: false, tap };
     else startPan(point, tap);
@@ -65,6 +77,11 @@ export function createInteraction(svg, opts) {
       const m = midpoint(a, b);
       const zoomed = zoomAt(gesture.t0, gesture.t0.k * (distance(a, b) / gesture.d0), gesture.m0.x, gesture.m0.y);
       setTransform({ ...zoomed, x: zoomed.x + m.x - gesture.m0.x, y: zoomed.y + m.y - gesture.m0.y });
+      return;
+    }
+    if (gesture.type === 'link') {
+      gesture.moved = true;
+      onLinkMove(gesture.id, event);
       return;
     }
     const dx = point.x - gesture.start.x;
@@ -86,6 +103,11 @@ export function createInteraction(svg, opts) {
     if (!gesture) return;
     // Taps and drags both replace the browser's click on the canvas.
     swallowClickUntil = performance.now() + 400;
+    if (gesture.type === 'link') {
+      onLinkEnd(gesture.id, event.type === 'pointerup' ? event : null);
+      if (pointers.size === 0) gesture = null;
+      return;
+    }
     if (!gesture.moved && (gesture.type === 'press' || gesture.type === 'pan') && event.type === 'pointerup' && pointers.size === 0) {
       onTap(gesture.tap);
     }
@@ -120,9 +142,13 @@ export function createInteraction(svg, opts) {
     }
   }
 
-  // Escape during a drag puts the card back.
+  // Escape during a drag puts the card back; during a connect line, drops the line.
   function onKeyDown(event) {
-    if (event.key === 'Escape' && gesture?.type === 'drag') {
+    if (event.key === 'Escape' && gesture?.type === 'link') {
+      event.preventDefault();
+      onLinkEnd(gesture.id, null);
+      gesture = { ...gesture, type: 'cancelled' };
+    } else if (event.key === 'Escape' && gesture?.type === 'drag') {
       event.preventDefault(); // tells other handlers the Escape was used
       onDragCancel(gesture.id);
       gesture = { ...gesture, type: 'cancelled' };
@@ -140,6 +166,9 @@ export function createInteraction(svg, opts) {
   return {
     get dragging() {
       return gesture?.type === 'drag';
+    },
+    get linking() {
+      return gesture?.type === 'link';
     },
     destroy() {
       svg.removeEventListener('pointerdown', onPointerDown);

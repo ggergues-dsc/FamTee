@@ -42,6 +42,8 @@ in this browser, start a new tree, or open another file. `#start=file|new|contin
 | Edit a person / partnership | Edit fields in the side panel (applied when a field loses focus or on Enter) |
 | Add partner, child, parent | Buttons in the person panel; "+ Child" asks which partnership |
 | Add person, rename the family | Panel with nothing selected (click empty canvas or press Esc) |
+| Connect people already in the tree | Ctrl/⌘+drag from one person to another, drag the **+** handle on the selected person, or select a person, press `C` and click the other one. Choose partner, child, parent, brother or sister, or another relation (e.g. godparent) in the popover; Esc cancels. People with no lines yet have a dashed outline |
+| Quick look at a person | Point at a card: a read-only summary (dates, parents, partners, children, groups, other graphs) appears beside it |
 | Photos | Person panel → **Add photo…** (or drop an image on the circle). Shrunk to 256 px JPEG and embedded |
 | Advanced (collapsed) | Groups, links to other graphs, sub-graphs, adding GEDCOM as a sub-graph, position/layout reset |
 | Move a card | Drag it (one undoable step); cards in the way move aside. Advanced → "Reset position" / "Reset layout" |

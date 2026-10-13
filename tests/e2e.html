@@ -422,6 +422,79 @@ test('add a relative, type without Enter, go back to the parent: the parent can 
   }
 });
 
+test('connect people: add someone on their own, then Ctrl+drag or C to connect them', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  const g = app.view.path.at(-1);
+  const graph = () => app.store.doc.graphs[g];
+  const card = (id) => doc.querySelector(`rect.card[data-id="${id}"]`);
+  const centre = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const svg = doc.getElementById('canvas');
+  const fire = (type, target, [x, y], extra = {}) => target.dispatchEvent(new win.PointerEvent(type, {
+    bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y, ...extra,
+  }));
+  const key = (k) => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
+
+  app.ctx.select(null);
+  byText(doc, '+ Person').click();
+  const rosa = [...app.view.selection][0];
+  change(doc.querySelector('[name="given"]'), 'Rosa');
+  byText(doc, 'Fit').click();
+  assert(card(rosa).classList.contains('unconnected'), 'someone on their own has a dashed outline');
+  assert(doc.querySelector(`[data-connect-from="${rosa}"]`), 'the selected person has a connect handle');
+
+  // Ctrl+drag from Rosa onto Leo, then choose "partner".
+  fire('pointerdown', card(rosa), centre(card(rosa)), { ctrlKey: true });
+  fire('pointermove', svg, centre(card('p-leo')), { ctrlKey: true });
+  assert(doc.querySelector('.connect-line'), 'a line follows the pointer');
+  assert(card('p-leo').classList.contains('connect-target'), 'the person under the pointer is highlighted');
+  fire('pointerup', svg, centre(card('p-leo')));
+  const pop = doc.querySelector('.connect[role="dialog"]');
+  assert(pop, 'letting go asks how they are related');
+  assertEqual(pop.querySelector('#connect-relation').value, 'partner');
+  pop.querySelector('#connect-start').value = '2025';
+  pop.querySelector('#connect-start').dispatchEvent(new win.Event('input'));
+  assert(pop.querySelector('.connect-preview').textContent.includes('partner (married 2025)'), 'the result is described first');
+  byText(doc, 'Connect').click();
+  assert(!doc.querySelector('.connect'), 'the popover closes');
+  const union = Object.keys(graph().nodes).find((id) => graph().nodes[id].type === 'union' &&
+    graph().edges.filter((e) => e.to === id && e.type === 'partner').map((e) => e.from).sort().join() === [rosa, 'p-leo'].sort().join());
+  assert(union, 'Rosa and Leo are partners');
+  assertEqual(graph().nodes[union].attrs, { kind: 'married', start: '2025' });
+  assert(!card(rosa).classList.contains('unconnected'));
+  assertEqual(app.store.undoStack.at(-1).label, 'Connect as partners');
+  app.store.undo();
+  assert(card(rosa).classList.contains('unconnected'), 'undo disconnects');
+
+  // Keyboard: select Rosa, press C, click Zoe, choose "other relation".
+  app.ctx.select(rosa);
+  key('c');
+  assert(doc.getElementById('notice').textContent.includes('click the other person'));
+  tap(win, card('p-zoe'));
+  const pop2 = doc.querySelector('.connect');
+  pop2.querySelector('#connect-relation').value = 'other';
+  pop2.querySelector('#connect-relation').dispatchEvent(new win.Event('change'));
+  pop2.querySelector('#connect-label').value = 'godparent';
+  byText(doc, 'Connect').click();
+  const edge = graph().edges.find((e) => e.type === 'custom' && e.from === rosa);
+  assertEqual([edge?.to, edge?.attrs], ['p-zoe', { label: 'godparent' }]);
+  assert([...doc.querySelectorAll('.edge-label')].some((t) => t.textContent === 'godparent'), 'the relation is labelled');
+
+  // Esc cancels both the pick and the popover.
+  app.ctx.select('p-leo');
+  key('c');
+  key('Escape');
+  tap(win, card('p-zoe'));
+  assert(!doc.querySelector('.connect'), 'after Esc, a click just selects');
+  assertEqual([...app.view.selection], ['p-zoe']);
+  fire('pointerdown', card('p-zoe'), centre(card('p-zoe')), { ctrlKey: true });
+  fire('pointermove', svg, centre(card('p-leo')), { ctrlKey: true });
+  fire('pointerup', svg, centre(card('p-leo')));
+  assert(doc.querySelector('.connect'));
+  assert(doc.querySelector('option[value="sibling"]').disabled, 'Zoe and Leo already share parents: brother or sister is unavailable');
+  key('Escape');
+  assert(!doc.querySelector('.connect'), 'Esc closes the popover');
+});
+
 run();
 </script>
 </body>

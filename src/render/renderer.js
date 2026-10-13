@@ -53,7 +53,7 @@ export function createRenderer(svg) {
   const layers = Object.fromEntries(LAYERS.map((name) => [name, svgEl('g', { class: `layer layer-${name}` }, viewport)]));
 
   // `preview` holds extra { dx, dy } offsets for nodes being dragged (not stored).
-  function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions } = {}) {
+  function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions, connectHandle = false } = {}) {
     const graph = doc.graphs[graphId];
     if (!graph) throw new Error(`Unknown graph: ${graphId}`);
     const orientation = layoutOptions?.orientation ?? graph.layout?.orientation;
@@ -72,6 +72,7 @@ export function createRenderer(svg) {
     drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip);
     drawLinkBadges(doc, graphId, layout, layers.annotations);
     drawSelection(selection, layout, groupBoxes, layers.ui);
+    if (connectHandle) drawConnectHandles(graph, selection, layout, layers.ui);
     return layout;
   }
 
@@ -139,6 +140,11 @@ function drawEdges(graph, layout, layer) {
       const mx = (a.x + b.x) / 2;
       const my = Math.min(a.y, b.y) - 40;
       d = `M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}`;
+      if (edge.attrs?.label) {
+        // The curve's highest point is halfway between its ends and the control point.
+        const label = svgEl('text', { class: 'edge-label', x: mx, y: (Math.min(a.y, b.y) + my) / 2 - 4 }, layer);
+        label.textContent = edge.attrs.label;
+      }
     }
     svgEl('path', { class: cls, d, 'data-id': edge.id }, layer);
   }
@@ -186,6 +192,8 @@ function busLanes(graph, layout) {
 }
 
 function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip) {
+  // People with no partner, parent, child or other line yet are drawn with a dashed outline.
+  const connected = new Set(graph.edges.flatMap((e) => [e.from, e.to]));
   for (const [id, node] of Object.entries(graph.nodes)) {
     const pos = layout.nodes[id];
     if (!pos) continue;
@@ -216,7 +224,7 @@ function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip)
       title = displayName(node.attrs);
       subtitle = lifespan(node.attrs);
       const sex = ['M', 'F'].includes(node.attrs.sex) ? node.attrs.sex : 'U';
-      cls = `card person sex-${sex}`;
+      cls = `card person sex-${sex}${connected.has(id) ? '' : ' unconnected'}`;
     }
 
     if (preview?.[id]) cls += ' dragging';
@@ -276,6 +284,19 @@ function drawLinkBadges(doc, graphId, layout, layer) {
       svgEl('title', {}, badge).textContent =
         link.type === 'same-as' ? `Same person in “${target}”` : `${label}linked to “${target}”`;
     });
+  }
+}
+
+// A handle on the right edge of the selected person: drag it onto someone to connect them.
+function drawConnectHandles(graph, selection, layout, layer) {
+  for (const id of selection) {
+    const pos = layout.nodes[id];
+    if (!pos || graph.nodes[id]?.type !== 'person') continue;
+    const cx = pos.x + pos.width / 2;
+    const handle = svgEl('g', { class: 'connect-handle', 'data-connect-from': id }, layer);
+    svgEl('title', {}, handle).textContent = 'Drag onto someone to connect them (or Ctrl/⌘+drag any card, or press C)';
+    svgEl('circle', { cx, cy: pos.y, r: 9 }, handle);
+    svgEl('path', { d: `M ${cx - 4} ${pos.y} h 8 M ${cx} ${pos.y - 4} v 8` }, handle);
   }
 }
 

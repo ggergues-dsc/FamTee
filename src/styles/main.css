@@ -314,3 +314,28 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .snapshot dt { padding-top: 0.1rem; color: var(--tile-ink); font-size: 0.72rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; }
 .snapshot dd { margin: 0; overflow-wrap: anywhere; }
 .snapshot-foot { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.72rem; }
+
+/* --- connecting people (src/ui/connect.js) --- */
+.famtee-canvas .person.unconnected { stroke-dasharray: 5 4; stroke-width: 1.5; }
+.famtee-canvas .edge-label { fill: var(--muted); font-size: 11px; }
+.famtee-canvas .connect-handle { cursor: crosshair; }
+.famtee-canvas .connect-handle circle { fill: var(--card-bg); stroke: var(--accent); stroke-width: 1.5; }
+.famtee-canvas .connect-handle path { stroke: var(--accent); stroke-width: 1.5; }
+.famtee-canvas .connect-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.famtee-canvas .connect-end { fill: var(--accent); pointer-events: none; }
+.famtee-canvas .card.connect-target, .famtee-canvas .card.connect-source { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: none; }
+.famtee-canvas.picking .card.person { cursor: crosshair; }
+.connect { position: absolute; z-index: 6; width: 300px; padding: 0.8rem 0.9rem 0.75rem; display: grid; gap: 0.55rem;
+  border: 1px solid var(--card-stroke); border-radius: 10px; background: var(--card-bg); color: var(--fg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); font-size: 0.85rem; }
+.connect h4 { margin: 0; font-size: 0.95rem; line-height: 1.3; text-wrap: balance; }
+.connect .field { display: grid; gap: 0.25rem; padding: 0.45rem 0.55rem 0.55rem; border-radius: 8px;
+  background: var(--tile-bg); border: 1px solid var(--tile-stroke); }
+.connect .field > span { font-size: 0.78rem; font-weight: 650; color: var(--tile-ink); }
+.connect .field:focus-within { border-color: var(--accent); }
+.connect .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.connect-extra:empty { display: none; }
+.connect-preview { margin: 0; padding-top: 0.5rem; border-top: 1px solid var(--card-stroke); font-size: 0.82rem; }
+.connect-actions { display: flex; align-items: center; gap: 0.4rem; }
+.connect-actions .muted { margin-left: auto; font-size: 0.75rem; }
+.notice.hint { background: var(--tile-bg); border-color: var(--tile-stroke); color: var(--tile-ink); }
