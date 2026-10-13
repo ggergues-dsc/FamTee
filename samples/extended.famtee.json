@@ -1,0 +1,536 @@
+{
+  "format": "famtee",
+  "schemaVersion": 1,
+  "meta": {
+    "id": "01JA0000000000000000000001",
+    "title": "Hanna family (extended sample)",
+    "created": "2026-10-12T00:00:00Z",
+    "modified": "2026-10-12T00:00:00Z",
+    "rootGraph": "g-hanna",
+    "theme": "default",
+    "overlay": {
+      "layers": []
+    }
+  },
+  "graphs": {
+    "g-hanna": {
+      "title": "Hanna family",
+      "nodes": {
+        "p-george": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "George",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1920"
+            },
+            "death": {
+              "date": "1990"
+            }
+          }
+        },
+        "p-mary": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Mary",
+              "surname": "Hanna"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1924"
+            },
+            "death": {
+              "date": "2001"
+            }
+          }
+        },
+        "u-george-mary": {
+          "type": "union",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        "p-peter": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Peter",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1946"
+            },
+            "death": {
+              "date": "2019"
+            }
+          }
+        },
+        "p-nadia": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Nadia",
+              "surname": "Saleh"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1948"
+            }
+          }
+        },
+        "p-helen": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Helen",
+              "surname": "Fahmy"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1952"
+            }
+          }
+        },
+        "p-samir": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Samir",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1950"
+            }
+          }
+        },
+        "p-lina": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Lina",
+              "surname": "Hanna"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1954"
+            }
+          }
+        },
+        "p-omar": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Omar",
+              "surname": "Khalil"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1951"
+            }
+          }
+        },
+        "u-peter-nadia": {
+          "type": "union",
+          "attrs": {
+            "kind": "divorced",
+            "end": "1980"
+          }
+        },
+        "u-peter-helen": {
+          "type": "union",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        "u-samir-single": {
+          "type": "union",
+          "attrs": {
+            "kind": "single"
+          }
+        },
+        "u-lina-omar": {
+          "type": "union",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        "p-mark": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Mark",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1972"
+            }
+          }
+        },
+        "p-sara": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Sara",
+              "surname": "Hanna"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1975"
+            }
+          }
+        },
+        "p-youssef": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Youssef",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1984"
+            }
+          }
+        },
+        "p-rami": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Rami",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1990"
+            }
+          }
+        },
+        "p-dina": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Dina",
+              "surname": "Khalil"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1976"
+            }
+          }
+        },
+        "p-karim": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Karim",
+              "surname": "Khalil"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1979"
+            }
+          }
+        },
+        "p-emma": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Emma",
+              "surname": "Wright"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1974"
+            }
+          }
+        },
+        "u-mark-emma": {
+          "type": "union",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        "u-youssef-dina": {
+          "type": "union",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        "p-leo": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Leo",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "2001"
+            }
+          }
+        },
+        "p-zoe": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Zoe",
+              "surname": "Hanna"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "2004"
+            }
+          }
+        },
+        "p-adam": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Adam",
+              "surname": "Hanna"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "2012"
+            }
+          }
+        }
+      },
+      "edges": [
+        {
+          "id": "e-1",
+          "type": "partner",
+          "from": "p-george",
+          "to": "u-george-mary",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-2",
+          "type": "partner",
+          "from": "p-mary",
+          "to": "u-george-mary",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-3",
+          "type": "child",
+          "from": "u-george-mary",
+          "to": "p-peter",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-4",
+          "type": "child",
+          "from": "u-george-mary",
+          "to": "p-samir",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-5",
+          "type": "child",
+          "from": "u-george-mary",
+          "to": "p-lina",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-6",
+          "type": "partner",
+          "from": "p-peter",
+          "to": "u-peter-nadia",
+          "attrs": {
+            "kind": "divorced"
+          }
+        },
+        {
+          "id": "e-7",
+          "type": "partner",
+          "from": "p-nadia",
+          "to": "u-peter-nadia",
+          "attrs": {
+            "kind": "divorced"
+          }
+        },
+        {
+          "id": "e-8",
+          "type": "partner",
+          "from": "p-peter",
+          "to": "u-peter-helen",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-9",
+          "type": "partner",
+          "from": "p-helen",
+          "to": "u-peter-helen",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-10",
+          "type": "partner",
+          "from": "p-samir",
+          "to": "u-samir-single",
+          "attrs": {
+            "kind": "single"
+          }
+        },
+        {
+          "id": "e-11",
+          "type": "partner",
+          "from": "p-lina",
+          "to": "u-lina-omar",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-12",
+          "type": "partner",
+          "from": "p-omar",
+          "to": "u-lina-omar",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-13",
+          "type": "child",
+          "from": "u-peter-nadia",
+          "to": "p-mark",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-14",
+          "type": "child",
+          "from": "u-peter-nadia",
+          "to": "p-sara",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-15",
+          "type": "child",
+          "from": "u-peter-helen",
+          "to": "p-youssef",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-16",
+          "type": "child",
+          "from": "u-samir-single",
+          "to": "p-rami",
+          "attrs": {
+            "kind": "adopted"
+          }
+        },
+        {
+          "id": "e-17",
+          "type": "child",
+          "from": "u-lina-omar",
+          "to": "p-dina",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-18",
+          "type": "child",
+          "from": "u-lina-omar",
+          "to": "p-karim",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-19",
+          "type": "partner",
+          "from": "p-mark",
+          "to": "u-mark-emma",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-20",
+          "type": "partner",
+          "from": "p-emma",
+          "to": "u-mark-emma",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-21",
+          "type": "partner",
+          "from": "p-youssef",
+          "to": "u-youssef-dina",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-22",
+          "type": "partner",
+          "from": "p-dina",
+          "to": "u-youssef-dina",
+          "attrs": {
+            "kind": "married"
+          }
+        },
+        {
+          "id": "e-23",
+          "type": "child",
+          "from": "u-mark-emma",
+          "to": "p-leo",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-24",
+          "type": "child",
+          "from": "u-mark-emma",
+          "to": "p-zoe",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-25",
+          "type": "child",
+          "from": "u-youssef-dina",
+          "to": "p-adam",
+          "attrs": {
+            "kind": "biological"
+          }
+        }
+      ]
+    }
+  },
+  "links": []
+}

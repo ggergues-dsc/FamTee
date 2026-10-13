@@ -3,17 +3,84 @@
   --fg: #1f2328;
   --muted: #6b6f76;
   --error: #b42318;
+  --accent: #2f6fdb;
+  --card-bg: #ffffff;
+  --card-stroke: #c9ccd1;
+  --card-m: #e8f0fc;
+  --card-f: #fbeaf0;
+  --card-u: #f1f1ef;
+  --ref-bg: #fff7e6;
+  --ref-stroke: #d9a640;
+  --edge: #8a8f98;
+  --group-bg: rgba(47, 111, 219, 0.05);
+  --group-stroke: rgba(47, 111, 219, 0.35);
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #16181c; --fg: #e6e6e6; --muted: #9aa0a6; --error: #f97066; }
+  :root {
+    --bg: #16181c; --fg: #e6e6e6; --muted: #9aa0a6; --error: #f97066; --accent: #7aa7ff;
+    --card-bg: #22252b; --card-stroke: #3c4048; --card-m: #1f2a3d; --card-f: #3a2430; --card-u: #2a2c30;
+    --ref-bg: #3a3020; --ref-stroke: #b48a35; --edge: #7d828b;
+    --group-bg: rgba(122, 167, 255, 0.06); --group-stroke: rgba(122, 167, 255, 0.35);
+  }
 }
+
+html, body { height: 100%; }
 body {
   margin: 0;
-  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   color: var(--fg);
   font: 15px/1.5 system-ui, sans-serif;
 }
 .muted { color: var(--muted); }
 .error { color: var(--error); }
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1.25rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--card-stroke);
+}
+.topbar h1 { margin: 0; font-size: 1.15rem; }
+.topbar p { margin: 0; }
+#breadcrumb button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+#breadcrumb button:hover { text-decoration: underline; }
+
+#app { flex: 1; min-height: 0; }
+#canvas { display: block; width: 100%; height: 100%; }
+
+/* --- graph (ADR 0003 layers) --- */
+.famtee-canvas .background { fill: var(--bg); }
+.famtee-canvas .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+.famtee-canvas .edge.kind-adopted,
+.famtee-canvas .edge.kind-foster,
+.famtee-canvas .edge.kind-step { stroke-dasharray: 5 4; }
+.famtee-canvas .edge.edge-partner.kind-divorced { stroke-dasharray: 2 4; }
+.famtee-canvas .edge.edge-custom { stroke-dasharray: 1 5; stroke-linecap: round; }
+.famtee-canvas .union { fill: var(--edge); }
+.famtee-canvas .card { stroke: var(--card-stroke); stroke-width: 1; cursor: pointer; }
+.famtee-canvas .person.sex-M { fill: var(--card-m); }
+.famtee-canvas .person.sex-F { fill: var(--card-f); }
+.famtee-canvas .person.sex-U { fill: var(--card-u); }
+.famtee-canvas .graph-ref { fill: var(--ref-bg); stroke: var(--ref-stroke); stroke-width: 1.5; }
+.famtee-canvas .group { fill: var(--group-bg); stroke: var(--group-stroke); stroke-dasharray: 4 3; }
+.famtee-canvas .layer-labels { pointer-events: none; }
+.famtee-canvas text { fill: var(--fg); text-anchor: middle; font-size: 13px; }
+.famtee-canvas .name { font-weight: 600; }
+.famtee-canvas .dates { fill: var(--muted); font-size: 11px; }
+.famtee-canvas .group-label { text-anchor: start; fill: var(--accent); font-size: 11px; }
+.famtee-canvas .link-badge { cursor: pointer; }
+.famtee-canvas .link-badge circle { fill: var(--accent); }
+.famtee-canvas .link-badge text { fill: #fff; font-size: 12px; font-weight: 700; }
+.famtee-canvas .selection { fill: none; stroke: var(--accent); stroke-width: 2.5; pointer-events: none; }

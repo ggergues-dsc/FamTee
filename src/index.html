@@ -7,7 +7,14 @@
 <link rel="stylesheet" href="./styles/main.css">
 </head>
 <body>
-<main id="app"></main>
+<header class="topbar">
+  <h1 id="doc-title">FamTee</h1>
+  <nav id="breadcrumb" aria-label="Graph path"></nav>
+  <p id="status" class="muted"></p>
+</header>
+<main id="app">
+  <svg id="canvas" role="img" aria-label="Family graph"></svg>
+</main>
 <script type="application/json" id="famtee-data"></script>
 <script type="module" src="./main.js"></script>
 </body>

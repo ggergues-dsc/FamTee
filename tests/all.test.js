@@ -7,5 +7,7 @@ import './validate.test.js';
 import './migrate.test.js';
 import './serialize.test.js';
 import './store.test.js';
+import './layout.test.js';
+import './render.test.js';
 
 run();

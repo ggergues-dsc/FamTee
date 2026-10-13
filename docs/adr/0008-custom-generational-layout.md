@@ -30,3 +30,21 @@ Overview graphs of `graphRef` tiles can use a simple grid or (later) d3-force.
 - + Genealogy-appropriate result, small code, deterministic output (stable between saves).
 - + Manual positions double as anchors for the future design overlay.
 - − We own the algorithm's edge cases (pedigree collapse, very wide generations); add tests with sample files.
+
+## Implementation notes (2026-10-12)
+
+Implemented in `src/layout/layout.js`, with refinements found while testing against `samples/extended.famtee.json`:
+
+- **Ranks** are found by constraint relaxation: partners are raised to a shared rank and children sit at least one
+  rank below their union. A person with **no parents** in the graph is pulled down to just above their children,
+  so in-laws and single parents don't float to the top row. The loop is capped, because valid but odd data
+  (e.g. partnering a grandchild's generation) can keep pushing ranks.
+- **Blocks**: each row is made of blocks. A block is a person, their same-generation partners and the union dots
+  between them. A block starts at a chain end, so someone with two partners sits between them.
+- **Placement** resolves each row with cluster merging: overlapping blocks merge and sit at the mean of their
+  desired positions. This centres sibling groups under their parents automatically. The passes run down, up,
+  then down again.
+- **Pins** are applied after layout rather than having the layout flow around them (simpler; revisit when
+  dragging is implemented). An unpinned union follows its pinned partners.
+- **Connector lanes** (renderer): child connectors from different unions in the same row are given separate
+  heights where their horizontal spans overlap. Otherwise a remarried parent's two families read as one.
