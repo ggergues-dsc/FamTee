@@ -38,7 +38,7 @@ export async function run() {
     }
   }
   const failed = results.filter((r) => !r.ok).length;
-  const summary = { total: results.length, failed, results };
+  const summary = { total: results.length, failed, results, userAgent: navigator.userAgent };
 
   const out = document.getElementById('results');
   out.textContent = results.map((r) => `${r.ok ? 'ok  ' : 'FAIL'} ${r.name}${r.ok ? '' : '\n     ' + r.error}`).join('\n') +

@@ -71,7 +71,7 @@ the bundled file from `file://`), then the end-to-end test against the built app
 devops/test.sh
 ```
 
-Runs the same suite in Docker with Python and Firefox ESR, on a read-only copy of the repo, with no network,
+Runs the same suite in Docker with Python, **Firefox ESR and Chromium**, on a read-only copy of the repo, with no network,
 leaving nothing behind. See [devops/README.md](../devops/README.md) and ADR 0014.
 
 ### CI/CD: merge through the gate
