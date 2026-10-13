@@ -1,0 +1,288 @@
+import { test, assert, assertEqual } from './harness.js';
+import { createPanel } from '../src/ui/panel.js';
+import { createToolbar } from '../src/ui/toolbar.js';
+import { h, confirmButton } from '../src/ui/dom.js';
+import { Store } from '../src/store/store.js';
+import { unionsOfPerson, parentUnionsOf, groupsOf } from '../src/store/family.js';
+import { addGraph, addPerson } from '../src/store/model.js';
+import { smallFamily } from './fixtures.js';
+
+// A panel wired to a real Store, with the same ctx contract main.js provides.
+function setup({ readOnly = false } = {}) {
+  const fam = smallFamily();
+  const store = new Store(fam.doc, { readOnly });
+  const view = { path: [fam.g], selection: new Set() };
+  const errors = [];
+  const container = h('div');
+  document.body.append(container);
+  const ctx = {
+    store, view,
+    currentGraph: () => view.path.at(-1),
+    edit(label, fn) {
+      try { return store.apply(label, fn); } catch (e) { errors.push(e.message); return undefined; }
+    },
+    editAndSelect(label, fn) { const id = ctx.edit(label, fn); if (id) ctx.select(id); },
+    select(id) { view.selection = id ? new Set([id]) : new Set(); panel.render(); },
+    open(graphId) { view.path.push(graphId); panel.render(); },
+    openNode(graphId, nodeId) { if (view.path.at(-1) !== graphId) view.path.push(graphId); ctx.select(nodeId); },
+    back() { view.path.pop(); panel.render(); },
+  };
+  const panel = createPanel(container, ctx);
+  store.subscribe(() => panel.render());
+  panel.render();
+  return { ...fam, store, view, ctx, panel, container, errors };
+}
+
+const field = (c, name) => c.querySelector(`[name="${name}"]`);
+const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent === text);
+const change = (el, value) => {
+  el.value = value;
+  el.dispatchEvent(new Event('change'));
+};
+const node = (s, id) => s.store.doc.graphs[s.g].nodes[id];
+
+test('person form edits nested attributes and removes emptied ones', () => {
+  const s = setup();
+  s.ctx.select(s.mum);
+  assertEqual(field(s.container, 'given').value, 'Ann');
+  change(field(s.container, 'surname'), '  Lee ');
+  change(field(s.container, 'birth-date'), '1950');
+  change(field(s.container, 'sex'), 'F');
+  assertEqual(node(s, s.mum).attrs.name, { given: 'Ann', surname: 'Lee' });
+  assertEqual(node(s, s.mum).attrs.birth, { date: '1950' });
+  assertEqual(node(s, s.mum).attrs.sex, 'F');
+  change(field(s.container, 'birth-date'), '');
+  assert(!('birth' in node(s, s.mum).attrs));
+  assertEqual(s.store.undoStack.length, 4);
+  s.container.remove();
+});
+
+test('panel keeps its inputs across edits (focus is not lost)', () => {
+  const s = setup();
+  s.ctx.select(s.mum);
+  const surname = field(s.container, 'surname');
+  change(field(s.container, 'given'), 'Anna');
+  assert(field(s.container, 'surname') === surname, 'same element after edit');
+  s.store.undo();
+  assertEqual(field(s.container, 'given').value, 'Ann', 'values refresh after undo');
+  s.container.remove();
+});
+
+test('adding relatives selects the new person', () => {
+  const s = setup();
+  s.ctx.select(s.kid);
+  button(s.container, '+ Partner').click();
+  const [partner] = s.view.selection;
+  assert(partner !== s.kid && node(s, partner).type === 'person');
+  assertEqual(unionsOfPerson(s.store.doc.graphs[s.g], s.kid)[0].partners, [partner]);
+
+  s.ctx.select(s.kid);
+  assertEqual(field(s.container, 'child-union').selectedIndex, 0, 'defaults to the first partnership');
+  button(s.container, '+ Child').click();
+  const [child] = s.view.selection;
+  const [union] = unionsOfPerson(s.store.doc.graphs[s.g], s.kid);
+  assertEqual(union.children, [child]);
+
+  s.ctx.select(child);
+  assert(button(s.container, '+ Parent').disabled, 'already has two parents');
+  s.ctx.select(partner);
+  assert(!button(s.container, '+ Parent').disabled, 'married-in partner has no parents yet');
+  button(s.container, '+ Parent').click();
+  assertEqual(parentUnionsOf(s.store.doc.graphs[s.g], partner).length, 1);
+  s.container.remove();
+});
+
+test('delete needs a second click', () => {
+  const s = setup();
+  s.ctx.select(s.kid);
+  const del = button(s.container, 'Delete person');
+  del.click();
+  assert(node(s, s.kid), 'first click only arms');
+  assertEqual(del.textContent, 'Click again to delete');
+  del.click();
+  assert(!node(s, s.kid));
+  assertEqual(s.view.selection.size, 0);
+  s.container.remove();
+});
+
+test('union panel edits the partnership', () => {
+  const s = setup();
+  s.ctx.select(s.union);
+  change(field(s.container, 'kind'), 'divorced');
+  change(field(s.container, 'end'), '1990');
+  assertEqual(node(s, s.union).attrs, { kind: 'divorced', end: '1990' });
+  assertEqual(s.container.querySelectorAll('.people li').length, 3);
+  s.container.remove();
+});
+
+test('graph panel renames, adds people and sub-graphs', () => {
+  const s = setup();
+  assert(!/\bnull\b|undefined/.test(s.container.textContent), 'no stray null/undefined text');
+  assert(!button(s.container, 'Delete this graph'), 'root graph cannot be deleted');
+  change(field(s.container, 'doc-title'), 'The Lees');
+  change(field(s.container, 'graph-title'), 'Main line');
+  assertEqual(s.store.doc.meta.title, 'The Lees');
+  assertEqual(s.store.doc.graphs[s.g].title, 'Main line');
+  button(s.container, '+ Person').click();
+  assertEqual(node(s, [...s.view.selection][0]).attrs.name.given, 'New person');
+  s.ctx.select(null);
+  button(s.container, '+ Sub-graph').click();
+  assertEqual(s.view.path.length, 2);
+  assertEqual(s.store.doc.graphs[s.view.path[1]].title, 'New family');
+  assert(button(s.container, 'Delete this graph'), 'sub-graphs can be deleted');
+  s.container.remove();
+});
+
+test('Reset layout clears all manual moves in one step', () => {
+  const s = setup();
+  const reset = button(s.container, 'Reset layout');
+  assert(reset.hidden, 'hidden while nothing was moved');
+  s.store.apply('move', (d) => {
+    d.graphs[s.g].nodes[s.mum].attrs.nudge = { dx: 5, dy: 0 };
+    d.graphs[s.g].nodes[s.kid].attrs.nudge = { dx: 0, dy: 9 };
+  });
+  assert(!reset.hidden);
+  reset.click();
+  assert(!node(s, s.mum).attrs.nudge && !node(s, s.kid).attrs.nudge);
+  assertEqual(s.store.undoStack.at(-1).label, 'Reset layout');
+  s.container.remove();
+});
+
+test('rejected edits leave the document unchanged and report why', () => {
+  const s = setup();
+  s.ctx.select(s.kid);
+  // Making the child a parent of its own mother would be an ancestry cycle.
+  s.ctx.edit('cycle', (doc) => {
+    const u = parentUnionsOf(doc.graphs[s.g], s.kid)[0];
+    doc.graphs[s.g].edges.push({ id: 'e-bad', type: 'partner', from: s.kid, to: u, attrs: {} });
+  });
+  assertEqual(s.errors.length, 1);
+  assert(/ancestry cycle/.test(s.errors[0]));
+  assert(!s.store.canUndo);
+  s.container.remove();
+});
+
+test('read-only documents disable every control', () => {
+  const s = setup({ readOnly: true });
+  s.ctx.select(s.mum);
+  // Name links in the relatives lists only change the selection, so they stay enabled.
+  const controls = [...s.container.querySelectorAll('input, select, textarea, button:not(.link)')];
+  assert(controls.length > 5);
+  assert(controls.every((c) => c.disabled), controls.filter((c) => !c.disabled).map((c) => c.outerHTML).join());
+  assert(s.container.querySelectorAll('button.link:not(:disabled)').length > 0);
+  s.container.remove();
+});
+
+test('toolbar reflects store state', () => {
+  const { doc, g } = smallFamily();
+  const store = new Store(doc);
+  const container = h('div');
+  let saved = 0;
+  const toolbar = createToolbar(container, { undo: () => store.undo(), redo: () => store.redo(), save: () => saved++, exportJson() {}, importFile() {} });
+  toolbar.render(store);
+  assert(button(container, 'Undo').disabled);
+  assertEqual(container.querySelector('.save-state').textContent, 'All changes saved');
+  store.apply('Rename', (d) => { d.graphs[g].title = 'x'; });
+  toolbar.render(store);
+  assert(!button(container, 'Undo').disabled);
+  assert(button(container, 'Undo').title.startsWith('Undo Rename'));
+  assertEqual(container.querySelector('.save-state').textContent, '● Unsaved changes');
+  button(container, 'Save').click();
+  assertEqual(saved, 1);
+});
+
+test('links: copy into another graph, link, label, open and remove', () => {
+  const s = setup();
+  s.ctx.select(s.mum);
+  assert(!s.container.querySelector('.link-form') || s.container.querySelector('.link-form').hidden, 'no other graphs yet');
+  let other;
+  let stranger;
+  s.store.apply('setup', (d) => {
+    other = addGraph(d, { title: 'In-laws' });
+    stranger = addPerson(d, other, { name: { given: 'Zed' } });
+  });
+  assert(!s.container.querySelector('.link-form').hidden);
+  assertEqual(field(s.container, 'link-graph').value, other);
+  s.store.apply('empty graph first', (d) => {
+    const { [other]: moved, ...rest } = d.graphs;
+    d.graphs = { ...rest, 'g-empty': { title: 'Empty', nodes: {}, edges: [] }, [other]: moved };
+  });
+  s.ctx.select(null);
+  s.ctx.select(s.mum); // fresh panel: no remembered choice
+  assertEqual(field(s.container, 'link-graph').options[0].textContent, 'Empty');
+  assertEqual(field(s.container, 'link-graph').value, other, 'defaults to a graph with people, not the first one');
+  assertEqual([...field(s.container, 'link-person').options].map((o) => o.textContent), ['Zed']);
+
+  button(s.container, 'Copy into that graph').click();
+  const copyLink = s.store.doc.links[0];
+  assertEqual(copyLink.type, 'same-as');
+  assert(button(s.container, 'Copy into that graph').disabled, 'already in that graph');
+  assertEqual([...field(s.container, 'link-person').options].map((o) => o.textContent), ['Zed'], 'own copy is not offered');
+
+  change(field(s.container, 'link-type'), 'custom');
+  assert(!field(s.container, 'link-label').hidden);
+  assertEqual(field(s.container, 'link-person').options.length, 2, 'related-to may target anyone');
+  field(s.container, 'link-person').value = stranger;
+  field(s.container, 'link-label').value = 'godparent';
+  button(s.container, 'Link').click();
+  assertEqual(s.store.doc.links[1].attrs, { label: 'godparent' });
+  const items = [...s.container.querySelectorAll('.links li')].map((li) => li.querySelector('.link').textContent);
+  assertEqual(items, ['Same person in In-laws', 'godparent: Zed (In-laws)']);
+
+  s.container.querySelectorAll('.links li')[1].querySelector('.link').click();
+  assertEqual([s.view.path.at(-1), [...s.view.selection][0]], [other, stranger]);
+  s.ctx.select(stranger);
+  s.container.querySelector('.links li .icon').click();
+  assertEqual(s.store.doc.links.length, 1);
+  s.container.remove();
+});
+
+test('groups: create, add, remove, rename and delete from the panels', () => {
+  const s = setup();
+  const graph = () => s.store.doc.graphs[s.g];
+  s.ctx.select(s.mum);
+  assertEqual(field(s.container, 'add-group').value, '', 'only "New group" when none exist');
+  button(s.container, 'Add to group').click();
+  const [group] = groupsOf(graph(), s.mum);
+  assertEqual(graph().nodes[group].attrs.label, 'New group');
+
+  s.ctx.select(s.dad);
+  assertEqual(field(s.container, 'add-group').value, group, 'existing group offered first');
+  button(s.container, 'Add to group').click();
+  assertEqual(graph().nodes[group].attrs.members, [s.mum, s.dad]);
+
+  s.ctx.select(group);
+  change(field(s.container, 'group-label'), 'Household');
+  assertEqual(graph().nodes[group].attrs.label, 'Household');
+  assertEqual([...s.container.querySelectorAll('.people li .link')].map((b) => b.textContent), ['Ann', 'Bob']);
+  s.container.querySelector('.people li .icon').click();
+  assertEqual(graph().nodes[group].attrs.members, [s.dad]);
+
+  s.ctx.select(s.dad);
+  s.container.querySelector('.people li .icon[title^="Remove from"]').click();
+  assert(!graph().nodes[group], 'removing the last member removes the group');
+
+  s.ctx.select(s.kid);
+  button(s.container, 'Add to group').click();
+  const [g2] = groupsOf(graph(), s.kid);
+  s.ctx.select(null);
+  assert([...s.container.querySelectorAll('.people li .link')].some((b) => b.textContent === 'New group'), 'graph panel lists groups');
+  s.ctx.select(g2);
+  const del = button(s.container, 'Delete group');
+  del.click();
+  del.click();
+  assert(!graph().nodes[g2] && graph().nodes[s.kid], 'group deleted, member kept');
+  s.container.remove();
+});
+
+test('h() treats strings as text, never markup', () => {
+  const el = h('p', { class: 'x', dataset: { id: '1' } }, '<b>bold</b>', null, ['a', 'b']);
+  assertEqual(el.innerHTML, '&lt;b&gt;bold&lt;/b&gt;ab');
+  assertEqual(el.dataset.id, '1');
+  let ran = 0;
+  const b = confirmButton('Go', 'Sure?', () => ran++);
+  b.click();
+  assertEqual(ran, 0);
+  b.click();
+  assertEqual(ran, 1);
+});

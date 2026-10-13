@@ -1,0 +1,34 @@
+# FamTee Documentation
+
+FamTee is a lightweight, portable family-tree application: graph data and its visualization live together
+in a single HTML file that opens in any modern browser on any OS, with no install, server or network.
+
+## Documents
+
+| Document | Purpose |
+|---|---|
+| [architecture.md](architecture.md) | The architecture outcome: goals, constraints, components, repo layout |
+| [data-model.md](data-model.md) | The native JSON format (compound / multi-graph) |
+| [development.md](development.md) | Building, testing, code layout and the supported module syntax |
+| [options-considered.md](options-considered.md) | All options surveyed during the architecture session and how they scored |
+| [adr/](adr/) | Architecture Decision Records — one file per decision, with rationale |
+
+## Decision log
+
+| # | Decision | Status |
+|---|---|---|
+| [0001](adr/0001-hybrid-single-file-packaging.md) | Hybrid packaging: single HTML with embedded data + external JSON import/export | Accepted |
+| [0002](adr/0002-no-framework-vanilla-es-modules-with-inline-build.md) | No framework; vanilla ES modules inlined by a tiny build | Accepted (tooling amended by 0011) |
+| [0003](adr/0003-svg-layered-rendering.md) | SVG rendering organised in named layers | Accepted |
+| [0004](adr/0004-compound-multi-graph-json-data-model.md) | Compound multi-graph JSON data model | Accepted |
+| [0005](adr/0005-union-nodes-for-family-relations.md) | Union nodes for partnerships / parentage | Accepted |
+| [0006](adr/0006-persistence-file-system-access-with-download-fallback.md) | Save via File System Access API, download fallback, local autosave | Accepted |
+| [0007](adr/0007-vendored-micro-dependencies-d3.md) | Vendored micro-dependencies (d3 modules) only | Accepted (d3-zoom superseded by 0012) |
+| [0008](adr/0008-custom-generational-layout.md) | Custom generational layout with manual overrides | Accepted |
+| [0009](adr/0009-overlay-layer-for-future-graphic-design.md) | Reserved overlay layer for future graphic design | Accepted |
+| [0010](adr/0010-gedcom-interop-as-import-export-only.md) | GEDCOM as import/export adapter, not native format | Accepted |
+| [0011](adr/0011-python-build-and-browser-tests.md) | Python build script and in-browser tests (no Node.js); amends 0002 tooling | Accepted |
+| [0012](adr/0012-hand-written-pointer-events-pan-zoom-drag.md) | Hand-written pan/zoom and drag on Pointer Events; drags stored as offsets | Accepted |
+
+New decisions: copy [adr/0000-adr-template.md](adr/0000-adr-template.md), take the next number, add a row above.
+A decision is never edited away — supersede it with a new ADR and mark the old one `Superseded by NNNN`.

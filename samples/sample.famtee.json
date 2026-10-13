@@ -1,0 +1,57 @@
+{
+  "format": "famtee",
+  "schemaVersion": 1,
+  "meta": {
+    "id": "01JA0000000000000000000000",
+    "title": "Sample family",
+    "created": "2026-10-12T00:00:00Z",
+    "modified": "2026-10-12T00:00:00Z",
+    "rootGraph": "g-overview",
+    "theme": "default",
+    "overlay": { "layers": [] }
+  },
+  "graphs": {
+    "g-overview": {
+      "title": "Families",
+      "nodes": {
+        "ref-smith": { "type": "graphRef", "attrs": { "graph": "g-smith", "label": "Smith family" } },
+        "ref-garcia": { "type": "graphRef", "attrs": { "graph": "g-garcia", "label": "Garcia family" } }
+      },
+      "edges": []
+    },
+    "g-smith": {
+      "title": "Smith family",
+      "nodes": {
+        "p-john": { "type": "person", "attrs": { "name": { "given": "John", "surname": "Smith" }, "sex": "M", "birth": { "date": "1948" } } },
+        "p-anne": { "type": "person", "attrs": { "name": { "given": "Anne", "surname": "Smith" }, "sex": "F", "birth": { "date": "1950" } } },
+        "u-john-anne": { "type": "union", "attrs": { "kind": "married", "start": "1972" } },
+        "p-david": { "type": "person", "attrs": { "name": { "given": "David", "surname": "Smith" }, "sex": "M", "birth": { "date": "1975" } } },
+        "p-sarah": { "type": "person", "attrs": { "name": { "given": "Sarah", "surname": "Smith" }, "sex": "F", "birth": { "date": "1978" } } }
+      },
+      "edges": [
+        { "id": "e-1", "type": "partner", "from": "p-john", "to": "u-john-anne", "attrs": {} },
+        { "id": "e-2", "type": "partner", "from": "p-anne", "to": "u-john-anne", "attrs": {} },
+        { "id": "e-3", "type": "child", "from": "u-john-anne", "to": "p-david", "attrs": { "kind": "biological" } },
+        { "id": "e-4", "type": "child", "from": "u-john-anne", "to": "p-sarah", "attrs": { "kind": "biological" } }
+      ]
+    },
+    "g-garcia": {
+      "title": "Garcia family",
+      "nodes": {
+        "p-luis": { "type": "person", "attrs": { "name": { "given": "Luis", "surname": "Garcia" }, "sex": "M", "birth": { "date": "1976" } } },
+        "p-sarah-g": { "type": "person", "attrs": { "name": { "given": "Sarah", "surname": "Garcia" }, "sex": "F", "birth": { "date": "1978" } } },
+        "u-luis-sarah": { "type": "union", "attrs": { "kind": "married", "start": "2003" } },
+        "p-mia": { "type": "person", "attrs": { "name": { "given": "Mia", "surname": "Garcia" }, "sex": "F", "birth": { "date": "2006" } } },
+        "grp-household": { "type": "group", "attrs": { "label": "Household", "members": ["p-luis", "p-sarah-g", "p-mia"] } }
+      },
+      "edges": [
+        { "id": "e-5", "type": "partner", "from": "p-luis", "to": "u-luis-sarah", "attrs": {} },
+        { "id": "e-6", "type": "partner", "from": "p-sarah-g", "to": "u-luis-sarah", "attrs": {} },
+        { "id": "e-7", "type": "child", "from": "u-luis-sarah", "to": "p-mia", "attrs": { "kind": "biological" } }
+      ]
+    }
+  },
+  "links": [
+    { "id": "l-sarah", "type": "same-as", "from": "g-smith:p-sarah", "to": "g-garcia:p-sarah-g", "attrs": {} }
+  ]
+}

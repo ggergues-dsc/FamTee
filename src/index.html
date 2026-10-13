@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FamTee</title>
+<link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+<header class="topbar">
+  <h1 id="doc-title">FamTee</h1>
+  <nav id="breadcrumb" aria-label="Graph path"></nav>
+  <div id="toolbar" class="toolbar"></div>
+</header>
+<div id="notice" class="notice" role="status" hidden></div>
+<main id="app">
+  <svg id="canvas" role="img" aria-label="Family graph"></svg>
+  <aside id="panel" class="panel" aria-label="Details"></aside>
+</main>
+<script type="application/json" id="famtee-data"></script>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

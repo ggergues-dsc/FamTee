@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FamTee end-to-end</title>
+</head>
+<body>
+<pre id="results">running…</pre>
+<iframe id="app" width="1200" height="800" title="app"></iframe>
+<script type="module">
+// End-to-end: drive the built single-file app in an iframe (served over http so it is
+// same-origin), edit through its real UI, save, reopen the saved file, save again.
+// Run by tests/run.py with ?app=<built html>&report=<url>.
+import { test, assert, assertEqual, run } from './harness.js';
+
+const params = new URLSearchParams(location.search);
+const frame = document.getElementById('app');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function load(props) {
+  const loaded = new Promise((resolve) => { frame.onload = resolve; });
+  frame.removeAttribute('srcdoc');
+  Object.assign(frame, props);
+  await loaded;
+  for (let i = 0; i < 100 && !frame.contentWindow.famtee; i++) await sleep(20);
+  const win = frame.contentWindow;
+  assert(win.famtee, 'app booted');
+  return { win, doc: win.document, app: win.famtee };
+}
+
+// The app saves through the File System Access API when present; stub it to capture output.
+function capturePicker(win) {
+  const saved = [];
+  win.showSaveFilePicker = async () => ({
+    createWritable: async () => ({ write: async (c) => saved.push(c), close: async () => {} }),
+  });
+  return saved;
+}
+
+const byText = (doc, text) => [...doc.querySelectorAll('button')].find((b) => b.textContent === text);
+const change = (el, value) => { el.value = value; el.dispatchEvent(new Event('change')); };
+let savedHtml;
+let editedDoc;
+
+test('edit through the UI, save, and reopen the saved file', async () => {
+  let { win, doc, app } = await load({ src: params.get('app') });
+  win.localStorage.clear();
+  app.ctx.select('p-peter');
+  change(doc.querySelector('[name="given"]'), 'Pierre');
+  byText(doc, '+ Child').click();
+  const [child] = app.view.selection;
+  change(doc.querySelector('[name="given"]'), 'Baby');
+  assert([...doc.querySelectorAll('.layer-labels .name')].some((t) => t.textContent === 'Pierre Hanna'), 'canvas shows edit');
+  assertEqual(doc.querySelector('.save-state').textContent, '● Unsaved changes');
+
+  const saved = capturePicker(win);
+  byText(doc, 'Save').click();
+  await sleep(100);
+  assertEqual(saved.length, 1);
+  assertEqual(doc.querySelector('.save-state').textContent, 'All changes saved');
+  savedHtml = saved[0];
+  editedDoc = JSON.parse(JSON.stringify(app.store.doc));
+  assert(!savedHtml.includes('class="card'), 'saved file has no rendered output baked in');
+
+  ({ win, doc, app } = await load({ srcdoc: savedHtml }));
+  assertEqual(app.store.doc, editedDoc);
+  assertEqual(app.store.doc.graphs['g-hanna'].nodes[child].attrs.name.given, 'Baby');
+  assert(!app.store.dirty);
+
+  const resaved = capturePicker(win);
+  await app.save('html');
+  assertEqual(resaved.length, 1);
+  assert(resaved[0] === savedHtml, 'saving an unchanged reopened file is byte-identical');
+});
+
+test('unsaved edits are recovered from the draft after reopening', async () => {
+  let { win, doc, app } = await load({ srcdoc: savedHtml });
+  app.ctx.select('p-mary');
+  change(doc.querySelector('[name="surname"]'), 'Draftly');
+  await sleep(1100); // autosave debounce
+  ({ win, doc, app } = await load({ srcdoc: savedHtml }));
+  assertEqual(app.store.doc, editedDoc, 'file content is unchanged');
+  const restore = byText(doc, 'Restore');
+  assert(restore && !doc.getElementById('notice').hidden, 'recovery notice shown');
+  restore.click();
+  assertEqual(app.store.doc.graphs['g-hanna'].nodes['p-mary'].attrs.name.surname, 'Draftly');
+  assert(app.store.dirty, 'restored draft still needs saving');
+  win.localStorage.clear();
+});
+
+test('export JSON and import it back', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  const saved = capturePicker(win);
+  byText(doc, 'Export JSON').click();
+  await sleep(100);
+  assertEqual(JSON.parse(saved[0]), editedDoc);
+
+  app.store.apply('wipe', (d) => { d.meta.title = 'Changed'; });
+  const file = new win.File([saved[0]], 'family.famtee.json', { type: 'application/json' });
+  const input = doc.querySelector('.toolbar input[type="file"]');
+  const transfer = new win.DataTransfer();
+  transfer.items.add(file);
+  input.files = transfer.files;
+  input.dispatchEvent(new win.Event('change'));
+  await sleep(200);
+  assertEqual(app.store.doc.meta.title, editedDoc.meta.title);
+  app.store.undo();
+  assertEqual(app.store.doc.meta.title, 'Changed', 'import is undoable');
+});
+
+test('drag moves a card (undoably); pan and zoom never touch the document', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  const svg = doc.getElementById('canvas');
+  const fire = (type, target, x, y) => target.dispatchEvent(new win.PointerEvent(type, {
+    bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y,
+  }));
+  const cardX = () => Number(doc.querySelector('rect.card[data-id="p-leo"]').getAttribute('x'));
+  const k = app.getTransform().k;
+  const x0 = cardX();
+  const r = doc.querySelector('rect.card[data-id="p-leo"]').getBoundingClientRect();
+  const [cx, cy] = [r.left + r.width / 2, r.top + r.height / 2];
+
+  fire('pointerdown', doc.querySelector('rect.card[data-id="p-leo"]'), cx, cy);
+  fire('pointermove', svg, cx + 30, cy);
+  fire('pointermove', svg, cx + 60, cy);
+  assert(doc.querySelector('rect.card.dragging'), 'live preview while dragging');
+  assert(!app.store.dirty, 'nothing stored until drop');
+  fire('pointerup', svg, cx + 60, cy);
+  const nudge = app.store.doc.graphs['g-hanna'].nodes['p-leo'].attrs.nudge;
+  assertEqual(nudge, { dx: Math.round(60 / k), dy: 0 });
+  assert(Math.abs(cardX() - x0 - 60 / k) <= 1, 'card drawn at the new place');
+  assertEqual(app.store.undoStack.at(-1).label, 'Move person');
+  assertEqual(app.view.selection.size, 0, 'drop does not select');
+  app.store.undo();
+  assertEqual(cardX(), x0);
+
+  const t1 = app.getTransform();
+  const undoDepth = app.store.undoStack.length;
+  const sr = svg.getBoundingClientRect();
+  fire('pointerdown', svg, sr.left + 5, sr.top + 5);
+  fire('pointermove', svg, sr.left + 45, sr.top + 25);
+  fire('pointerup', svg, sr.left + 45, sr.top + 25);
+  assertEqual(app.getTransform(), { ...t1, x: t1.x + 40, y: t1.y + 20 });
+  assertEqual(app.store.undoStack.length, undoDepth, 'panning is not an edit');
+
+  byText(doc, '+').click();
+  assert(Math.abs(app.getTransform().k - t1.k * 1.25) < 1e-9);
+  const zoomed = app.getTransform();
+  app.ctx.select('p-leo');
+  change(doc.querySelector('[name="surname"]'), 'Moved');
+  assertEqual(app.getTransform(), zoomed, 'view kept across edits');
+  byText(doc, 'Fit').click();
+  assertEqual(app.getTransform(), t1, 'Fit returns to the initial fitted view');
+});
+
+test('copy a person into a sub-graph, follow the badge there and back; group via the panel', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  byText(doc, '+ Sub-graph').click();
+  const sub = app.view.path.at(-1);
+  assertEqual(app.store.doc.graphs[sub].title, 'New family');
+  doc.querySelector('#breadcrumb button').click();
+  app.ctx.select('p-nadia');
+  const graphSelect = doc.querySelector('[name="link-graph"]');
+  change(graphSelect, sub);
+  byText(doc, 'Copy into that graph').click();
+  assertEqual(Object.keys(app.store.doc.graphs[sub].nodes).length, 1, 'the new graph now holds the copy');
+
+  const badge = doc.querySelector('.link-badge');
+  assert(badge, 'badge on the original card');
+  badge.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  assertEqual(app.view.path.at(-1), sub, 'badge opens the other graph');
+  const [copy] = app.view.selection;
+  assertEqual(app.store.doc.graphs[sub].nodes[copy].attrs.name.given, 'Nadia');
+  doc.querySelector('.link-badge').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  assertEqual([app.view.path.at(-1), [...app.view.selection][0]], ['g-hanna', 'p-nadia'], 'and back');
+
+  byText(doc, 'Add to group').click();
+  app.ctx.select('p-peter');
+  byText(doc, 'Add to group').click();
+  const groups = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'group');
+  assertEqual(groups.map((n) => n.attrs.members), [['p-nadia', 'p-peter']], 'joined the existing group');
+  const hull = doc.querySelector('rect.group');
+  assert(hull, 'group drawn');
+  hull.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  assertEqual(doc.querySelector('#panel h2').textContent, 'Group');
+  app.store.undo();
+  app.store.undo();
+  assert(!doc.querySelector('rect.group'), 'undo removes the group');
+});
+
+test('GEDCOM: export the graph, import it back as a new graph, undo', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  app.store.apply('dirty', (d) => { d.meta.title = 'Unsaved title'; });
+  const count = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'person').length;
+  const saved = capturePicker(win);
+  byText(doc, 'Export GEDCOM').click();
+  await sleep(100);
+  assertEqual(saved.length, 1);
+  const ged = saved[0];
+  assert(ged.startsWith('0 HEAD\r\n') && ged.trimEnd().endsWith('0 TRLR'));
+  assertEqual((ged.match(/^0 @I\d+@ INDI/gm) ?? []).length, count);
+  assert(app.store.dirty, 'a GEDCOM export does not count as saving');
+  assert(doc.getElementById('notice').textContent.includes(`${count} people`));
+
+  const graphsBefore = Object.keys(app.store.doc.graphs).length;
+  const input = doc.querySelector('.toolbar input[type="file"]');
+  const transfer = new win.DataTransfer();
+  transfer.items.add(new win.File([ged], 'hanna.ged', { type: 'application/x-gedcom' }));
+  input.files = transfer.files;
+  input.dispatchEvent(new win.Event('change'));
+  await sleep(300);
+  const graphId = app.view.path.at(-1);
+  assert(graphId !== 'g-hanna', 'opened the imported graph');
+  assertEqual(app.store.doc.graphs[graphId].title, 'hanna');
+  const names = (g) => Object.values(app.store.doc.graphs[g].nodes).filter((n) => n.type === 'person')
+    .map((n) => `${n.attrs.name?.given} ${n.attrs.name?.surname}`).sort();
+  assertEqual(names(graphId), names('g-hanna'));
+  assertEqual(doc.querySelectorAll('.card.person').length, count, 'imported graph is drawn');
+  assert(Object.values(app.store.doc.graphs['g-hanna'].nodes).some((n) => n.type === 'graphRef' && n.attrs.graph === graphId),
+    'tile added to the graph it was imported from');
+  app.store.undo();
+  assertEqual(Object.keys(app.store.doc.graphs).length, graphsBefore);
+  assertEqual(app.view.path.at(-1), 'g-hanna', 'view returns when the graph disappears');
+});
+
+run();
+</script>
+</body>
+</html>
