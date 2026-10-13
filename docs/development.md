@@ -33,21 +33,24 @@ divorce, adoption and a cousin marriage. Append `#g=<graphId>&sel=<nodeId>` to t
 
 ## Editing and saving
 
+Every session starts on the **start screen**: open the family stored in the file, continue an unsaved session kept
+in this browser, start a new tree, or open another file. `#start=file|new|continue` skips it (ADR 0017).
+
 | Action | How |
 |---|---|
-| Edit a person / partnership | Click it; edit fields in the side panel (applied when a field loses focus or on Enter) |
+| See everything about a node | Click it: the side panel shows the editable fields and **All attributes** (every stored field, ID, photo, manual position) |
+| Edit a person / partnership | Edit fields in the side panel (applied when a field loses focus or on Enter) |
 | Add partner, child, parent | Buttons in the person panel; "+ Child" asks which partnership |
-| Add person / sub-graph, rename | Panel with nothing selected (click empty canvas or press Esc) |
-| Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person or group |
-| Photos | Person panel → **Add photo…** (or drop an image on the circle). Shrunk to 256 px JPEG and embedded; **Change…** / **Remove**. The graph panel shows how much photos add to the file |
-| Link across graphs | Person panel → "In other graphs": **Copy into that graph** (same person, new card there), or link to someone there as the **same person** or **related** (with a label). The **=** / **↔** badge on a card opens the other side |
-| Groups | Person panel → "Add to group" (existing or new). Click a group's outline to rename it, remove members or delete it |
-| Move a card | Drag it (one undoable step). "Reset position" in the panel, or "Reset layout" for the whole graph |
+| Add person, rename the family | Panel with nothing selected (click empty canvas or press Esc) |
+| Photos | Person panel → **Add photo…** (or drop an image on the circle). Shrunk to 256 px JPEG and embedded |
+| Advanced (collapsed) | Groups, links to other graphs, sub-graphs, adding GEDCOM as a sub-graph, position/layout reset |
+| Move a card | Drag it (one undoable step). Advanced → "Reset position" / "Reset layout" |
 | Pan / zoom | Drag the background; scroll wheel or pinch; + / − / Fit buttons; keys `+` `-` `0` |
+| Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person or group |
 | Undo / redo | Toolbar, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or Ctrl+Y |
-| Save | Ctrl/⌘+S or Save. Chromium overwrites the file you pick; Firefox/Safari download a new copy |
-| Export / import | Export ▸ FamTee data writes `.famtee.json`; Import… reads `.famtee.json` or a FamTee `.html` and replaces the document (undoable) |
-| GEDCOM | **Export ▸ GEDCOM: this graph** writes the graph on screen as a 5.5.1 `.ged`; **Export ▸ GEDCOM: all graphs merged** writes every graph as one tree, with people linked as the same person written once. **Import…** with a `.ged` file adds it as a new graph with a tile in the current graph (undoable). Both list what couldn't be carried over |
+| Keep working | Changes are kept **in this browser** automatically; the toolbar says when, and that they are not downloaded |
+| Save to disk | **Download** (Ctrl/⌘+S): a new file named `<family>-<date-time>-<fingerprint>.html`, stamped with its content hash. Nothing is overwritten |
+| Export / open | **Export ▾**: FamTee data (`.famtee.json`), GEDCOM, and (with several graphs) GEDCOM merged. **Open…** replaces the family with a file (undoable) |
 
 Edits that would break integrity (e.g. making someone their own ancestor) are rejected with a message, and the
 document is left unchanged.

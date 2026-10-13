@@ -18,5 +18,7 @@ import './links-groups.test.js';
 import './gedcom.test.js';
 import './gedcom-merged.test.js';
 import './photo.test.js';
+import './revision.test.js';
+import './session.test.js';
 
 run();

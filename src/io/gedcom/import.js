@@ -3,7 +3,7 @@
 // else is counted and reported, not silently dropped.
 
 import { newId } from '../../store/ids.js';
-import { getGraph, addGraphRef } from '../../store/model.js';
+import { getGraph, addGraphRef, createDocument } from '../../store/model.js';
 import { parseGedcom, child, childrenOf, valueOf, unescapeValue } from './lines.js';
 import { dateFromGedcom, nameFromGedcom } from './convert.js';
 
@@ -139,4 +139,12 @@ export function addImportedGraph(doc, parentGraphId, graph) {
   doc.graphs[graphId] = structuredClone(graph);
   addGraphRef(doc, parentGraphId, graphId, { label: graph.title });
   return graphId;
+}
+
+// A new document whose only tree is the imported graph (the start screen's and
+// Open…'s way of opening a GEDCOM file).
+export function documentFromGedcom(graph) {
+  const doc = createDocument({ title: graph.title, graphTitle: graph.title });
+  doc.graphs[doc.meta.rootGraph] = structuredClone(graph);
+  return doc;
 }

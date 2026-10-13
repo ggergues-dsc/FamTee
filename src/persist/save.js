@@ -1,6 +1,5 @@
-// Saving the document (ADR 0006): the whole app as one HTML file, or the data as
-// JSON. Chromium writes in place via the File System Access API; other browsers
-// download a new copy.
+// Writing the document to disk (ADR 0006, 0017): the whole app as one HTML file, or
+// the data as JSON, always as a download. Nothing is overwritten in place.
 
 import { replaceDataBlock, serialize } from '../store/serialize.js';
 import { withoutUnusedMedia } from '../store/media.js';
@@ -21,16 +20,6 @@ export function buildHtml(template, doc) {
   return replaceDataBlock(template, doc);
 }
 
-export function fileName(doc, ext) {
-  const base = (doc.meta.title || 'family')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\- ]+/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .toLowerCase();
-  return `${base || 'family'}${ext}`;
-}
 
 export const FORMATS = {
   html: { ext: '.html', mime: 'text/html', description: 'FamTee file' },
@@ -44,23 +33,10 @@ export function documentContents(kind, doc, template) {
   return kind === 'html' ? buildHtml(template, out) : serialize(out);
 }
 
-// Writes `contents`. Returns { method: 'fsa' | 'download', handle } or throws.
-// A user cancelling the file picker raises an AbortError, which callers ignore.
+// Downloads `contents` as a file (ADR 0017: the only way FamTee writes to disk).
 // `env` is injectable for tests.
-export async function writeFile({ contents, kind, suggestedName, handle = null }, env = globalThis) {
-  const format = FORMATS[kind];
-  if (typeof env.showSaveFilePicker === 'function') {
-    const target = handle ?? (await env.showSaveFilePicker({
-      suggestedName,
-      types: [{ description: format.description, accept: { [format.mime]: [format.ext] } }],
-    }));
-    const writable = await target.createWritable();
-    await writable.write(contents);
-    await writable.close();
-    return { method: 'fsa', handle: target };
-  }
-  download(contents, format.mime, suggestedName, env);
-  return { method: 'download', handle: null };
+export function downloadFile({ contents, kind, filename }, env = globalThis) {
+  download(contents, FORMATS[kind].mime, filename, env);
 }
 
 function download(contents, mime, name, env) {

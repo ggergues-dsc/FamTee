@@ -72,5 +72,5 @@ export function menuButton(label, items, props = {}) {
       button.focus();
     }
   });
-  return { element: wrap, button, menu, close };
+  return { element: wrap, button, menu, items: [...menu.children], close };
 }

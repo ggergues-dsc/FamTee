@@ -4,6 +4,10 @@
 //
 // The panel is rebuilt only when the selection changes; after an edit, field values
 // are refreshed in place so typing and tabbing between fields keep focus.
+//
+// Simple by default (ADR 0017): one tree. Groups, sub-graphs, cross-graph links and
+// layout tools sit in a collapsed "Advanced" section. "All attributes" shows every
+// stored attribute of the selected node, including ones without a form field.
 
 import { h, confirmButton } from './dom.js';
 import { displayName } from '../render/format.js';
@@ -120,6 +124,27 @@ export function createPanel(container, ctx) {
     return form(fields, read, (field, value) => {
       ctx.edit(label, (doc) => updateNodeAttrs(doc, graphId, nodeId, field.patch(read(), value)));
     });
+  }
+
+  // A collapsed "Advanced" section; whether it is open is remembered for the session.
+  function advanced(...children) {
+    const section = h('details', { class: 'advanced', open: !!ctx.view.advancedOpen },
+      h('summary', {}, 'Advanced'), ...children);
+    section.addEventListener('toggle', () => { ctx.view.advancedOpen = section.open; });
+    return section;
+  }
+
+  // Every stored attribute of a node, read-only, refreshed after each edit.
+  function allAttributes(graphId, nodeId) {
+    const list = h('dl', { class: 'attrs' });
+    refreshers.push(() => {
+      const { doc } = ctx.store;
+      const node = doc.graphs[graphId]?.nodes[nodeId];
+      if (!node) return;
+      list.replaceChildren(...attributeRows(doc, graphId, nodeId, node).flatMap(([label, value]) =>
+        [h('dt', {}, label), h('dd', {}, value)]));
+    });
+    return h('section', { class: 'all-attributes' }, h('h3', {}, 'All attributes'), list);
   }
 
   // A <select> whose options are rebuilt after every edit. It defaults to the first
@@ -361,10 +386,12 @@ export function createPanel(container, ctx) {
       people('Partners', () => unionsOfPerson(graph(), personId).flatMap((u) => u.partners)),
       people('Parents', () => parentUnionsOf(graph(), personId).flatMap((u) => partnersOfUnion(graph(), u))),
       people('Children', () => unionsOfPerson(graph(), personId).flatMap((u) => u.children)),
-      linksSection(graphId, personId),
-      groupsSection(graphId, personId),
+      allAttributes(graphId, personId),
+      advanced(
+        linksSection(graphId, personId),
+        groupsSection(graphId, personId),
+        h('div', { class: 'row' }, resetPosition)),
       h('section', { class: 'row danger' },
-        resetPosition,
         confirmButton('Delete person', 'Click again to delete', () => {
           ctx.edit('Delete person', (doc) => removePerson(doc, graphId, personId));
           ctx.select(null);
@@ -381,6 +408,7 @@ export function createPanel(container, ctx) {
       nodeForm(graphId, unionId, UNION_FIELDS, 'Edit partnership'),
       people('Partners', () => partnersOfUnion(graph(), unionId)),
       people('Children', () => childrenOfUnion(graph(), unionId)),
+      allAttributes(graphId, unionId),
       h('section', { class: 'row danger' },
         confirmButton('Delete partnership', 'Click again to delete', () => {
           ctx.edit('Delete partnership', (doc) => removeNode(doc, graphId, unionId));
@@ -404,7 +432,8 @@ export function createPanel(container, ctx) {
           if (last) ctx.select(null);
         },
       }),
-      h('p', { class: 'muted hint' }, 'Add people from their own panel (“Add to group”). Removing the last member removes the group.'),
+      h('p', { class: 'muted hint' }, 'Add people from their own panel (Advanced → “Add to group”). Removing the last member removes the group.'),
+      allAttributes(graphId, groupId),
       h('section', { class: 'row danger' },
         confirmButton('Delete group', 'Click again to delete', () => {
           ctx.edit('Delete group', (d) => removeNode(d, graphId, groupId));
@@ -418,19 +447,28 @@ export function createPanel(container, ctx) {
   function graphPanel(graphId) {
     const { doc } = ctx.store;
     const isRoot = graphId === doc.meta.rootGraph;
-    const docFields = [{ name: 'doc-title', label: 'Family title', ...nested(null, 'title') }];
+    const docFields = [{ name: 'doc-title', label: 'Family name', ...nested(null, 'title') }];
     const graphFields = [{ name: 'graph-title', label: 'This graph', ...nested(null, 'title') }];
+    const gedcomInput = h('input', { type: 'file', accept: '.ged', hidden: true, name: 'gedcom-subgraph' });
+    gedcomInput.addEventListener('change', () => {
+      const [file] = gedcomInput.files;
+      gedcomInput.value = '';
+      if (file) ctx.addGedcomGraph(file);
+    });
     return [
-      h('h2', {}, 'Family file'),
+      h('h2', {}, 'Family'),
       form(docFields, () => ctx.store.doc.meta, (field, value) =>
         ctx.edit('Rename family', (d) => { d.meta.title = value.trim() || 'Untitled family'; })),
-      form(graphFields, () => ctx.store.doc.graphs[graphId] ?? {}, (field, value) =>
-        ctx.edit('Rename graph', (d) => { d.graphs[graphId].title = value.trim() || 'Untitled graph'; })),
-      photoUsage(),
       h('section', { class: 'actions' },
         h('div', { class: 'row' },
           h('button', { type: 'button', onclick: () =>
-            ctx.editAndSelect('Add person', (d) => addPerson(d, graphId, { name: { given: 'New person' } })) }, '+ Person'),
+            ctx.editAndSelect('Add person', (d) => addPerson(d, graphId, { name: { given: 'New person' } })) }, '+ Person'))),
+      h('p', { class: 'muted hint' }, 'Click a person to see and edit everything about them and to add relatives. Drag cards to move them; drag the background to pan, scroll or pinch to zoom.'),
+      photoUsage(),
+      advanced(
+        form(graphFields, () => ctx.store.doc.graphs[graphId] ?? {}, (field, value) =>
+          ctx.edit('Rename graph', (d) => { d.graphs[graphId].title = value.trim() || 'Untitled graph'; })),
+        h('div', { class: 'row' },
           h('button', { type: 'button', onclick: () => {
             const id = ctx.edit('Add sub-graph', (d) => {
               const sub = addGraph(d, { title: 'New family' });
@@ -438,18 +476,21 @@ export function createPanel(container, ctx) {
               return sub;
             });
             if (id) ctx.open(id);
-          } }, '+ Sub-graph'))),
-      resetLayoutButton(graphId),
-      people('Groups', () => Object.keys(ctx.store.doc.graphs[graphId]?.nodes ?? {})
-        .filter((id) => ctx.store.doc.graphs[graphId].nodes[id].type === 'group')),
-      h('p', { class: 'muted hint' }, 'Select a person to edit them and add relatives. Drag cards to move them; drag the background to pan, scroll or pinch to zoom.'),
-      isRoot ? null : h('section', { class: 'row danger' },
-        confirmButton('Delete this graph', 'Click again to delete', () => {
-          ctx.back();
-          ctx.edit('Delete graph', (d) => removeGraph(d, graphId));
-        })),
+          } }, '+ Sub-graph'),
+          h('button', { type: 'button', onclick: () => gedcomInput.click(),
+            title: 'Adds a GEDCOM file as a separate graph, with a tile here' }, 'Add GEDCOM as sub-graph…'),
+          gedcomInput),
+        resetLayoutButton(graphId),
+        people('Groups', () => Object.keys(ctx.store.doc.graphs[graphId]?.nodes ?? {})
+          .filter((id) => ctx.store.doc.graphs[graphId].nodes[id].type === 'group')),
+        isRoot ? null : h('section', { class: 'row danger' },
+          confirmButton('Delete this graph', 'Click again to delete', () => {
+            ctx.back();
+            ctx.edit('Delete graph', (d) => removeGraph(d, graphId));
+          }))),
     ];
   }
+
 
   // How much the embedded photos add to the saved file.
   function photoUsage() {
@@ -473,4 +514,42 @@ export function createPanel(container, ctx) {
   }
 
   return { render };
+}
+
+// --- all attributes -----------------------------------------------------------------
+
+const LABELS = {
+  name: 'Name', given: 'given name', surname: 'surname', suffix: 'suffix', sex: 'Sex', birth: 'Born', death: 'Died',
+  date: 'date', place: 'place', notes: 'Notes', kind: 'Relationship', start: 'From', end: 'Until', label: 'Label',
+};
+const SEX = { M: 'Male', F: 'Female', U: 'Unknown' };
+
+// [label, text] rows for every stored attribute of a node, plus its identity.
+export function attributeRows(doc, graphId, nodeId, node) {
+  const rows = [['Type', node.type === 'union' ? 'partnership' : node.type], ['ID', nodeId]];
+  for (const [key, value] of Object.entries(node.attrs ?? {})) {
+    if (value === undefined || value === null || value === '') continue;
+    if (key === 'photo') {
+      const m = doc.media?.[value];
+      rows.push(['Photo', m ? `${m.width}×${m.height} ${m.mime.replace('image/', '').toUpperCase()}, ${formatSize(imageBytes(m.data))} (${value})` : `missing (${value})`]);
+    } else if (key === 'nudge') {
+      rows.push(['Manual position', `moved ${value.dx}, ${value.dy} from the automatic layout`]);
+    } else if (key === 'members' && Array.isArray(value)) {
+      rows.push(['Members', value.map((id) => nodeLabel(doc, graphId, id)).join(', ') || 'none']);
+    } else if (key === 'graph') {
+      rows.push(['Graph', doc.graphs[value]?.title ?? value]);
+    } else if (key === 'sex') {
+      rows.push(['Sex', SEX[value] ?? String(value)]);
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [sub, v] of Object.entries(value)) {
+        if (v === undefined || v === null || v === '') continue;
+        rows.push([`${LABELS[key] ?? key} · ${LABELS[sub] ?? sub}`, typeof v === 'object' ? JSON.stringify(v) : String(v)]);
+      }
+    } else {
+      rows.push([LABELS[key] ?? key, Array.isArray(value) ? value.join(', ') : String(value)]);
+    }
+  }
+  const links = doc.links.filter((l) => [l.from, l.to].includes(`${graphId}:${nodeId}`)).length;
+  if (links) rows.push(['Links to other graphs', String(links)]);
+  return rows;
 }

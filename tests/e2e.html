@@ -17,32 +17,42 @@ const params = new URLSearchParams(location.search);
 const frame = document.getElementById('app');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function load(props) {
+// Loads the app in the iframe and answers the start screen (ADR 0017) with `start`:
+// 'start-file' (the family in this file), 'start-continue' or 'start-new'.
+async function load(props, start = 'start-file') {
   const loaded = new Promise((resolve) => { frame.onload = resolve; });
   frame.removeAttribute('srcdoc');
   Object.assign(frame, props);
   await loaded;
-  for (let i = 0; i < 100 && !frame.contentWindow.famtee; i++) await sleep(20);
   const win = frame.contentWindow;
+  for (let i = 0; i < 100 && !win.famtee && !win.document.querySelector('.start-overlay'); i++) await sleep(20);
+  const card = win.document.querySelector(`.start-choice[data-choice="${start}"]`);
+  assert(win.famtee || card, `start screen offers ${start}`);
+  card?.querySelector('button:not(.link)').click();
+  for (let i = 0; i < 100 && !win.famtee; i++) await sleep(20);
   assert(win.famtee, 'app booted');
   return { win, doc: win.document, app: win.famtee };
 }
 
-// The app saves through the File System Access API when present; stub it to capture output.
-function capturePicker(win) {
+// Downloads are the only way the app writes files: capture them instead of saving.
+function captureDownloads(win) {
   const saved = [];
-  win.showSaveFilePicker = async () => ({
-    createWritable: async () => ({ write: async (c) => saved.push(c), close: async () => {} }),
-  });
+  let blob = null;
+  win.URL.createObjectURL = (b) => { blob = b; return 'blob:captured'; };
+  win.URL.revokeObjectURL = () => {};
+  win.HTMLAnchorElement.prototype.click = function capture() { saved.push({ name: this.download, blob }); };
   return saved;
 }
+const textOf = (download) => download.blob.text();
 
 const byText = (doc, text) => [...doc.querySelectorAll('button')].find((b) => b.textContent === text);
 const change = (el, value) => { el.value = value; el.dispatchEvent(new Event('change')); };
+const fingerprint = (html) => JSON.parse(new DOMParser().parseFromString(html, 'text/html')
+  .getElementById('famtee-data').textContent).meta.revision;
 let savedHtml;
 let editedDoc;
 
-test('edit through the UI, save, and reopen the saved file', async () => {
+test('edit, download a stamped file, reopen it, download again', async () => {
   let { win, doc, app } = await load({ src: params.get('app') });
   win.localStorage.clear();
   app.ctx.select('p-peter');
@@ -51,53 +61,66 @@ test('edit through the UI, save, and reopen the saved file', async () => {
   const [child] = app.view.selection;
   change(doc.querySelector('[name="given"]'), 'Baby');
   assert([...doc.querySelectorAll('.layer-labels .name')].some((t) => t.textContent === 'Pierre Hanna'), 'canvas shows edit');
-  assertEqual(doc.querySelector('.save-state').textContent, '● Unsaved changes');
+  assert(doc.querySelector('.save-state').textContent.includes('not downloaded'));
 
-  const saved = capturePicker(win);
-  byText(doc, 'Save').click();
-  await sleep(100);
+  const saved = captureDownloads(win);
+  byText(doc, 'Download').click();
   assertEqual(saved.length, 1);
-  assertEqual(doc.querySelector('.save-state').textContent, 'All changes saved');
-  savedHtml = saved[0];
+  assert(doc.querySelector('.save-state').textContent.startsWith('Downloaded '));
+  savedHtml = await textOf(saved[0]);
+  const rev = fingerprint(savedHtml);
+  assert(/^[0-9a-f]{64}$/.test(rev.hash) && rev.parent === null, 'first download: hash, no parent');
+  assert(new RegExp(`^hanna-family-extended-sample-\\d{4}-\\d{2}-\\d{2}-\\d{6}-${rev.hash.slice(0, 6)}\\.html$`).test(saved[0].name), saved[0].name);
   editedDoc = JSON.parse(JSON.stringify(app.store.doc));
-  assert(!savedHtml.includes('class="card'), 'saved file has no rendered output baked in');
+  assertEqual(editedDoc.meta.revision, rev);
+  assert(!savedHtml.includes('class="card'), 'downloaded file has no rendered output baked in');
 
   ({ win, doc, app } = await load({ srcdoc: savedHtml }));
   assertEqual(app.store.doc, editedDoc);
   assertEqual(app.store.doc.graphs['g-hanna'].nodes[child].attrs.name.given, 'Baby');
   assert(!app.store.dirty);
+  assert(doc.getElementById('notice').hidden, 'fingerprint matches: no warning');
 
-  const resaved = capturePicker(win);
-  await app.save('html');
-  assertEqual(resaved.length, 1);
-  assert(resaved[0] === savedHtml, 'saving an unchanged reopened file is byte-identical');
+  const again = captureDownloads(win);
+  app.download('html');
+  const rev2 = fingerprint(await textOf(again[0]));
+  assertEqual(rev2.hash, rev.hash, 'same content, same fingerprint');
+  assertEqual(rev2.parent, rev.hash, 'chained to the version it was opened from');
 });
 
-test('unsaved edits are recovered from the draft after reopening', async () => {
+test('unsaved work is kept in the browser and offered on the start screen', async () => {
   let { win, doc, app } = await load({ srcdoc: savedHtml });
   app.ctx.select('p-mary');
   change(doc.querySelector('[name="surname"]'), 'Draftly');
-  await sleep(1100); // autosave debounce
-  ({ win, doc, app } = await load({ srcdoc: savedHtml }));
-  assertEqual(app.store.doc, editedDoc, 'file content is unchanged');
-  const restore = byText(doc, 'Restore');
-  assert(restore && !doc.getElementById('notice').hidden, 'recovery notice shown');
-  restore.click();
+  await sleep(1300); // kept in the browser ~1 s after the change
+  assert(doc.querySelector('.save-state').textContent.startsWith('Kept in this browser'));
+  ({ win, doc, app } = await load({ srcdoc: savedHtml }, 'start-continue'));
   assertEqual(app.store.doc.graphs['g-hanna'].nodes['p-mary'].attrs.name.surname, 'Draftly');
-  assert(app.store.dirty, 'restored draft still needs saving');
+  assert(app.store.dirty, 'continued work still needs downloading');
+
+  ({ win, doc, app } = await load({ srcdoc: savedHtml }));
+  assertEqual(app.store.doc, editedDoc, 'opening the file instead gives the file’s version');
   win.localStorage.clear();
 });
 
-test('export JSON and import it back', async () => {
+test('a file edited outside FamTee is flagged', async () => {
+  const tampered = savedHtml.replace('"Pierre"', '"Peter"');
+  const { doc } = await load({ srcdoc: tampered });
+  assert(doc.getElementById('notice').textContent.includes('changed outside FamTee'));
+});
+
+test('export FamTee data and open it again', async () => {
   const { win, doc, app } = await load({ srcdoc: savedHtml });
-  const saved = capturePicker(win);
+  const saved = captureDownloads(win);
   byText(doc, 'Export ▾').click();
   byText(doc, 'FamTee data (.famtee.json)').click();
-  await sleep(100);
-  assertEqual(JSON.parse(saved[0]), editedDoc);
+  const json = await textOf(saved[0]);
+  assert(saved[0].name.endsWith('.famtee.json'));
+  const exported = JSON.parse(json);
+  assertEqual(exported.graphs, editedDoc.graphs);
 
   app.store.apply('wipe', (d) => { d.meta.title = 'Changed'; });
-  const file = new win.File([saved[0]], 'family.famtee.json', { type: 'application/json' });
+  const file = new win.File([json], saved[0].name, { type: 'application/json' });
   const input = doc.querySelector('.toolbar input[type="file"]');
   const transfer = new win.DataTransfer();
   transfer.items.add(file);
@@ -106,7 +129,15 @@ test('export JSON and import it back', async () => {
   await sleep(200);
   assertEqual(app.store.doc.meta.title, editedDoc.meta.title);
   app.store.undo();
-  assertEqual(app.store.doc.meta.title, 'Changed', 'import is undoable');
+  assertEqual(app.store.doc.meta.title, 'Changed', 'Open… is undoable');
+});
+
+test('start screen: a new tree', async () => {
+  const { doc, app } = await load({ srcdoc: savedHtml }, 'start-new');
+  assertEqual(app.store.doc.meta.title, 'My family');
+  assertEqual(Object.keys(app.store.doc.graphs[app.store.doc.meta.rootGraph].nodes).length, 0);
+  byText(doc, '+ Person').click();
+  assertEqual(doc.querySelectorAll('.card.person').length, 1);
 });
 
 test('drag moves a card (undoably); pan and zoom never touch the document', async () => {
@@ -193,19 +224,19 @@ test('GEDCOM: export the graph, import it back as a new graph, undo', async () =
   const { win, doc, app } = await load({ srcdoc: savedHtml });
   app.store.apply('dirty', (d) => { d.meta.title = 'Unsaved title'; });
   const count = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'person').length;
-  const saved = capturePicker(win);
+  const saved = captureDownloads(win);
   byText(doc, 'Export ▾').click();
-  byText(doc, 'GEDCOM: this graph').click();
-  await sleep(100);
+  byText(doc, 'GEDCOM (.ged)').click();
   assertEqual(saved.length, 1);
-  const ged = saved[0];
+  const ged = await textOf(saved[0]);
   assert(ged.startsWith('0 HEAD\r\n') && ged.trimEnd().endsWith('0 TRLR'));
   assertEqual((ged.match(/^0 @I\d+@ INDI/gm) ?? []).length, count);
   assert(app.store.dirty, 'a GEDCOM export does not count as saving');
   assert(doc.getElementById('notice').textContent.includes(`${count} people`));
 
   const graphsBefore = Object.keys(app.store.doc.graphs).length;
-  const input = doc.querySelector('.toolbar input[type="file"]');
+  app.ctx.select(null);
+  const input = doc.querySelector('[name="gedcom-subgraph"]'); // Advanced → Add GEDCOM as sub-graph…
   const transfer = new win.DataTransfer();
   transfer.items.add(new win.File([ged], 'hanna.ged', { type: 'application/x-gedcom' }));
   input.files = transfer.files;
@@ -234,12 +265,12 @@ test('GEDCOM merged: a person copied into a sub-graph is written once', async ()
   change(doc.querySelector('[name="link-graph"]'), Object.keys(app.store.doc.graphs).find((g) => g !== 'g-hanna'));
   byText(doc, 'Copy into that graph').click();
 
-  const saved = capturePicker(win);
+  const saved = captureDownloads(win);
   byText(doc, 'Export ▾').click();
+  assert(!byText(doc, 'GEDCOM: all graphs merged').hidden, 'offered now that two graphs have people');
   byText(doc, 'GEDCOM: all graphs merged').click();
-  await sleep(100);
   assertEqual(saved.length, 1);
-  assertEqual((saved[0].match(/^0 @I\d+@ INDI/gm) ?? []).length, people, 'Nadia once, not twice');
+  assertEqual(((await textOf(saved[0])).match(/^0 @I\d+@ INDI/gm) ?? []).length, people, 'Nadia once, not twice');
   const notice = doc.getElementById('notice').textContent;
   assert(notice.includes(`${people} people`) && notice.includes('2 graph(s) merged'), notice);
   assert(doc.querySelector('.menu').hidden, 'menu closed after choosing');
@@ -268,15 +299,15 @@ test('photos: add and replace in the built app; saved file holds only the curren
   await pick(await imageFile('#c63', 'mary2.png'));
   assert(doc.querySelector('.avatar[data-id="p-mary"]'), 'avatar drawn on the card');
 
-  const saved = capturePicker(win);
-  byText(doc, 'Save').click();
-  await sleep(150);
-  const media = JSON.parse(new DOMParser().parseFromString(saved[0], 'text/html')
+  const saved = captureDownloads(win);
+  byText(doc, 'Download').click();
+  const html = await textOf(saved[0]);
+  const media = JSON.parse(new DOMParser().parseFromString(html, 'text/html')
     .getElementById('famtee-data').textContent).media;
   assertEqual(Object.keys(media).length, 1, 'the replaced photo is not saved');
   assert(Object.values(media)[0].data.length < 40000, 'photo is small (shrunk to 256 px)');
 
-  ({ win, doc, app } = await load({ srcdoc: saved[0] }));
+  ({ win, doc, app } = await load({ srcdoc: html }));
   assert(doc.querySelector('.avatar[data-id="p-mary"]'), 'photo still there after reopening');
   assert(doc.querySelector('defs pattern image').getAttribute('href').startsWith('data:image/jpeg;base64,'));
 });

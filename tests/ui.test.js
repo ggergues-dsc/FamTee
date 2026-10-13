@@ -175,22 +175,39 @@ test('read-only documents disable every control', () => {
   s.container.remove();
 });
 
-test('toolbar reflects store state', () => {
+test('toolbar says where changes are: browser only until downloaded', () => {
   const { doc, g } = smallFamily();
   const store = new Store(doc);
   const container = h('div');
-  let saved = 0;
-  const toolbar = createToolbar(container, { undo: () => store.undo(), redo: () => store.redo(), save: () => saved++, exportJson() {}, importFile() {} });
-  toolbar.render(store);
+  let downloads = 0;
+  const toolbar = createToolbar(container, {
+    undo: () => store.undo(), redo: () => store.redo(), download: () => downloads++,
+    exportJson() {}, exportGedcom() {}, exportGedcomMerged() {}, openFile() {},
+  });
+  const state = () => container.querySelector('.save-state');
+  toolbar.render(store, {});
   assert(button(container, 'Undo').disabled);
-  assertEqual(container.querySelector('.save-state').textContent, 'All changes saved');
+  assertEqual(state().textContent, 'No unsaved changes');
+  assert(button(container, 'GEDCOM: all graphs merged').hidden, 'one tree: no merged export');
+
   store.apply('Rename', (d) => { d.graphs[g].title = 'x'; });
-  toolbar.render(store);
-  assert(!button(container, 'Undo').disabled);
+  toolbar.render(store, { draftAt: '2026-10-13T15:30:00Z', storageOk: true });
+  assert(state().textContent.startsWith('Kept in this browser') && state().textContent.endsWith('· not downloaded'), state().textContent);
+  assert(state().title.includes('in this browser only'));
   assert(button(container, 'Undo').title.startsWith('Undo Rename'));
-  assertEqual(container.querySelector('.save-state').textContent, '● Unsaved changes');
-  button(container, 'Save').click();
-  assertEqual(saved, 1);
+
+  toolbar.render(store, { storageOk: false });
+  assertEqual(state().textContent, 'Not backed up · download to keep your work');
+  assert(state().classList.contains('error'));
+
+  button(container, 'Download').click();
+  assertEqual(downloads, 1);
+  store.markSaved();
+  toolbar.render(store, { downloadedAt: '2026-10-13T15:31:00Z', downloadName: 'f.html', multiGraph: true });
+  assert(state().textContent.startsWith('Downloaded '));
+  assertEqual(state().title, 'Saved to your disk as f.html');
+  assert(!button(container, 'GEDCOM: all graphs merged').hidden);
+  assert(!button(container, 'Save'), 'no in-place Save any more');
 });
 
 test('links: copy into another graph, link, label, open and remove', () => {
@@ -336,6 +353,33 @@ test('photo: add from a file, change, remove; bad files are reported', async () 
   s.ctx.select(null);
   s.store.undo();
   assert(s.container.querySelector('.photo-usage').textContent.startsWith('1 photo embedded'));
+  s.container.remove();
+});
+
+test('simple by default: advanced controls are collapsed, everything else visible', () => {
+  const s = setup();
+  const advanced = s.container.querySelector('details.advanced');
+  assert(advanced && !advanced.open, 'graph panel: Advanced collapsed');
+  assert(advanced.contains(button(s.container, '+ Sub-graph')) && advanced.contains(button(s.container, 'Reset layout')));
+  assert(!advanced.contains(button(s.container, '+ Person')), '+ Person stays visible');
+  s.ctx.select(s.mum);
+  const personAdvanced = s.container.querySelector('details.advanced');
+  assert(personAdvanced.contains(button(s.container, 'Add to group')), 'groups are advanced');
+  assert(personAdvanced.contains(s.container.querySelector('.links')), 'cross-graph links are advanced');
+  assert(!personAdvanced.contains(button(s.container, '+ Partner')), 'family editing stays visible');
+  assert(s.container.querySelector('.all-attributes dl').textContent.includes(s.mum), 'all attributes visible');
+  personAdvanced.open = true;
+  personAdvanced.dispatchEvent(new Event('toggle'));
+  s.ctx.select(s.dad);
+  assert(s.container.querySelector('details.advanced').open, 'open state remembered while you work');
+  s.container.remove();
+});
+
+test('all attributes refresh after an edit', () => {
+  const s = setup();
+  s.ctx.select(s.mum);
+  change(field(s.container, 'birth-place'), 'Cairo');
+  assert(s.container.querySelector('.all-attributes').textContent.includes('Cairo'));
   s.container.remove();
 });
 

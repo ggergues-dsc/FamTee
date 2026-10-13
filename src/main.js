@@ -1,13 +1,17 @@
-// Bootstrap and wiring: Store ↔ renderer, pan/zoom and drag, editing panel, toolbar,
-// persistence.
+// Bootstrap and wiring: start screen → Store ↔ renderer, pan/zoom and drag, editing
+// panel, toolbar, browser-first saving (ADR 0017).
 // Navigation: drill into graphRef cards, jump across link badges, breadcrumb back,
-// #g=<graphId>&sel=<nodeId> deep links. Clicking a card selects it for editing;
-// dragging it moves it (stored as attrs.nudge); dragging the background pans.
+// #g=<graphId>&sel=<nodeId> deep links (they open the file's family directly, as does
+// #start=file|new|continue). Clicking a card selects it for editing; dragging it moves
+// it (stored as attrs.nudge); dragging the background pans.
 
-import { captureTemplate, isSelfContained, documentContents, writeFile, fileName, FORMATS } from './persist/save.js';
-import { saveDraft, findNewerDraft, clearDraft, debounce } from './persist/autosave.js';
+import { captureTemplate, isSelfContained, documentContents, downloadFile, FORMATS } from './persist/save.js';
+import {
+  saveDraft, draftRelation, lastSessionDraft, clearDraft, recordDownload, lastDownload, debounce,
+} from './persist/autosave.js';
+import { stampRevision, checkRevision, downloadName, shortHash } from './persist/revision.js';
 import { parseImport } from './persist/import.js';
-import { importGedcom, addImportedGraph, looksLikeGedcom } from './io/gedcom/import.js';
+import { importGedcom, addImportedGraph, looksLikeGedcom, documentFromGedcom } from './io/gedcom/import.js';
 import { exportGedcom, exportGedcomMerged } from './io/gedcom/export.js';
 import { createDocument, updateNodeAttrs, removeNode } from './store/model.js';
 import { replaceDocument, removePerson } from './store/family.js';
@@ -16,13 +20,15 @@ import { Store } from './store/store.js';
 import { createRenderer } from './render/renderer.js';
 import { createPanel } from './ui/panel.js';
 import { createToolbar } from './ui/toolbar.js';
+import { startScreen } from './ui/start.js';
 import { h } from './ui/dom.js';
 import { createInteraction } from './ui/interaction.js';
 import { IDENTITY, fitTransform, zoomAt } from './ui/viewport.js';
 
-// Must run before anything changes the DOM: this is what "Save" writes back.
+// Must run before anything changes the DOM: this is what "Download" writes out.
 const TEMPLATE = captureTemplate();
 const SELF_CONTAINED = isSelfContained();
+const when = (iso) => new Date(iso).toLocaleString();
 
 function safeStorage() {
   try {
@@ -32,42 +38,118 @@ function safeStorage() {
   }
 }
 
-function boot() {
+// Reads a chosen file as a whole document: FamTee .html, .famtee.json or GEDCOM.
+async function readDocumentFile(file) {
+  const text = await file.text();
+  if (/\.ged(com)?$/i.test(file.name) || looksLikeGedcom(text)) {
+    const title = file.name.replace(/\.ged(com)?$/i, '') || 'Imported family';
+    const { graph, warnings } = importGedcom(text, { title });
+    return { doc: documentFromGedcom(graph), warnings };
+  }
+  const { doc, readOnly, errors } = parseImport(text);
+  if (readOnly) throw new Error('it was made by a newer version of FamTee');
+  if (errors.length) throw new Error(errors.map((e) => e.message).join('; '));
+  return { doc, warnings: [] };
+}
+
+async function boot() {
   const notice = document.getElementById('notice');
   const showNotice = (content, kind = 'info') => {
     notice.className = `notice ${kind}`;
     notice.replaceChildren(...[content].flat(), h('button', { type: 'button', class: 'link', onclick: () => { notice.hidden = true; } }, 'Dismiss'));
     notice.hidden = false;
   };
+  const storage = safeStorage();
 
-  let store;
-  let loadErrors = [];
+  // 1. The family stored in this file, if any.
+  let embedded = null;
   try {
     const text = readEmbedded(document);
     if (text) {
       const loaded = loadDocument(text);
-      loadErrors = loaded.errors;
-      store = new Store(loaded.doc, { readOnly: loaded.readOnly || loadErrors.length > 0 });
-      if (loaded.readOnly) showNotice('This file was made by a newer version of FamTee and is opened read-only.', 'error');
-      if (loadErrors.length) showNotice(`Opened read-only, the data has problems: ${loadErrors.map((e) => e.message).join('; ')}`, 'error');
-    } else {
-      store = new Store(createDocument());
+      embedded = {
+        doc: loaded.doc,
+        readOnly: loaded.readOnly || loaded.errors.length > 0,
+        integrity: checkRevision(loaded.doc),
+        problems: loaded.readOnly ? 'Made by a newer version of FamTee: it opens read-only.'
+          : loaded.errors.length ? `It has problems and opens read-only: ${loaded.errors.map((e) => e.message).join('; ')}` : '',
+      };
     }
   } catch (e) {
-    showNotice(`Could not load data: ${e.message}`, 'error');
-    return;
+    embedded = { error: e.message };
   }
 
-  const storage = safeStorage();
-  const renderer = createRenderer(document.getElementById('canvas'));
-  const view = { path: [store.doc.meta.rootGraph], selection: new Set() };
+  // 2. Unsaved work kept in this browser: for this family, or the last one edited.
+  let draft = null;
+  let relation = 'other';
+  if (storage && embedded?.doc) ({ draft, relation } = draftRelation(storage, embedded.doc));
+  if (relation === 'none') draft = null;
+  if (storage && !draft) {
+    const last = lastSessionDraft(storage);
+    if (last && last.doc.meta.id !== embedded?.doc?.meta.id) [draft, relation] = [last, 'other'];
+  }
+
+  // 3. The start screen (skipped by #start=… and deep links).
   const hash = new URLSearchParams(location.hash.slice(1));
+  const wanted = hash.get('start') ?? (hash.get('g') || hash.get('sel') ? 'file' : null);
+  let openedWarnings = [];
+  let choice = wanted === 'file' && embedded?.doc ? { kind: 'file' }
+    : wanted === 'continue' && draft ? { kind: 'continue' }
+      : wanted === 'new' ? { kind: 'new', title: 'My family' } : null;
+  choice ??= await startScreen(document.body, {
+    embedded, draft, relation,
+    openFile: async (file) => {
+      const { doc, warnings } = await readDocumentFile(file);
+      openedWarnings = warnings;
+      return doc;
+    },
+    discardDraft: () => clearDraft(storage, draft.doc),
+  });
+
+  // 4. The document to work on.
+  let doc;
+  let readOnly = false;
+  const session = { baseHash: null, draftAt: null, downloadedAt: null, downloadName: '', storageOk: !!storage };
+  if (choice.kind === 'file') {
+    ({ doc, readOnly } = embedded);
+    session.baseHash = doc.meta.revision?.hash ?? null;
+    if (embedded.problems) showNotice(embedded.problems, 'error');
+    else if (embedded.integrity === 'modified') {
+      showNotice('This file was changed outside FamTee after it was saved: its content no longer matches its fingerprint.', 'error');
+    }
+    const later = storage && lastDownload(storage, doc.meta.id);
+    if (later && later.hash !== session.baseHash && later.savedAt > (doc.meta.revision?.savedAt ?? '')) {
+      showNotice(`A newer version of this family was downloaded on ${when(later.savedAt)} as ${later.filename}. You opened an older file.`, 'error');
+    }
+  } else if (choice.kind === 'continue') {
+    doc = draft.doc;
+    session.baseHash = draft.baseHash;
+    session.draftAt = draft.savedAt;
+    if (relation === 'diverged') {
+      showNotice('You continued an unsaved session that started from a different version than this file. Download it to keep it.', 'error');
+    }
+  } else if (choice.kind === 'new') {
+    doc = createDocument({ title: choice.title, graphTitle: choice.title });
+  } else {
+    doc = choice.doc;
+    session.baseHash = doc.meta.revision?.hash ?? null;
+    if (openedWarnings.length) showNotice(`Opened ${choice.name}. ${openedWarnings.join('. ')}.`);
+  }
+
+  const store = new Store(doc, { readOnly });
+  if (choice.kind === 'continue') store.dirty = true;
+
+  const renderer = createRenderer(document.getElementById('canvas'));
+  const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false };
   const start = hash.get('g');
   if (start && start !== view.path[0] && store.doc.graphs[start]) view.path.push(start);
   if (hash.get('sel')) view.selection = new Set([hash.get('sel')]);
-  const handles = { html: null, json: null };
 
   const currentGraph = () => view.path[view.path.length - 1];
+  const sessionView = () => ({
+    ...session,
+    multiGraph: Object.values(store.doc.graphs).filter((g) => Object.values(g.nodes).some((n) => n.type === 'person')).length > 1,
+  });
 
   const ctx = {
     store,
@@ -106,61 +188,62 @@ function boot() {
       view.selection = new Set();
       update();
     },
+    addGedcomGraph: async (file) => {
+      try {
+        importGedcomText(await file.text(), file);
+      } catch (e) {
+        showNotice(`Import failed: ${e.message}`, 'error');
+      }
+    },
   };
 
   const panel = createPanel(document.getElementById('panel'), ctx);
 
-  async function save(kind) {
+  // The only way FamTee writes to disk (ADR 0017): a new file, stamped with the content
+  // hash and time, named so it never overwrites an earlier download.
+  function download(kind) {
     if (kind === 'html' && !SELF_CONTAINED) {
-      showNotice('This page runs from separate source files, so it can’t save itself as one file. Build it with python3 build/build.py, or use Export ▸ FamTee data.', 'error');
+      showNotice('This page runs from separate source files, so it can’t download itself as one file. Build it with python3 build/build.py, or use Export ▸ FamTee data.', 'error');
       return;
     }
-    const { doc } = store;
+    const now = new Date();
+    const stamped = stampRevision(store.doc, { now, parent: session.baseHash });
+    const filename = downloadName(stamped, FORMATS[kind].ext, now);
     try {
-      const result = await writeFile({
-        contents: documentContents(kind, doc, TEMPLATE),
-        kind,
-        suggestedName: fileName(doc, FORMATS[kind].ext),
-        handle: handles[kind],
-      });
-      handles[kind] = result.handle;
-      store.markSaved();
-      if (storage) clearDraft(storage, doc);
-      if (result.method === 'download') {
-        showNotice(kind === 'html'
-          ? 'Downloaded an updated copy. Replace your old file with it (your browser can’t overwrite files directly).'
-          : 'Downloaded the data as a .famtee.json file.');
-      } else {
-        notice.hidden = true;
-      }
+      downloadFile({ contents: documentContents(kind, stamped, TEMPLATE), kind, filename });
     } catch (e) {
-      if (e.name !== 'AbortError') showNotice(`Save failed: ${e.message}`, 'error');
+      showNotice(`Download failed: ${e.message}`, 'error');
+      return;
     }
+    store.doc.meta.revision = stamped.meta.revision; // shown in "All attributes"; not part of the content hash
+    Object.assign(session, { baseHash: stamped.meta.revision.hash, downloadedAt: now.toISOString(), downloadName: filename });
+    if (storage) {
+      clearDraft(storage, store.doc);
+      recordDownload(storage, stamped, filename);
+    }
+    store.markSaved();
+    showNotice(`Downloaded ${filename} (fingerprint ${shortHash(stamped.meta.revision.hash)}). Earlier files are untouched; open this new one next time.`);
   }
 
   // GEDCOM export (the graph on screen, or every graph merged) never counts as
   // saving: the file can't hold everything FamTee stores (ADR 0010).
-  async function exportGedcomFile({ merged = false } = {}) {
-    const { doc } = store;
-    const graph = doc.graphs[currentGraph()];
+  function exportGedcomFile({ merged = false } = {}) {
+    const { doc: current } = store;
+    const graph = current.graphs[currentGraph()];
     try {
-      const { text, stats, warnings } = merged ? exportGedcomMerged(doc) : exportGedcom(doc, currentGraph());
-      const title = merged ? doc.meta.title : graph.title || doc.meta.title;
-      const result = await writeFile({
-        contents: text,
-        kind: 'gedcom',
-        suggestedName: fileName({ meta: { title } }, FORMATS.gedcom.ext),
-      });
+      const { text, stats, warnings } = merged ? exportGedcomMerged(current) : exportGedcom(current, currentGraph());
+      const title = merged ? current.meta.title : graph.title || current.meta.title;
+      downloadFile({ contents: text, kind: 'gedcom', filename: downloadName({ meta: { title } }, FORMATS.gedcom.ext) });
       const counts = `${stats.people} people and ${stats.families} families`;
       const what = merged ? `${counts} from ${stats.graphs} graph(s) merged` : `${counts} from “${graph.title}”`;
-      showNotice(`${result.method === 'download' ? 'Downloaded' : 'Exported'} GEDCOM with ${what}.` +
+      showNotice(`Downloaded GEDCOM with ${what}. This doesn't count as saving your family.` +
         (warnings.length ? ` ${warnings.join('. ')}.` : ''));
     } catch (e) {
-      if (e.name !== 'AbortError') showNotice(`GEDCOM export failed: ${e.message}`, 'error');
+      showNotice(`GEDCOM export failed: ${e.message}`, 'error');
     }
   }
 
-  // A GEDCOM file is added as a new graph (with a tile here) instead of replacing the document.
+  // Advanced: a GEDCOM file added as a new graph (with a tile here).
   function importGedcomText(text, file) {
     const title = file.name.replace(/\.ged(com)?$/i, '') || 'Imported family';
     const { graph, stats, warnings } = importGedcom(text, { title });
@@ -171,32 +254,30 @@ function boot() {
       (warnings.length ? ` ${warnings.join('. ')}.` : ''));
   }
 
-  async function importFile(file) {
+  // Open…: another file in place of this family (undoable).
+  async function openFile(file) {
     try {
-      const text = await file.text();
-      if (/\.ged(com)?$/i.test(file.name) || looksLikeGedcom(text)) return importGedcomText(text, file);
-      const { doc, readOnly, errors } = parseImport(text);
-      if (readOnly) throw new Error('the file was made by a newer version of FamTee');
-      if (errors.length) throw new Error(errors.map((e) => e.message).join('; '));
-      if (ctx.edit(`Import ${file.name}`, (d) => { replaceDocument(d, doc); return true; })) {
+      const { doc: opened, warnings } = await readDocumentFile(file);
+      if (ctx.edit(`Open ${file.name}`, (d) => { replaceDocument(d, opened); return true; })) {
+        session.baseHash = opened.meta.revision?.hash ?? null;
         view.path = [store.doc.meta.rootGraph];
         view.selection = new Set();
         update();
-        showNotice(`Imported ${file.name}. Use Undo to go back.`);
+        showNotice(`Opened ${file.name}. Undo brings the previous family back.${warnings.length ? ` ${warnings.join('. ')}.` : ''}`);
       }
     } catch (e) {
-      showNotice(`Import failed: ${e.message}`, 'error');
+      showNotice(`${file.name} couldn't be opened: ${e.message}`, 'error');
     }
   }
 
   const toolbar = createToolbar(document.getElementById('toolbar'), {
     undo: () => store.undo(),
     redo: () => store.redo(),
-    save: () => save('html'),
-    exportJson: () => save('json'),
+    download: () => download('html'),
+    exportJson: () => download('json'),
     exportGedcom: () => exportGedcomFile(),
     exportGedcomMerged: () => exportGedcomFile({ merged: true }),
-    importFile,
+    openFile,
   });
 
   // --- canvas: rendering, pan/zoom, drag ------------------------------------------
@@ -269,7 +350,7 @@ function boot() {
     renderBreadcrumb(doc, view, update);
     renderCanvas();
     panel.render();
-    toolbar.render(store);
+    toolbar.render(store, sessionView());
   }
 
   // Clicks (a press without movement; pans and drags swallow their click).
@@ -291,7 +372,7 @@ function boot() {
     if (mod && k === 's') {
       event.preventDefault();
       event.target.blur?.(); // commit the field being edited first
-      save('html');
+      download('html');
     } else if (typing) {
       return;
     } else if (mod && k === 'z') {
@@ -322,18 +403,32 @@ function boot() {
     }
   });
 
-  // --- persistence -------------------------------------------------------------
-  // Browser storage holds only a few MB; with many photos the draft backup can fail.
-  let draftWarningShown = false;
-  const autosave = debounce(() => {
-    if (!storage || !store.dirty || saveDraft(storage, store.doc) || draftWarningShown) return;
-    draftWarningShown = true;
-    showNotice('Unsaved changes can’t be backed up in this browser (the family, with its photos, is too big for browser storage). Save regularly.', 'error');
-  }, 800);
+  // --- browser-first saving (ADR 0017) ----------------------------------------------
+  // Unsaved work is kept in browser storage ~1 s after each change, every 30 s while
+  // there are changes, and when the page is hidden or closed. Storage holds only a few
+  // MB; if it refuses (e.g. many photos), the toolbar and a notice say so.
+  let storageWarningShown = false;
+  function keepInBrowser() {
+    if (!storage || !store.dirty || store.readOnly) return;
+    const now = new Date();
+    session.storageOk = saveDraft(storage, store.doc, { baseHash: session.baseHash, now });
+    if (session.storageOk) session.draftAt = now.toISOString();
+    else if (!storageWarningShown) {
+      storageWarningShown = true;
+      showNotice('This browser can’t keep your changes (the family, with its photos, is too big for browser storage). Download now so nothing is lost.', 'error');
+    }
+    toolbar.render(store, sessionView());
+  }
+  const autosave = debounce(keepInBrowser, 1000);
+  setInterval(keepInBrowser, 30000);
   store.subscribe(() => {
     update();
     if (store.dirty) autosave();
   });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') autosave.flush();
+  });
+  window.addEventListener('pagehide', () => autosave.flush());
   window.addEventListener('beforeunload', (event) => {
     if (!store.dirty) return;
     autosave.flush();
@@ -341,22 +436,7 @@ function boot() {
     event.returnValue = '';
   });
 
-  const draft = storage && !store.readOnly ? findNewerDraft(storage, store.doc) : null;
-  if (draft) {
-    const when = new Date(draft.savedAt).toLocaleString();
-    showNotice([
-      `Unsaved changes from ${when} were found. `,
-      h('button', { type: 'button', class: 'primary', onclick: () => {
-        ctx.edit('Restore unsaved changes', (d) => replaceDocument(d, draft.doc));
-        notice.hidden = true;
-      } }, 'Restore'),
-      ' ',
-      h('button', { type: 'button', onclick: () => { clearDraft(storage, store.doc); notice.hidden = true; } }, 'Discard'),
-      ' ',
-    ]);
-  }
-
-  window.famtee = { store, view, ctx, save, interaction, getTransform, setTransform, fit };
+  window.famtee = { store, view, ctx, session, download, interaction, getTransform, setTransform, fit };
   update();
 }
 

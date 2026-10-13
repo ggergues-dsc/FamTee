@@ -136,6 +136,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .menu button:hover, .menu button:focus-visible { background: var(--bg); outline: none; }
 .save-state { font-size: 0.8rem; color: var(--muted); margin: 0 0.4rem; }
 .save-state.dirty { color: var(--ref-stroke); }
+.save-state.error { color: var(--error); font-weight: 600; }
 
 .notice {
   display: flex;
@@ -184,6 +185,13 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .panel .link-form .row input { flex: 1; }
 .panel .row select { min-width: 0; }
 .panel .hint { font-size: 0.85rem; }
+.panel .advanced { margin-top: 1.25rem; border-top: 1px solid var(--card-stroke); padding-top: 0.5rem; }
+.panel .advanced > summary { cursor: pointer; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted); padding: 0.25rem 0; }
+.panel .advanced[open] > summary { margin-bottom: 0.25rem; }
+.panel .attrs { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 0.75rem; margin: 0; font-size: 0.8rem; }
+.panel .attrs dt { color: var(--muted); }
+.panel .attrs dd { margin: 0; overflow-wrap: anywhere; }
 .panel .photo-section { display: grid; justify-items: start; gap: 0.25rem; margin-bottom: 0.75rem; }
 .panel .photo-frame { border-radius: 50%; outline: 2px dashed transparent; outline-offset: 3px; }
 .panel .photo-frame.drop { outline-color: var(--accent); }
@@ -196,3 +204,28 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
   #canvas { min-height: 55vh; }
   .panel { width: auto; border-left: 0; border-top: 1px solid var(--card-stroke); }
 }
+
+/* --- start screen (ADR 0017) --- */
+.start-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+}
+.start { width: min(40rem, 100%); }
+.start h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
+.start-intro { margin: 0 0 1rem; color: var(--muted); }
+.start-intro strong { color: var(--fg); }
+.start-choices { display: grid; gap: 0.75rem; }
+.start-choice { padding: 0.9rem 1.1rem; border: 1px solid var(--card-stroke); border-radius: 10px; background: var(--card-bg); }
+.start-choice.primary { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.start-choice h2 { margin: 0 0 0.2rem; font-size: 1.05rem; }
+.start-choice p { margin: 0 0 0.5rem; font-size: 0.9rem; }
+.start-choice .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.start-choice .row input[type="text"] { flex: 1; min-width: 10rem; }
+.start-warning { color: var(--error); }
+.start-error { color: var(--error); font-weight: 600; }
