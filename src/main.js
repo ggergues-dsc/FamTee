@@ -344,9 +344,28 @@ async function boot() {
     setTransform(zoomAt(t, t.k * factor, svg.clientWidth / 2, svg.clientHeight / 2));
   };
 
+  // What a press on the canvas is about, read at press time (see interaction.js).
+  const describe = (target) => {
+    const ref = target.closest?.('[data-ref-graph]');
+    const badge = target.closest?.('[data-link-graph]');
+    const node = target.closest?.('[data-id]');
+    return {
+      refGraph: ref?.dataset.refGraph ?? null,
+      link: badge ? { graph: badge.dataset.linkGraph, node: badge.dataset.linkNode } : null,
+      id: node && !node.classList.contains('edge') ? node.dataset.id : null,
+    };
+  };
+  const onTap = (tap) => {
+    if (tap?.refGraph) ctx.open(tap.refGraph);
+    else if (tap?.link) ctx.openNode(tap.link.graph, tap.link.node);
+    else ctx.select(tap?.id ?? null);
+  };
+
   const interaction = createInteraction(svg, {
     getTransform,
     setTransform,
+    describe,
+    onTap,
     draggableId: (target) => (store.readOnly ? null : target.closest?.('rect.card[data-id]')?.dataset.id ?? null),
     onDragMove(id, dx, dy) {
       drag = { id, dx, dy };
@@ -390,16 +409,6 @@ async function boot() {
     toolbar.render(store, sessionView());
   }
 
-  // Clicks (a press without movement; pans and drags swallow their click).
-  svg.addEventListener('click', (event) => {
-    const ref = event.target.closest('[data-ref-graph]');
-    const badge = event.target.closest('[data-link-graph]');
-    const node = event.target.closest('[data-id]');
-    if (ref) ctx.open(ref.dataset.refGraph);
-    else if (badge) ctx.openNode(badge.dataset.linkGraph, badge.dataset.linkNode);
-    else if (node && !node.classList.contains('edge')) ctx.select(node.dataset.id);
-    else ctx.select(null);
-  });
 
   // --- keyboard ------------------------------------------------------------------
   document.addEventListener('keydown', (event) => {

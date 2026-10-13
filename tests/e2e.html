@@ -46,6 +46,17 @@ function captureDownloads(win) {
 const textOf = (download) => download.blob.text();
 
 const byText = (doc, text) => [...doc.querySelectorAll('button')].find((b) => b.textContent === text);
+// A real press and release on a canvas element (what a mouse click or a finger tap does).
+function tap(win, el) {
+  const r = el.getBoundingClientRect();
+  const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
+  const fire = (type, target) => target.dispatchEvent(new win.PointerEvent(type, {
+    bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y,
+  }));
+  const svg = win.document.getElementById('canvas');
+  fire('pointerdown', el);
+  fire('pointerup', svg);
+}
 const change = (el, value) => { el.value = value; el.dispatchEvent(new Event('change')); };
 const fingerprint = (html) => JSON.parse(new DOMParser().parseFromString(html, 'text/html')
   .getElementById('famtee-data').textContent).meta.revision;
@@ -199,11 +210,11 @@ test('copy a person into a sub-graph, follow the badge there and back; group via
 
   const badge = doc.querySelector('.link-badge');
   assert(badge, 'badge on the original card');
-  badge.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  tap(win, badge);
   assertEqual(app.view.path.at(-1), sub, 'badge opens the other graph');
   const [copy] = app.view.selection;
   assertEqual(app.store.doc.graphs[sub].nodes[copy].attrs.name.given, 'Nadia');
-  doc.querySelector('.link-badge').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  tap(win, doc.querySelector('.link-badge'));
   assertEqual([app.view.path.at(-1), [...app.view.selection][0]], ['g-hanna', 'p-nadia'], 'and back');
 
   byText(doc, 'Add to group').click();
@@ -213,7 +224,7 @@ test('copy a person into a sub-graph, follow the badge there and back; group via
   assertEqual(groups.map((n) => n.attrs.members), [['p-nadia', 'p-peter']], 'joined the existing group');
   const hull = doc.querySelector('rect.group');
   assert(hull, 'group drawn');
-  hull.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  tap(win, hull);
   assertEqual(doc.querySelector('#panel h2').textContent, 'Group');
   app.store.undo();
   app.store.undo();
@@ -370,6 +381,45 @@ test('layout: switch to left to right; a card dropped on a neighbour pushes it a
   app.store.undo();
   const georgeTB = box('p-george');
   assert(box('p-peter').y > georgeTB.y + georgeTB.h, 'undo: back to top to bottom');
+});
+
+// Regression (reported in UAT): after adding a relative and typing in it, going back to
+// the parent didn't work: committing the field on blur redrew the panel and canvas in the
+// middle of the click, so the click was lost or landed on the background (deselecting).
+test('add a relative, type without Enter, go back to the parent: the parent can be edited', async () => {
+  for (const via of ['panel link', 'card']) {
+    const { win, doc, app } = await load({ srcdoc: savedHtml }, 'start-new');
+    byText(doc, '+ Person').click();
+    const [parent] = app.view.selection;
+    change(doc.querySelector('[name="given"]'), 'Parent');
+    byText(doc, '+ Child').click();
+    const [kid] = app.view.selection;
+    const input = doc.querySelector('[name="given"]');
+    input.focus();
+    input.value = 'Kid';
+
+    const target = via === 'panel link'
+      ? [...doc.querySelectorAll('.people .link')].find((b) => b.textContent === 'Parent')
+      : doc.querySelector(`rect.card[data-id="${parent}"]`);
+    const r = target.getBoundingClientRect();
+    const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
+    if (via === 'card') {
+      target.dispatchEvent(new win.PointerEvent('pointerdown', { bubbles: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y }));
+    }
+    input.dispatchEvent(new win.Event('change')); // the field commits as it loses focus → redraw
+    if (via === 'panel link') {
+      assert(target.isConnected, 'the link being pressed survives the commit');
+      target.click();
+    } else {
+      doc.getElementById('canvas').dispatchEvent(new win.PointerEvent('pointerup', { bubbles: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y }));
+    }
+    assertEqual(app.store.doc.graphs[app.store.doc.meta.rootGraph].nodes[kid].attrs.name.given, 'Kid', `${via}: child's typing kept`);
+    assertEqual([...app.view.selection][0], parent, `${via}: parent selected`);
+    const field = doc.querySelector('[name="given"]');
+    assertEqual(field.value, 'Parent', `${via}: parent's data shown`);
+    change(field, 'Parent edited');
+    assertEqual(app.store.doc.graphs[app.store.doc.meta.rootGraph].nodes[parent].attrs.name.given, 'Parent edited', `${via}: parent editable`);
+  }
 });
 
 run();
