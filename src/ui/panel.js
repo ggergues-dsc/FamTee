@@ -463,6 +463,10 @@ export function createPanel(container, ctx) {
         h('div', { class: 'row' },
           h('button', { type: 'button', onclick: () =>
             ctx.editAndSelect('Add person', (d) => addPerson(d, graphId, { name: { given: 'New person' } })) }, '+ Person'))),
+      form([{ name: 'orientation', label: 'Layout', options: [['TB', 'Generations top to bottom'], ['LR', 'Generations left to right']],
+        ...nested(null, 'orientation') }],
+      () => ctx.store.doc.graphs[graphId]?.layout ?? {},
+      (field, value) => ctx.edit('Change layout', (d) => { d.graphs[graphId].layout = { ...d.graphs[graphId].layout, orientation: value }; })),
       h('p', { class: 'muted hint' }, 'Click a person to see and edit everything about them and to add relatives. Drag cards to move them; drag the background to pan, scroll or pinch to zoom.'),
       photoUsage(),
       advanced(

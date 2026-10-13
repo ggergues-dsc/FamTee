@@ -39,6 +39,9 @@ export function validate(doc) {
       fail('graph-shape', `graph "${graphId}" must have a nodes object and an edges array`);
       continue;
     }
+    if (graph.layout !== undefined && (!isObject(graph.layout) || !['TB', 'LR', undefined].includes(graph.layout.orientation))) {
+      fail('graph-layout', `graph "${graphId}": layout.orientation must be "TB" or "LR"`);
+    }
 
     for (const [nodeId, node] of Object.entries(graph.nodes)) {
       const where = `${graphId}:${nodeId}`;

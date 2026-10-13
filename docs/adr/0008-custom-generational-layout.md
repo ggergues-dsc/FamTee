@@ -49,3 +49,6 @@ Implemented in `src/layout/layout.js`, with refinements found while testing agai
   follows its pinned partners. Pins became relative offsets (`attrs.nudge`) when dragging was implemented, see ADR 0012.
 - **Connector lanes** (renderer): child connectors from different unions in the same row are given separate
   heights where their horizontal spans overlap. Otherwise a remarried parent's two families read as one.
+
+See [ADR 0019](0019-layout-push-aside-and-orientation.md): manually moved cards now push others aside, and a left-to-right
+orientation exists ("Options per graph: orientation" above is implemented as `graphs[id].layout.orientation`).

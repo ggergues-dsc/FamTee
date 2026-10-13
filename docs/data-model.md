@@ -36,7 +36,8 @@ A FamTee document is a **compound multi-graph**:
     }
   },
   "graphs": {
-    "g-main": { "title": "Main line", "nodes": { }, "edges": [ ] }
+    "g-main": { "title": "Main line", "nodes": { }, "edges": [ ],
+                "layout": { "orientation": "TB" } }   // optional: "TB" (default) or "LR" (ADR 0019)
   },
   "links": [ ],
   "media": {                             // embedded photos, shared by id (ADR 0013)

@@ -383,6 +383,18 @@ test('all attributes refresh after an edit', () => {
   s.container.remove();
 });
 
+test('layout orientation is a graph setting: undoable and saved in the file', () => {
+  const s = setup();
+  const select = field(s.container, 'orientation');
+  assertEqual(select.value, 'TB');
+  change(select, 'LR');
+  assertEqual(s.store.doc.graphs[s.g].layout, { orientation: 'LR' });
+  assertEqual(s.store.undoStack.at(-1).label, 'Change layout');
+  s.store.undo();
+  assertEqual(field(s.container, 'orientation').value, 'TB');
+  s.container.remove();
+});
+
 test('h() treats strings as text, never markup', () => {
   const el = h('p', { class: 'x', dataset: { id: '1' } }, '<b>bold</b>', null, ['a', 'b']);
   assertEqual(el.innerHTML, '&lt;b&gt;bold&lt;/b&gt;ab');

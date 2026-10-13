@@ -8,6 +8,7 @@ import './migrate.test.js';
 import './serialize.test.js';
 import './store.test.js';
 import './layout.test.js';
+import './layout2.test.js';
 import './render.test.js';
 import './family.test.js';
 import './persist.test.js';

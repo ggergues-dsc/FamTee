@@ -283,6 +283,7 @@ async function boot() {
   // --- canvas: rendering, pan/zoom, drag ------------------------------------------
   const svg = renderer.svg;
   const transforms = new Map(); // graph id → pan/zoom transform, kept while navigating
+  const fittedOrientation = new Map(); // graph id → orientation its transform was fitted for
   let drag = null; // { id, dx, dy } while a card is being dragged
   let layout = null;
 
@@ -292,7 +293,11 @@ async function boot() {
       selection: view.selection,
       preview: drag ? { [drag.id]: { dx: drag.dx, dy: drag.dy } } : null,
     });
-    if (!transforms.has(graphId)) transforms.set(graphId, fitTransform(layout.bounds, svg.clientWidth, svg.clientHeight));
+    // A new graph, or a changed orientation, starts fitted to the window.
+    if (!transforms.has(graphId) || fittedOrientation.get(graphId) !== layout.options.orientation) {
+      transforms.set(graphId, fitTransform(layout.bounds, svg.clientWidth, svg.clientHeight));
+      fittedOrientation.set(graphId, layout.options.orientation);
+    }
     renderer.setTransform(transforms.get(graphId));
   }
 

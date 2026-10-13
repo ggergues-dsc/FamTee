@@ -312,6 +312,38 @@ test('photos: add and replace in the built app; saved file holds only the curren
   assert(doc.querySelector('defs pattern image').getAttribute('href').startsWith('data:image/jpeg;base64,'));
 });
 
+test('layout: switch to left to right; a card dropped on a neighbour pushes it aside', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  const card = (id) => doc.querySelector(`rect.card[data-id="${id}"]`);
+  const box = (id) => ({ x: +card(id).getAttribute('x'), y: +card(id).getAttribute('y'), w: +card(id).getAttribute('width'), h: +card(id).getAttribute('height') });
+  const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  // Drag Leo onto Zoe (siblings): Zoe must move out of the way.
+  const [leo, zoe] = [box('p-leo'), box('p-zoe')];
+  const k = app.getTransform().k;
+  const r = card('p-leo').getBoundingClientRect();
+  const fire = (type, target, x, y) => target.dispatchEvent(new win.PointerEvent(type, {
+    bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: y,
+  }));
+  const [cx, cy] = [r.left + r.width / 2, r.top + r.height / 2];
+  fire('pointerdown', card('p-leo'), cx, cy);
+  fire('pointermove', doc.getElementById('canvas'), cx + 20, cy);
+  fire('pointermove', doc.getElementById('canvas'), cx + (zoe.x - leo.x) * k, cy);
+  fire('pointerup', doc.getElementById('canvas'), cx + (zoe.x - leo.x) * k, cy);
+  assert(Math.abs(box('p-leo').x - zoe.x) <= 1, 'Leo is where he was dropped');
+  assert(!overlaps(box('p-leo'), box('p-zoe')), 'Zoe was pushed aside');
+  assert(!app.store.doc.graphs['g-hanna'].nodes['p-zoe'].attrs.nudge, 'Zoe herself was not moved by the user');
+
+  change(doc.querySelector('[name="orientation"]'), 'LR');
+  const george = box('p-george');
+  assert(box('p-peter').x > george.x + george.w, 'next generation is to the right');
+  const all = [...doc.querySelectorAll('rect.card.person')].map((c) => box(c.dataset.id));
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) assert(!overlaps(all[i], all[j]), 'no overlaps left to right');
+  app.store.undo();
+  const georgeTB = box('p-george');
+  assert(box('p-peter').y > georgeTB.y + georgeTB.h, 'undo: back to top to bottom');
+});
+
 run();
 </script>
 </body>
