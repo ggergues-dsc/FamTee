@@ -117,6 +117,22 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-left: auto; }
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  display: grid;
+  min-width: 15rem;
+  padding: 0.3rem;
+  border: 1px solid var(--card-stroke);
+  border-radius: 8px;
+  background: var(--card-bg);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+.menu button { border: 0; text-align: left; background: none; padding: 0.45rem 0.6rem; }
+.menu button:hover, .menu button:focus-visible { background: var(--bg); outline: none; }
 .save-state { font-size: 0.8rem; color: var(--muted); margin: 0 0.4rem; }
 .save-state.dirty { color: var(--ref-stroke); }
 

@@ -8,7 +8,7 @@ import { captureTemplate, isSelfContained, documentContents, writeFile, fileName
 import { saveDraft, findNewerDraft, clearDraft, debounce } from './persist/autosave.js';
 import { parseImport } from './persist/import.js';
 import { importGedcom, addImportedGraph, looksLikeGedcom } from './io/gedcom/import.js';
-import { exportGedcom } from './io/gedcom/export.js';
+import { exportGedcom, exportGedcomMerged } from './io/gedcom/export.js';
 import { createDocument, updateNodeAttrs, removeNode } from './store/model.js';
 import { replaceDocument, removePerson } from './store/family.js';
 import { loadDocument, readEmbedded } from './store/serialize.js';
@@ -111,7 +111,7 @@ function boot() {
 
   async function save(kind) {
     if (kind === 'html' && !SELF_CONTAINED) {
-      showNotice('This page runs from separate source files, so it can’t save itself as one file. Build it with python3 build/build.py, or use Export JSON.', 'error');
+      showNotice('This page runs from separate source files, so it can’t save itself as one file. Build it with python3 build/build.py, or use Export ▸ FamTee data.', 'error');
       return;
     }
     const { doc } = store;
@@ -137,19 +137,21 @@ function boot() {
     }
   }
 
-  // GEDCOM is exported per graph and never counts as saving: the file can't hold
-  // everything FamTee stores (ADR 0010).
-  async function exportGedcomFile() {
-    const graphId = currentGraph();
-    const graph = store.doc.graphs[graphId];
+  // GEDCOM export (the graph on screen, or every graph merged) never counts as
+  // saving: the file can't hold everything FamTee stores (ADR 0010).
+  async function exportGedcomFile({ merged = false } = {}) {
+    const { doc } = store;
+    const graph = doc.graphs[currentGraph()];
     try {
-      const { text, stats, warnings } = exportGedcom(store.doc, graphId);
+      const { text, stats, warnings } = merged ? exportGedcomMerged(doc) : exportGedcom(doc, currentGraph());
+      const title = merged ? doc.meta.title : graph.title || doc.meta.title;
       const result = await writeFile({
         contents: text,
         kind: 'gedcom',
-        suggestedName: fileName({ meta: { title: graph.title || store.doc.meta.title } }, FORMATS.gedcom.ext),
+        suggestedName: fileName({ meta: { title } }, FORMATS.gedcom.ext),
       });
-      const what = `${stats.people} people and ${stats.families} families from “${graph.title}”`;
+      const counts = `${stats.people} people and ${stats.families} families`;
+      const what = merged ? `${counts} from ${stats.graphs} graph(s) merged` : `${counts} from “${graph.title}”`;
       showNotice(`${result.method === 'download' ? 'Downloaded' : 'Exported'} GEDCOM with ${what}.` +
         (warnings.length ? ` ${warnings.join('. ')}.` : ''));
     } catch (e) {
@@ -192,6 +194,7 @@ function boot() {
     save: () => save('html'),
     exportJson: () => save('json'),
     exportGedcom: () => exportGedcomFile(),
+    exportGedcomMerged: () => exportGedcomFile({ merged: true }),
     importFile,
   });
 

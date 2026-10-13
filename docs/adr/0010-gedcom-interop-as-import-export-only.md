@@ -48,5 +48,25 @@ Implemented in `src/io/gedcom/` (`lines.js` parser/writer, `convert.js` dates an
   - Anything GEDCOM can't hold (groups, sub-graph tiles, custom relations, cross-graph links, card positions,
     step-child and "widowed" kinds) is listed in the notice.
   - A GEDCOM export never marks the document saved.
-- **Deferred:** merged export of several graphs (collapsing `same-as` people into one INDI), GEDCOM 7-specific
-  structures, and ANSEL decoding.
+- **Deferred:** GEDCOM 7-specific structures and ANSEL decoding.
+
+### Merged export across linked graphs (added 2026-10-13)
+
+**Export ▸ GEDCOM: all graphs merged** writes every graph as one tree, which is what other genealogy software
+expects:
+
+- **People:** everyone joined by `same-as` links (followed transitively) becomes one INDI.
+  - Details are merged field by field in graph order: the root graph, then graphs reachable through tiles
+    (breadth-first), then the rest. Missing fields are filled from other copies.
+  - Where copies disagree (e.g. two birth dates), the first graph's value is used and the export says which
+    details differed.
+  - Different names (maiden vs married) are not treated as conflicts: they become additional NAME lines, which
+    GEDCOM allows. On import, additional names are reported, since FamTee keeps one name.
+- **Families:** the same couple recorded in several graphs becomes one FAM, with the children combined. A lone
+  parent's families are merged only when they share a child, because one parent's different families may really
+  be different.
+- **Reported as lost:** "related" links between graphs, plus everything the single-graph export reports.
+- Both exports share one writer, built on a neutral `{ people, families }` model, so single-graph export output
+  is unchanged.
+- The two Export buttons became one **Export ▾** menu (FamTee JSON / GEDCOM this graph / GEDCOM all graphs
+  merged), which also stops the toolbar wrapping at about 1100 px.
