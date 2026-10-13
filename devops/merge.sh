@@ -2,7 +2,7 @@
 # Merge gate (ADR 0015): merges a GitHub PR only after the local CI pipeline is green
 # on exactly what main will contain after the merge, then delivers a release.
 #
-#   devops/merge.sh <pr-number> [--dry-run] [--delete-branch] [--method merge|squash|rebase]
+#   devops/merge.sh <pr-number> [--dry-run] [--delete-branch] [--no-uat] [--method merge|squash|rebase]
 #
 # Steps:
 #   1. fetch the PR head and origin/main; refuse if the PR isn't open against main
@@ -11,19 +11,22 @@
 #   4. merge on GitHub, pinned to the tested head commit (--match-head-commit)
 #   5. deliver releases/<version>/ for the new main commit: promote the tested run if
 #      main's tree is exactly what was tested, otherwise run the pipeline again on main
+#   6. deploy that release to UAT and verify it (ADR 0016); --no-uat skips this
 # --dry-run stops after step 3. Nothing is posted to GitHub except the merge itself.
 set -euo pipefail
 
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,/^[^#]/s/^# \{0,1\}//p' "$0"; exit 2; }  # prints the comment block above
 
 pr=''
 dry_run=0
 delete_branch=0
+uat=1
 method=merge
 while (($#)); do
   case $1 in
     --dry-run) dry_run=1; shift ;;
     --delete-branch) delete_branch=1; shift ;;
+    --no-uat) uat=0; shift ;;
     --method) method=${2:?--method needs a value}; shift 2 ;;
     -h | --help) usage ;;
     [0-9]*) pr=$1; shift ;;
@@ -80,5 +83,13 @@ if ((delete_branch)); then
     echo "== PR branch is in a fork; not deleting it"
   else
     git push -q origin --delete "$head_ref" && echo "== deleted branch $head_ref on GitHub"
+  fi
+fi
+
+if ((uat)); then
+  echo "== deploying the release to UAT"
+  if ! devops/uat.sh deploy; then
+    echo "== PR #$pr is merged and released, but the UAT deploy FAILED; retry with: devops/uat.sh deploy" >&2
+    exit 3
   fi
 fi

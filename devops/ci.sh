@@ -15,7 +15,7 @@
 # the last run is written to .ci/last-run. Exit status: 0 green, 1 red, 2 usage error.
 set -euo pipefail
 
-usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,/^[^#]/s/^# \{0,1\}//p' "$0"; exit 2; }  # prints the comment block above
 
 ref=HEAD
 release=0

@@ -1,8 +1,9 @@
 # DevOps
 
-Container-based testing and the local CI/CD cycle for FamTee, without GitHub Actions. Decision records:
-[ADR 0014](../docs/adr/0014-disposable-container-tests.md) (disposable container) and
-[ADR 0015](../docs/adr/0015-local-cicd-pipeline.md) (pipeline and merge gate).
+Container-based testing, the local CI/CD cycle and a UAT environment for FamTee, without GitHub Actions. Decision
+records: [ADR 0014](../docs/adr/0014-disposable-container-tests.md) (disposable container),
+[ADR 0015](../docs/adr/0015-local-cicd-pipeline.md) (pipeline and merge gate) and
+[ADR 0016](../docs/adr/0016-local-uat-environment.md) (UAT).
 
 ## The CI/CD cycle
 
@@ -20,12 +21,30 @@ devops/ci.sh --ref <commit> --release   # ... and deliver releases/<version>/
 | test | full suite in the disposable container |
 | build | `famtee.html` + every sample, with `SHA256SUMS` (byte-for-byte reproducible) |
 | deliver | `releases/<YYYY.MM.DD>-<sha7>/` with artifacts, `ci.log`, `manifest.json`; `releases/latest` |
+| UAT (merge only) | deploy the release to the UAT server and verify what it serves |
 
 `merge.sh` runs the pipeline on **what main will contain after the merge** (computed with `git merge-tree`). It merges
 only when that is green, pinned to the tested PR head, then releases the new `main` commit. Run records are in
 `.ci/runs/` (last 20 kept); both `.ci/` and `releases/` are git-ignored.
 
 Merging with GitHub's own button bypasses the gate: merge with `devops/merge.sh` instead.
+
+## UAT: user acceptance testing on the local network
+
+Every merge through `devops/merge.sh` ends by deploying the new release to a **UAT web server** that anyone on your
+local network can open ([ADR 0016](../docs/adr/0016-local-uat-environment.md)):
+
+```bash
+devops/uat.sh status      # what's deployed, and the URLs (this computer + local network)
+devops/uat.sh deploy      # deploy releases/latest (or a given release folder), then verify it
+devops/uat.sh down        # stop and remove the UAT server
+```
+
+The landing page shows the version, commit and test result, with links to open the app, the sample families,
+checksums and the pipeline log. Deploys are atomic (no interruption for testers) and verified: UAT must serve the
+release's exact version and checksum. The server is unprivileged nginx with a read-only filesystem, keeps running
+until `down` (it restarts after a reboot), and listens on all interfaces at port 8080. Set
+`FAMTEE_UAT_BIND=127.0.0.1` to keep it to this computer.
 
 ## Run the tests in a disposable container
 
@@ -64,7 +83,10 @@ The image holds only the toolchain, not the source, so it is rebuilt only when `
 | `compose.test.yaml` | The disposable, read-only, offline service definition |
 | `test.sh` | One-command wrapper: test the working copy in the container, return the test status |
 | `ci.sh` | The pipeline: export → test → build → (deliver) for an exact commit or tree |
-| `merge.sh` | Merge gate: pipeline on the PR's merge result → merge → release |
+| `merge.sh` | Merge gate: pipeline on the PR's merge result → merge → release → UAT |
+| `uat.sh` | UAT server: deploy (atomic + verified), status, up, down, logs |
+| `compose.uat.yaml`, `uat/nginx.conf` | Hardened, read-only nginx serving `.uat/current` on port 8080 |
+| `uat/landing.py` | Generates the UAT landing page from a release's manifest |
 
 ## Housekeeping
 
