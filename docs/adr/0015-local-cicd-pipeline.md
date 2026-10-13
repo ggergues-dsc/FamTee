@@ -56,3 +56,22 @@ that run tested. Exit codes: 0 green, 1 red, 2 usage error.
 - − It is a convention, not enforcement: merging with the GitHub button bypasses the gate. Branch protection
   that requires a status would need reporting to GitHub, which was deliberately left out.
 - − Releases are local folders (git-ignored); sharing them is a manual step.
+
+## Addendum (2026-10-13): devops self-test in the gate
+
+The app's test suite doesn't cover the devops scripts, which is how a UAT pruning bug reached `main` (ADR 0016,
+"Incident and fix"). `merge.sh` now has a step 4:
+
+- If the PR changes anything under `devops/` (or with `--selftest`), the gate runs
+  `devops/gate-selftest.sh <merge result tree> <run artifacts>`.
+- That exports the merge result with `git archive` and runs **that tree's own** `devops/selftest.sh` against the
+  artifacts the pipeline just built. It tests the PR's version of the scripts, not the working copy's.
+- The scripts find the repo relative to their own location, so they work in an exported tree.
+- A red self-test blocks the merge; the log is kept as `.ci/runs/<run>/selftest.log`. Dry runs include the step.
+
+**Verified:** a throwaway commit with the old pruning bug made the gate's self-test fail at exactly the regression
+step, even though the working copy held the fixed script. The good tree passed, and live UAT was untouched.
+
+**Not covered:** the gate scripts that do the testing (`merge.sh`, `ci.sh`) run from the working copy, so the code
+under review never decides whether it may merge. A change to those scripts is still exercised only by the
+self-test's UAT scenarios, not end to end.

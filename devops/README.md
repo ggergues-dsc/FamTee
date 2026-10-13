@@ -21,6 +21,7 @@ devops/ci.sh --ref <commit> --release   # ... and deliver releases/<version>/
 | test | full suite in the disposable container |
 | build | `famtee.html` + every sample, with `SHA256SUMS` (byte-for-byte reproducible) |
 | deliver | `releases/<YYYY.MM.DD>-<sha7>/` with artifacts, `ci.log`, `manifest.json`; `releases/latest` |
+| devops self-test (merge, if `devops/` changed) | the PR's own `devops/selftest.sh`, run from the merge result |
 | UAT (merge only) | deploy the release to the UAT server and verify what it serves |
 
 `merge.sh` runs the pipeline on **what main will contain after the merge** (computed with `git merge-tree`). It merges
@@ -38,7 +39,7 @@ local network can open ([ADR 0016](../docs/adr/0016-local-uat-environment.md)):
 devops/uat.sh status      # what's deployed, and the URLs (this computer + local network)
 devops/uat.sh deploy      # deploy releases/latest (or a given release folder), then verify it
 devops/uat.sh down        # stop and remove the UAT server
-devops/selftest.sh        # test the devops scripts on a throwaway UAT; run it whenever devops/ changes
+devops/selftest.sh        # test the devops scripts on a throwaway UAT (the merge gate runs it for devops/ changes)
 ```
 
 The landing page shows the version, commit and test result, with links to open the app, the sample families,
@@ -89,6 +90,7 @@ The image holds only the toolchain, not the source, so it is rebuilt only when `
 | `compose.uat.yaml`, `uat/nginx.conf` | Hardened, read-only nginx serving `.uat/current` on port 8080 |
 | `uat/landing.py` | Generates the UAT landing page from a release's manifest |
 | `selftest.sh` | Tests the devops scripts on a throwaway UAT (port 18080), never touching live UAT |
+| `gate-selftest.sh` | Runs a given tree's own `selftest.sh` from a `git archive` export (used by `merge.sh`) |
 
 ## Housekeeping
 
