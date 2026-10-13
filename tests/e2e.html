@@ -312,6 +312,34 @@ test('photos: add and replace in the built app; saved file holds only the curren
   assert(doc.querySelector('defs pattern image').getAttribute('href').startsWith('data:image/jpeg;base64,'));
 });
 
+test('privacy: a shared copy hides living people and leaves the family untouched', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  app.ctx.select('p-george');
+  assertEqual(doc.querySelector('[name="status"]').value, '', 'automatic by default');
+  change(doc.querySelector('[name="status"]'), 'deceased');
+  assertEqual(app.store.doc.graphs['g-hanna'].nodes['p-george'].attrs.status, 'deceased');
+  const before = JSON.stringify(app.store.doc);
+  const dirty = app.store.dirty;
+
+  const saved = captureDownloads(win);
+  byText(doc, 'Export ▾').click();
+  byText(doc, 'Share copy without living people (.html)').click();
+  assertEqual(saved.length, 1);
+  assert(/-shared-\d{4}-\d{2}-\d{2}-\d{6}-[0-9a-f]{6}\.html$/.test(saved[0].name), saved[0].name);
+  const shared = JSON.parse(new DOMParser().parseFromString(await textOf(saved[0]), 'text/html')
+    .getElementById('famtee-data').textContent);
+  const people = Object.values(shared.graphs['g-hanna'].nodes).filter((n) => n.type === 'person');
+  const living = people.filter((n) => n.attrs.name?.given === 'Living');
+  assert(living.length > 0 && living.every((n) => !n.attrs.birth && !n.attrs.notes && !n.attrs.photo));
+  assert(people.some((n) => n.attrs.name?.given === 'George'), 'deceased people stay named');
+  for (const name of ['Baby', 'Rami']) assert(!JSON.stringify(shared).includes(name), `living ${name} is not in the copy`);
+  assert(JSON.stringify(shared).includes('Pierre'), 'Pierre died in 2019: kept');
+  assert(shared.meta.id !== app.store.doc.meta.id);
+  assertEqual(JSON.stringify(app.store.doc), before, 'family untouched');
+  assertEqual(app.store.dirty, dirty, 'sharing is not saving');
+  assert(doc.getElementById('notice').textContent.includes('shown as “Living”'));
+});
+
 test('layout: switch to left to right; a card dropped on a neighbour pushes it aside', async () => {
   const { win, doc, app } = await load({ srcdoc: savedHtml });
   const card = (id) => doc.querySelector(`rect.card[data-id="${id}"]`);

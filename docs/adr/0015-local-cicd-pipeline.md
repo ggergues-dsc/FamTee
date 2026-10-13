@@ -22,9 +22,10 @@ Two scripts in `devops/`:
 4. *build* — in the same kind of container, build `famtee.html` and every sample into the run's `artifacts/` with
    `SHA256SUMS`. That bind mount is the only host path the pipeline writes to.
 5. *deliver* (`--release`, commits only) — copy the artifacts, `ci.log` and a `manifest.json` (version, commit,
-   tree, subject, build time, test result) into `releases/<YYYY.MM.DD.HH.MM>-<sha7>/` and point `releases/latest` at it.
-   The version is the commit's time in UTC to the minute plus the short commit hash, so a newer release always
-   sorts later and the same commit always gets the same version.
+   tree, subject, build time, test result) into `releases/<YYYY.MM.DD.HH.MM.SS>-<sha7>/` and point `releases/latest` at it.
+   The version is the commit's time in UTC to the second plus the short commit hash, so a newer release always
+   sorts later and the same commit always gets the same version. (Minutes were not enough: two merges 26 seconds
+   apart once shared `2026.10.13.14.26`, and the newer one listed first.)
 
 Each run is recorded in `.ci/runs/<UTC time>-<sha7>/` (`ci.log`, `status`, `tree`, `artifacts/`); the last 20 are
 kept. `--promote <run> --ref <commit>` delivers an earlier green run, but only if the commit has **exactly** the tree

@@ -16,6 +16,7 @@ import argparse
 import http.server
 import json
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -55,13 +56,26 @@ def start_server(results: queue.Queue) -> http.server.ThreadingHTTPServer:
     return server
 
 
+def is_chromium(browser: str) -> bool:
+    return any(name in Path(browser).name for name in ("chrom", "chrome", "msedge"))
+
+
+def browser_command(browser: str, profile: str, url: str) -> list[str]:
+    if is_chromium(browser):
+        # --no-sandbox: Chromium's sandbox needs privileges the locked-down test container
+        # doesn't grant (ADR 0014); the container itself is the isolation boundary.
+        return [browser, "--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run",
+                "--no-default-browser-check", f"--user-data-dir={profile}", url]
+    return [browser, "--headless", "--no-remote", "--profile", profile, url]
+
+
 def run_in_browser(browser: str, url: str, results: queue.Queue) -> dict | None:
     # Snap-packaged Firefox can only use profile directories inside $HOME, so keep it in the repo.
     cache = ROOT / ".cache"
     cache.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(dir=cache, prefix="profile-") as profile:
         proc = subprocess.Popen(
-            [browser, "--headless", "--no-remote", "--profile", profile, url],
+            browser_command(browser, profile, url),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -77,10 +91,27 @@ def run_in_browser(browser: str, url: str, results: queue.Queue) -> dict | None:
                 proc.kill()
 
 
-def report(name: str, summary: dict | None) -> bool:
+ENGINES = (("Firefox", r"Firefox/(\d+)"), ("Chrome", r"Chrome/(\d+)"))
+
+
+def engine(user_agent: str) -> str:
+    """'Firefox 153' / 'Chrome 155' from a user agent string."""
+    for name, pattern in ENGINES:
+        m = re.search(pattern, user_agent or "")
+        if m:
+            return f"{name} {m[1]}"
+    return "unknown browser"
+
+
+def report(name: str, summary: dict | None, browser: str = "") -> bool:
     print(f"== Browser: {name}")
     if summary is None:
         print(f"   no results within {TIMEOUT}s (page failed to load or crashed)")
+        return False
+    ran_in = engine(summary.get("userAgent", ""))
+    print(f"   ran in {ran_in}")
+    if browser and ("Chrome" in ran_in) != is_chromium(browser):
+        print(f"   FAIL results came from {ran_in}, not from {browser}")
         return False
     for r in summary["results"]:
         if not r["ok"]:
@@ -91,13 +122,16 @@ def report(name: str, summary: dict | None) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run FamTee tests")
-    parser.add_argument("--browser", default="firefox")
+    parser.add_argument("--browser", action="append", dest="browsers",
+                        help="browser to run the JS suites in (repeat for several; default: firefox)")
     args = parser.parse_args()
+    browsers = args.browsers or ["firefox"]
 
     ok = run_python_tests()
 
-    if not shutil.which(args.browser):
-        print(f"{args.browser} not found; skipping browser tests")
+    missing = [b for b in browsers if not shutil.which(b)]
+    if missing:
+        print(f"not found: {', '.join(missing)}; browser tests can't run")
         return 1
 
     bundled = ROOT / "dist" / "tests.html"
@@ -111,12 +145,14 @@ def main() -> int:
     base = f"http://127.0.0.1:{server.server_port}"
     report_url = f"{base}/__results"
     try:
-        dev = run_in_browser(args.browser, f"http://127.0.0.1:{server.server_port}/tests/index.html?report={report_url}", results)
-        ok = report("ES modules over http", dev) and ok
-        dist = run_in_browser(args.browser, f"{bundled.as_uri()}?report={report_url}", results)
-        ok = report("bundled from file://", dist) and ok
-        e2e = run_in_browser(args.browser, f"{base}/tests/e2e.html?app=/dist/e2e-app.html&report={report_url}", results)
-        ok = report("end-to-end (built app)", e2e) and ok
+        for browser in browsers:
+            label = Path(browser).name
+            dev = run_in_browser(browser, f"{base}/tests/index.html?report={report_url}", results)
+            ok = report(f"{label}: ES modules over http", dev, browser) and ok
+            dist = run_in_browser(browser, f"{bundled.as_uri()}?report={report_url}", results)
+            ok = report(f"{label}: bundled from file://", dist, browser) and ok
+            e2e = run_in_browser(browser, f"{base}/tests/e2e.html?app=/dist/e2e-app.html&report={report_url}", results)
+            ok = report(f"{label}: end-to-end (built app)", e2e, browser) and ok
     finally:
         server.shutdown()
 

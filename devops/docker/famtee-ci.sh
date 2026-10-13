@@ -19,8 +19,10 @@ tar -C "$src" \
 cd "$work"
 
 if [ "$mode" = test ]; then
-  echo "FamTee tests in a disposable container: $(python3 -V), $(firefox-esr --version 2>/dev/null)"
-  exec python3 tests/run.py --browser firefox-esr "$@"
+  echo "FamTee tests in a disposable container: $(python3 -V), $(firefox-esr --version 2>/dev/null), $(chromium --version 2>/dev/null)"
+  # Both engines by default; any --browser argument replaces the default list.
+  if [ $# -eq 0 ]; then set -- --browser firefox-esr --browser chromium; fi
+  exec python3 tests/run.py "$@"
 fi
 
 out=${FAMTEE_OUT:-/out}

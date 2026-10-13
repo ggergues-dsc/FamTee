@@ -34,6 +34,7 @@ in a single HTML file that opens in any modern browser on any OS, with no instal
 | [0015](adr/0015-local-cicd-pipeline.md) | Local CI/CD pipeline and merge gate in the container (no GitHub Actions) | Accepted |
 | [0016](adr/0016-local-uat-environment.md) | Local UAT environment: read-only web server on the LAN, deployed on merge | Accepted |
 | [0017](adr/0017-browser-first-sessions-and-simple-mode.md) | Browser-first sessions, download-only saving, versioned files, simple mode | Accepted |
+| [0018](adr/0018-privacy-filter-for-sharing.md) | Privacy filter: shared copies without living people's details | Accepted |
 | [0019](adr/0019-layout-push-aside-and-orientation.md) | Layout: moved cards push others aside; left-to-right orientation | Accepted |
 
 New decisions: copy [adr/0000-adr-template.md](adr/0000-adr-template.md), take the next number, add a row above.

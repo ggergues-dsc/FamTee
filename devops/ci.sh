@@ -51,9 +51,10 @@ deliver() {
   local artifacts=$1 log=$2
   [[ -n $commit ]] || { echo "Release needs a commit, not a bare tree" >&2; return 2; }
   local version dest
-  # Commit time in UTC down to the minute, then the commit: newer always sorts later,
-  # and the same commit always gets the same version.
-  version="$(TZ=UTC git show -s --format=%cd --date=format-local:%Y.%m.%d.%H.%M "$commit")-${commit:0:7}"
+  # Commit time in UTC down to the second, then the commit: newer always sorts later
+  # (two merges a few seconds apart once shared a minute), and the same commit always
+  # gets the same version.
+  version="$(TZ=UTC git show -s --format=%cd --date=format-local:%Y.%m.%d.%H.%M.%S "$commit")-${commit:0:7}"
   dest="releases/$version"
   rm -rf "$dest"
   mkdir -p "$dest"

@@ -26,6 +26,8 @@ import { photoFromFile, ACCEPTED_TYPES } from '../io/photo.js';
 
 const UNION_KINDS = ['married', 'partner', 'divorced', 'widowed', 'single'];
 const SEXES = [['U', 'Unknown'], ['F', 'Female'], ['M', 'Male']];
+// '' lets the privacy rule decide (ADR 0018): living unless a death is recorded or born 100+ years ago.
+const STATUSES = [['', 'Automatic (from dates)'], ['living', 'Living'], ['deceased', 'Deceased']];
 
 // Reads/writes nested attrs such as name.given or birth.date. Empty strings remove the key.
 function nested(group, key) {
@@ -46,6 +48,7 @@ const PERSON_FIELDS = [
   { name: 'given', label: 'Given name', ...nested('name', 'given') },
   { name: 'surname', label: 'Surname', ...nested('name', 'surname') },
   { name: 'sex', label: 'Sex', options: SEXES, ...nested(null, 'sex') },
+  { name: 'status', label: 'Living or deceased', options: STATUSES, ...nested(null, 'status') },
   { name: 'birth-date', label: 'Born', placeholder: 'e.g. 1950-03-14', ...nested('birth', 'date') },
   { name: 'birth-place', label: 'Birthplace', ...nested('birth', 'place') },
   { name: 'death-date', label: 'Died', ...nested('death', 'date') },
@@ -525,6 +528,7 @@ export function createPanel(container, ctx) {
 const LABELS = {
   name: 'Name', given: 'given name', surname: 'surname', suffix: 'suffix', sex: 'Sex', birth: 'Born', death: 'Died',
   date: 'date', place: 'place', notes: 'Notes', kind: 'Relationship', start: 'From', end: 'Until', label: 'Label',
+  status: 'Status',
 };
 const SEX = { M: 'Male', F: 'Female', U: 'Unknown' };
 

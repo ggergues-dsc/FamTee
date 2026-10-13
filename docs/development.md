@@ -51,6 +51,7 @@ in this browser, start a new tree, or open another file. `#start=file|new|contin
 | Undo / redo | Toolbar, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or Ctrl+Y |
 | Keep working | Changes are kept **in this browser** automatically; the toolbar says when, and that they are not downloaded |
 | Save to disk | **Download** (Ctrl/⌘+S): a new file named `<family>-<date-time>-<fingerprint>.html`, stamped with its content hash. Nothing is overwritten |
+| Share safely | **Export ▾ → Share copy / Share GEDCOM without living people**: a separate copy where living people appear as "Living", without names, dates, places, notes or photos. Set **Living or deceased** on a person when dates don't tell |
 | Export / open | **Export ▾**: FamTee data (`.famtee.json`), GEDCOM, and (with several graphs) GEDCOM merged. **Open…** replaces the family with a file (undoable) |
 
 Edits that would break integrity (e.g. making someone their own ancestor) are rejected with a message, and the
@@ -72,7 +73,7 @@ the bundled file from `file://`), then the end-to-end test against the built app
 devops/test.sh
 ```
 
-Runs the same suite in Docker with Python and Firefox ESR, on a read-only copy of the repo, with no network,
+Runs the same suite in Docker with Python, **Firefox ESR and Chromium**, on a read-only copy of the repo, with no network,
 leaving nothing behind. See [devops/README.md](../devops/README.md) and ADR 0014.
 
 ### CI/CD: merge through the gate

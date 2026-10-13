@@ -17,10 +17,10 @@ devops/ci.sh --ref <commit> --release   # ... and deliver releases/<version>/
 | Stage | What happens |
 |---|---|
 | export source | `git archive` of the exact commit/tree; uncommitted edits are never tested |
-| prepare image | cached `famtee-test:local` image (Python + Firefox ESR) |
-| test | full suite in the disposable container |
+| prepare image | cached `famtee-test:local` image (Python + Firefox ESR + Chromium) |
+| test | full suite in the disposable container, in Firefox ESR and Chromium |
 | build | `famtee.html` + every sample, with `SHA256SUMS` (byte-for-byte reproducible) |
-| deliver | `releases/<YYYY.MM.DD.HH.MM>-<sha7>/` (commit time, UTC) with artifacts, `ci.log`, `manifest.json`; `releases/latest` |
+| deliver | `releases/<YYYY.MM.DD.HH.MM.SS>-<sha7>/` (commit time, UTC) with artifacts, `ci.log`, `manifest.json`; `releases/latest` |
 | devops self-test (merge, if `devops/` changed) | the PR's own `devops/selftest.sh`, run from the merge result |
 | UAT (merge only) | deploy the release to the UAT server and verify what it serves |
 
@@ -54,8 +54,8 @@ until `down` (it restarts after a reboot), and listens on all interfaces at port
 devops/test.sh
 ```
 
-This builds a small image (Python 3 + headless Firefox ESR) on first use, runs the **full suite** (build tests,
-browser tests as modules and as the bundled file, end-to-end tests), prints the summary and removes the
+This builds a small image (Python 3 + headless Firefox ESR and Chromium) on first use, runs the **full suite** in
+**both browsers** (build tests, browser tests as modules and as the bundled file, end-to-end tests), prints the summary and removes the
 container. The exit status is the test result. Arguments are passed through to `tests/run.py`.
 
 Without the wrapper:
@@ -80,8 +80,8 @@ The image holds only the toolchain, not the source, so it is rebuilt only when `
 
 | File | Purpose |
 |---|---|
-| `docker/Dockerfile.test` | Test image: `python:3.13-slim-trixie` + `firefox-esr` + a font |
-| `docker/famtee-ci.sh` | Entry point: copies `/src` into tmpfs, then `test` (runs `tests/run.py`) or `build` (writes `/out`) |
+| `docker/Dockerfile.test` | Test image: `python:3.13-slim-trixie` + `firefox-esr` + `chromium` + a font |
+| `docker/famtee-ci.sh` | Entry point: copies `/src` into tmpfs, then `test` (runs `tests/run.py` in Firefox ESR and Chromium) or `build` (writes `/out`) |
 | `compose.test.yaml` | The disposable, read-only, offline service definition |
 | `test.sh` | One-command wrapper: test the working copy in the container, return the test status |
 | `ci.sh` | The pipeline: export → test → build → (deliver) for an exact commit or tree |

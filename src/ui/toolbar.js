@@ -7,7 +7,7 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 const mod = isMac ? '⌘' : 'Ctrl+';
 const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-// actions: undo, redo, download, exportJson, exportGedcom, exportGedcomMerged, openFile(File)
+// actions: undo, redo, download, exportJson, exportGedcom, exportGedcomMerged, shareHtml, shareGedcom, openFile(File)
 export function createToolbar(container, actions) {
   const undo = h('button', { type: 'button', title: `Undo (${mod}Z)`, onclick: actions.undo }, 'Undo');
   const redo = h('button', { type: 'button', title: `Redo (${mod}Shift+Z)`, onclick: actions.redo }, 'Redo');
@@ -19,12 +19,22 @@ export function createToolbar(container, actions) {
     { label: 'FamTee data (.famtee.json)', title: 'The data only, without the app', run: actions.exportJson },
     { label: 'GEDCOM (.ged)', title: 'This tree, for other genealogy software', run: actions.exportGedcom },
     {
+      label: 'Share copy without living people (.html)',
+      title: 'A separate copy to share: living people appear as "Living", without dates, places, notes or photos',
+      run: actions.shareHtml,
+    },
+    {
+      label: 'Share GEDCOM without living people (.ged)',
+      title: 'This tree as GEDCOM, with living people shown as "Living" and their details removed',
+      run: actions.shareGedcom,
+    },
+    {
       label: 'GEDCOM: all graphs merged',
       title: 'Every graph as one tree; people linked as the same person are written once',
       run: actions.exportGedcomMerged,
     },
   ], { title: 'Export data or GEDCOM' });
-  const mergedItem = exportMenu.items[2];
+  const mergedItem = exportMenu.items.find((item) => item.textContent === 'GEDCOM: all graphs merged');
   const fileInput = h('input', {
     type: 'file', accept: '.json,.html,.htm,.ged', hidden: true,
     onchange: () => {

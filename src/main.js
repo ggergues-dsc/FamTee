@@ -13,6 +13,7 @@ import { stampRevision, checkRevision, downloadName, shortHash } from './persist
 import { parseImport } from './persist/import.js';
 import { importGedcom, addImportedGraph, looksLikeGedcom, documentFromGedcom } from './io/gedcom/import.js';
 import { exportGedcom, exportGedcomMerged } from './io/gedcom/export.js';
+import { privatize } from './privacy/living.js';
 import { createDocument, updateNodeAttrs, removeNode } from './store/model.js';
 import { replaceDocument, removePerson } from './store/family.js';
 import { loadDocument, readEmbedded } from './store/serialize.js';
@@ -243,6 +244,35 @@ async function boot() {
     }
   }
 
+  // A separate copy for sharing, with living people's details removed (ADR 0018).
+  // It never counts as saving the family itself.
+  function shareCopy(kind) {
+    if (kind === 'html' && !SELF_CONTAINED) {
+      showNotice('This page runs from separate source files, so it can’t download itself as one file. Build it with python3 build/build.py.', 'error');
+      return;
+    }
+    const now = new Date();
+    try {
+      const { doc: shared, hidden } = privatize(store.doc, { now });
+      let contents;
+      let filename;
+      if (kind === 'html') {
+        const stamped = stampRevision(shared, { now, parent: null });
+        contents = documentContents('html', stamped, TEMPLATE);
+        filename = downloadName(stamped, FORMATS.html.ext, now);
+      } else {
+        contents = exportGedcom(shared, currentGraph()).text;
+        filename = downloadName({ meta: { title: shared.meta.title } }, FORMATS.gedcom.ext, now);
+      }
+      downloadFile({ contents, kind, filename });
+      const who = hidden === 1 ? '1 living person is' : `${hidden} living people are`;
+      showNotice(`Downloaded ${filename} to share: ${who} shown as “Living”, without names, dates, places, notes or photos. ` +
+        'Your own family is unchanged, and this doesn’t save it: use Download for that.');
+    } catch (e) {
+      showNotice(`Sharing copy failed: ${e.message}`, 'error');
+    }
+  }
+
   // Advanced: a GEDCOM file added as a new graph (with a tile here).
   function importGedcomText(text, file) {
     const title = file.name.replace(/\.ged(com)?$/i, '') || 'Imported family';
@@ -277,6 +307,8 @@ async function boot() {
     exportJson: () => download('json'),
     exportGedcom: () => exportGedcomFile(),
     exportGedcomMerged: () => exportGedcomFile({ merged: true }),
+    shareHtml: () => shareCopy('html'),
+    shareGedcom: () => shareCopy('gedcom'),
     openFile,
   });
 

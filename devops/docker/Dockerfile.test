@@ -1,10 +1,10 @@
-# Test image for FamTee (ADR 0014): Python 3 + headless Firefox, nothing else.
+# Test image for FamTee (ADR 0014): Python 3 + headless Firefox ESR and Chromium, nothing else.
 # The source is not baked in; it is mounted read-only at /src at run time, so the
 # image only changes when the toolchain does.
 FROM python:3.13-slim-trixie
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends firefox-esr fonts-dejavu-core \
+ && apt-get install -y --no-install-recommends firefox-esr chromium fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --uid 10001 tester
