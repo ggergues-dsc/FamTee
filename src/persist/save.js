@@ -34,6 +34,7 @@ export function fileName(doc, ext) {
 export const FORMATS = {
   html: { ext: '.html', mime: 'text/html', description: 'FamTee file' },
   json: { ext: '.famtee.json', mime: 'application/json', description: 'FamTee data' },
+  gedcom: { ext: '.ged', mime: 'application/x-gedcom', description: 'GEDCOM file' },
 };
 
 export function documentContents(kind, doc, template) {

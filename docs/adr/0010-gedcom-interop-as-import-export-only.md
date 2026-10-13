@@ -22,3 +22,31 @@ layout positions, overlays, or arbitrary custom relations, and it is awkward to 
 - + Interoperability without compromising the model.
 - − Round-tripping through other tools loses FamTee-specific data; native JSON remains the backup format.
 - Follow-up: decide 5.5.1 vs 7.0 priority (open question in architecture.md).
+
+## Implementation notes (2026-10-12)
+
+Implemented in `src/io/gedcom/` (`lines.js` parser/writer, `convert.js` dates and names, `import.js`, `export.js`).
+
+- **Import adds a graph; it doesn't replace the document.** A `.ged` file becomes a new graph, with a tile in the
+  graph you imported from. This fits the multi-graph model (several GEDCOM files can sit side by side and be
+  linked with `same-as`), and one Undo removes it. The result goes through `Store.apply`, so files with impossible
+  data (e.g. someone who is their own ancestor) are refused and nothing changes.
+- **Mapping:**
+  - INDI → person: NAME (with GIVN/SURN), SEX, BIRT and DEAT (DATE, PLAC), NOTE. NOTE records referenced by
+    pointer are resolved.
+  - FAM → union: HUSB/WIFE as partner edges, CHIL as child edges. FAMC.PEDI adopted/foster becomes the child
+    edge's kind. MARR gives a start date and place, DIV gives the divorced kind and an end date.
+  - A family **without** a MARR record imports as `partner`, not `married`: the file doesn't say they married.
+- **Dates:** exact GEDCOM dates become ISO-style (`14 MAR 1950` → `1950-03-14`, `MAR 1950` → `1950-03`). Approximate
+  and range dates (`ABT`, `BET … AND …`) are kept as written. On export, free text becomes a date phrase `(…)`,
+  so every value round-trips.
+- **Nothing is dropped silently.** Unsupported tags are counted and reported after import ("Not imported: 2 × SOUR,
+  1 × OCCU"), as are dangling references, malformed lines, non-UTF-8 character sets and newer GEDCOM versions.
+- **Export is per graph** (the one on screen), GEDCOM 5.5.1, UTF-8, CRLF line endings:
+  - HUSB/WIFE are assigned by sex, then by order. Long or multi-line values are split with CONC/CONT, never at
+    a space. `@` is escaped as `@@`.
+  - Anything GEDCOM can't hold (groups, sub-graph tiles, custom relations, cross-graph links, card positions,
+    step-child and "widowed" kinds) is listed in the notice.
+  - A GEDCOM export never marks the document saved.
+- **Deferred:** merged export of several graphs (collapsing `same-as` people into one INDI), GEDCOM 7-specific
+  structures, and ANSEL decoding.

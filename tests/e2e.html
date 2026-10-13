@@ -188,6 +188,41 @@ test('copy a person into a sub-graph, follow the badge there and back; group via
   assert(!doc.querySelector('rect.group'), 'undo removes the group');
 });
 
+test('GEDCOM: export the graph, import it back as a new graph, undo', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  app.store.apply('dirty', (d) => { d.meta.title = 'Unsaved title'; });
+  const count = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'person').length;
+  const saved = capturePicker(win);
+  byText(doc, 'Export GEDCOM').click();
+  await sleep(100);
+  assertEqual(saved.length, 1);
+  const ged = saved[0];
+  assert(ged.startsWith('0 HEAD\r\n') && ged.trimEnd().endsWith('0 TRLR'));
+  assertEqual((ged.match(/^0 @I\d+@ INDI/gm) ?? []).length, count);
+  assert(app.store.dirty, 'a GEDCOM export does not count as saving');
+  assert(doc.getElementById('notice').textContent.includes(`${count} people`));
+
+  const graphsBefore = Object.keys(app.store.doc.graphs).length;
+  const input = doc.querySelector('.toolbar input[type="file"]');
+  const transfer = new win.DataTransfer();
+  transfer.items.add(new win.File([ged], 'hanna.ged', { type: 'application/x-gedcom' }));
+  input.files = transfer.files;
+  input.dispatchEvent(new win.Event('change'));
+  await sleep(300);
+  const graphId = app.view.path.at(-1);
+  assert(graphId !== 'g-hanna', 'opened the imported graph');
+  assertEqual(app.store.doc.graphs[graphId].title, 'hanna');
+  const names = (g) => Object.values(app.store.doc.graphs[g].nodes).filter((n) => n.type === 'person')
+    .map((n) => `${n.attrs.name?.given} ${n.attrs.name?.surname}`).sort();
+  assertEqual(names(graphId), names('g-hanna'));
+  assertEqual(doc.querySelectorAll('.card.person').length, count, 'imported graph is drawn');
+  assert(Object.values(app.store.doc.graphs['g-hanna'].nodes).some((n) => n.type === 'graphRef' && n.attrs.graph === graphId),
+    'tile added to the graph it was imported from');
+  app.store.undo();
+  assertEqual(Object.keys(app.store.doc.graphs).length, graphsBefore);
+  assertEqual(app.view.path.at(-1), 'g-hanna', 'view returns when the graph disappears');
+});
+
 run();
 </script>
 </body>

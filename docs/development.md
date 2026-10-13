@@ -45,7 +45,8 @@ divorce, adoption and a cousin marriage. Append `#g=<graphId>&sel=<nodeId>` to t
 | Pan / zoom | Drag the background; scroll wheel or pinch; + / − / Fit buttons; keys `+` `-` `0` |
 | Undo / redo | Toolbar, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or Ctrl+Y |
 | Save | Ctrl/⌘+S or Save. Chromium overwrites the file you pick; Firefox/Safari download a new copy |
-| Export / import | Export JSON writes `.famtee.json`; Import… reads `.famtee.json` or a FamTee `.html` (undoable) |
+| Export / import | Export JSON writes `.famtee.json`; Import… reads `.famtee.json` or a FamTee `.html` and replaces the document (undoable) |
+| GEDCOM | **Export GEDCOM** writes the graph on screen as a 5.5.1 `.ged`. **Import…** with a `.ged` file adds it as a new graph with a tile in the current graph (undoable). Both list what couldn't be carried over |
 
 Edits that would break integrity (e.g. making someone their own ancestor) are rejected with a message, and the
 document is left unchanged.
@@ -80,6 +81,11 @@ src/
   render/
     renderer.js       SVG renderer with fixed layers (ADR 0003), connector lanes, link badges
     format.js         card text: names, lifespans, truncation
+  io/gedcom/
+    lines.js          GEDCOM line parser/writer (levels, CONC/CONT, @@ escaping)
+    convert.js        dates and names between GEDCOM and FamTee
+    import.js         .ged → new graph (+ tile), with a report of what was skipped
+    export.js         graph → GEDCOM 5.5.1, with a report of what GEDCOM can't hold
   persist/
     save.js           template capture, HTML/JSON output, File System Access write or download
     autosave.js       localStorage drafts + debounce
@@ -128,4 +134,5 @@ Not supported (the build fails with a clear message): default imports/exports, `
 - Sub-graph tiles can't be edited or deleted in place: clicking a tile opens the graph, and the graph can be
   renamed or deleted from there. Links can be made only from people (the model also allows unions and tiles).
 - Group outlines are bounding boxes, so a group whose members are far apart can enclose other cards.
-- GEDCOM import/export (ADR 0010) is not implemented.
+- GEDCOM export covers one graph at a time; there's no merged export of linked graphs yet. ANSEL-encoded GEDCOM
+  files are read as UTF-8 (a warning says so).

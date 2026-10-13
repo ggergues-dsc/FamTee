@@ -7,6 +7,8 @@
 import { captureTemplate, isSelfContained, documentContents, writeFile, fileName, FORMATS } from './persist/save.js';
 import { saveDraft, findNewerDraft, clearDraft, debounce } from './persist/autosave.js';
 import { parseImport } from './persist/import.js';
+import { importGedcom, addImportedGraph, looksLikeGedcom } from './io/gedcom/import.js';
+import { exportGedcom } from './io/gedcom/export.js';
 import { createDocument, updateNodeAttrs, removeNode } from './store/model.js';
 import { replaceDocument, removePerson } from './store/family.js';
 import { loadDocument, readEmbedded } from './store/serialize.js';
@@ -135,9 +137,42 @@ function boot() {
     }
   }
 
+  // GEDCOM is exported per graph and never counts as saving: the file can't hold
+  // everything FamTee stores (ADR 0010).
+  async function exportGedcomFile() {
+    const graphId = currentGraph();
+    const graph = store.doc.graphs[graphId];
+    try {
+      const { text, stats, warnings } = exportGedcom(store.doc, graphId);
+      const result = await writeFile({
+        contents: text,
+        kind: 'gedcom',
+        suggestedName: fileName({ meta: { title: graph.title || store.doc.meta.title } }, FORMATS.gedcom.ext),
+      });
+      const what = `${stats.people} people and ${stats.families} families from “${graph.title}”`;
+      showNotice(`${result.method === 'download' ? 'Downloaded' : 'Exported'} GEDCOM with ${what}.` +
+        (warnings.length ? ` ${warnings.join('. ')}.` : ''));
+    } catch (e) {
+      if (e.name !== 'AbortError') showNotice(`GEDCOM export failed: ${e.message}`, 'error');
+    }
+  }
+
+  // A GEDCOM file is added as a new graph (with a tile here) instead of replacing the document.
+  function importGedcomText(text, file) {
+    const title = file.name.replace(/\.ged(com)?$/i, '') || 'Imported family';
+    const { graph, stats, warnings } = importGedcom(text, { title });
+    const graphId = ctx.edit(`Import ${file.name}`, (d) => addImportedGraph(d, currentGraph(), graph));
+    if (!graphId) return;
+    ctx.open(graphId);
+    showNotice(`Imported ${stats.people} people and ${stats.families} families from ${file.name} as a new graph. Use Undo to remove it.` +
+      (warnings.length ? ` ${warnings.join('. ')}.` : ''));
+  }
+
   async function importFile(file) {
     try {
-      const { doc, readOnly, errors } = parseImport(await file.text());
+      const text = await file.text();
+      if (/\.ged(com)?$/i.test(file.name) || looksLikeGedcom(text)) return importGedcomText(text, file);
+      const { doc, readOnly, errors } = parseImport(text);
       if (readOnly) throw new Error('the file was made by a newer version of FamTee');
       if (errors.length) throw new Error(errors.map((e) => e.message).join('; '));
       if (ctx.edit(`Import ${file.name}`, (d) => { replaceDocument(d, doc); return true; })) {
@@ -156,6 +191,7 @@ function boot() {
     redo: () => store.redo(),
     save: () => save('html'),
     exportJson: () => save('json'),
+    exportGedcom: () => exportGedcomFile(),
     importFile,
   });
 

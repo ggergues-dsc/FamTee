@@ -10,17 +10,22 @@ export function createToolbar(container, actions) {
   const redo = h('button', { type: 'button', title: `Redo (${mod}Shift+Z)`, onclick: actions.redo }, 'Redo');
   const save = h('button', { type: 'button', class: 'primary', title: `Save (${mod}S)`, onclick: actions.save }, 'Save');
   const exportJson = h('button', { type: 'button', title: 'Save the data only, as .famtee.json', onclick: actions.exportJson }, 'Export JSON');
+  const exportGedcom = h('button', {
+    type: 'button', title: 'Export the current graph as GEDCOM 5.5.1 (.ged) for other genealogy software', onclick: actions.exportGedcom,
+  }, 'Export GEDCOM');
   const fileInput = h('input', {
-    type: 'file', accept: '.json,.html,.htm,application/json,text/html', hidden: true,
+    type: 'file', accept: '.json,.html,.htm,.ged,application/json,text/html', hidden: true,
     onchange: () => {
       const [file] = fileInput.files;
       fileInput.value = '';
       if (file) actions.importFile(file);
     },
   });
-  const importButton = h('button', { type: 'button', title: 'Open a .famtee.json or FamTee .html file', onclick: () => fileInput.click() }, 'Import…');
+  const importButton = h('button', {
+    type: 'button', title: 'Open a .famtee.json or FamTee .html file, or add a GEDCOM (.ged) file as a new graph', onclick: () => fileInput.click(),
+  }, 'Import…');
   const state = h('span', { class: 'save-state', 'aria-live': 'polite' });
-  container.replaceChildren(undo, redo, state, save, exportJson, importButton, fileInput);
+  container.replaceChildren(undo, redo, state, save, exportJson, exportGedcom, importButton, fileInput);
 
   function render(store) {
     undo.disabled = store.readOnly || !store.canUndo;

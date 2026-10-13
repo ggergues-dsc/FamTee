@@ -48,7 +48,7 @@ must not contain `:` since links use `graphId:nodeId`.
 "p-01J9...": {
   "type": "person",
   "attrs": {
-    "name": { "given": "Maria", "surname": "Garcia" },
+    "name": { "given": "Maria", "surname": "Garcia" },   // optional "suffix" (e.g. from GEDCOM "Jr.")
     "sex": "F",
     "birth": { "date": "1950-03-14", "place": "Cairo" },
     "death": null,
