@@ -52,3 +52,26 @@ open the exact release from any device. The choices made:
   data in the samples, and use `FAMTEE_UAT_BIND=127.0.0.1` on untrusted networks. A host firewall may also need to
   allow port 8080 for other devices.
 - − It runs until stopped (`restart: unless-stopped`); `devops/uat.sh down` removes it.
+
+## Incident and fix (2026-10-13)
+
+**What happened.** The first auto-deploy after this ADR merged (release `2026.10.13-09b1373`) left UAT serving
+nothing. The deploy itself had verified correctly, but its clean-up step then deleted the new site. Old sites were
+ordered by **folder name**, and the name starts with the release version, whose commit part (`09b1373` <
+`fbae470`) has nothing to do with time. The newest site therefore looked oldest. The earlier tests had only
+redeployed a single release, so they couldn't show it.
+
+**Fix.**
+- Sites are pruned by **deploy time** (modification time), and the site currently served is never deleted.
+- Pruning now runs **before** the final verification, so the check covers what actually remains.
+- Site folders get a unique suffix, so two deploys in the same second can't overwrite a live site.
+
+**Regression test.** `devops/selftest.sh` runs a throwaway UAT (port 18080, localhost only, its own folder and
+container), so live UAT is never touched. It replays the failing history (an old release deployed until 5 sites
+exist, then one release whose name sorts first) plus alternating deploys, retention, and refusal of a release with
+bad checksums. With the old pruning put back, it fails at exactly the step that broke live UAT; with the fix, all
+checks pass.
+
+**Lesson.** The devops scripts need their own tests. Running the self-test against the *old* script during
+diagnosis touched live UAT once, because the old script ignores the self-test's isolation settings. UAT was
+redeployed straight away. Run `devops/selftest.sh` whenever `devops/` changes.
