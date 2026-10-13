@@ -15,8 +15,11 @@ from __future__ import annotations
 import argparse
 import http.server
 import json
+import os
 import queue
 import re
+import signal
+import time
 import shutil
 import subprocess
 import sys
@@ -51,7 +54,14 @@ def start_server(results: queue.Queue) -> http.server.ThreadingHTTPServer:
         def log_message(self, *args):
             pass
 
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), partial(Handler, directory=str(ROOT)))
+    class Server(http.server.ThreadingHTTPServer):
+        def handle_error(self, request, client_address):
+            # A browser stopped mid-download (normal at teardown) is not an error.
+            if isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+                return
+            super().handle_error(request, client_address)
+
+    server = Server(("127.0.0.1", 0), partial(Handler, directory=str(ROOT)))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server
 
@@ -73,22 +83,44 @@ def run_in_browser(browser: str, url: str, results: queue.Queue) -> dict | None:
     # Snap-packaged Firefox can only use profile directories inside $HOME, so keep it in the repo.
     cache = ROOT / ".cache"
     cache.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=cache, prefix="profile-") as profile:
+    # A leftover file in the throwaway profile must never fail the run (it lives in
+    # .cache/, or in the container's tmpfs).
+    with tempfile.TemporaryDirectory(dir=cache, prefix="profile-", ignore_cleanup_errors=True) as profile:
+        # Own process group: browsers start helper processes that outlive the main one.
         proc = subprocess.Popen(
             browser_command(browser, profile, url),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
         try:
             return results.get(timeout=TIMEOUT)
         except queue.Empty:
             return None
         finally:
-            proc.terminate()
-            try:
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+            stop_browser(proc)
+
+
+def stop_browser(proc: subprocess.Popen) -> None:
+    """Stops the browser and all its helper processes, so its profile is no longer in use."""
+    def signal_group(sig: int) -> bool:
+        try:
+            os.killpg(proc.pid, sig)
+            return True
+        except ProcessLookupError:
+            return False
+
+    signal_group(signal.SIGTERM)
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        signal_group(signal.SIGKILL)
+        proc.wait()
+    # Helpers can linger briefly after the main process exits: wait for the group to be gone.
+    deadline = time.monotonic() + 5
+    while signal_group(0) and time.monotonic() < deadline:
+        time.sleep(0.1)
+    signal_group(signal.SIGKILL)
 
 
 ENGINES = (("Firefox", r"Firefox/(\d+)"), ("Chrome", r"Chrome/(\d+)"))
