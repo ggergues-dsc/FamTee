@@ -1,0 +1,984 @@
+<title>FamTee Screens</title>
+<style>
+/* Layout: a neutral design board holding artboards; each artboard renders FamTee with its own tokens from src/styles/main.css. */
+:root {
+  /* board chrome (hue-biased toward the app accent) */
+  --board: #eceef2;
+  --board-ink: #2a2f38;
+  --board-muted: #697180;
+  --board-line: #d3d7de;
+  /* FamTee tokens, copied from src/styles/main.css */
+  --bg: #fbfaf7; --fg: #1f2328; --muted: #6b6f76; --error: #b42318; --accent: #2f6fdb;
+  --card-bg: #ffffff; --card-stroke: #c9ccd1; --card-m: #e8f0fc; --card-f: #fbeaf0; --card-u: #f1f1ef;
+  --ref-bg: #fff7e6; --ref-stroke: #d9a640; --edge: #8a8f98;
+  --group-bg: rgba(47, 111, 219, 0.05); --group-stroke: rgba(47, 111, 219, 0.35);
+  --on-accent: #ffffff;
+  --tile-bg: #eef3fc; --tile-stroke: #d3e0f7; --tile-ink: #1d4fa8;
+  --warn-ink: #8a5400; --error-bg: #fdecea;
+  --av-bg: #ffffff; --av-ink: #a3a9b3; --av-hair: #868d99;
+  --shadow: 0 1px 2px rgba(20, 30, 50, .06), 0 8px 28px rgba(20, 30, 50, .08);
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --board: #0f1114; --board-ink: #dfe3ea; --board-muted: #8b93a1; --board-line: #2a2f37;
+    --bg: #16181c; --fg: #e6e6e6; --muted: #9aa0a6; --error: #f97066; --accent: #7aa7ff;
+    --card-bg: #22252b; --card-stroke: #3c4048; --card-m: #1f2a3d; --card-f: #3a2430; --card-u: #2a2c30;
+    --ref-bg: #3a3020; --ref-stroke: #b48a35; --edge: #7d828b;
+    --group-bg: rgba(122, 167, 255, 0.06); --group-stroke: rgba(122, 167, 255, 0.35);
+    --on-accent: #0f1624;
+    --tile-bg: #1c2433; --tile-stroke: #2c3a55; --tile-ink: #a9c5ff;
+    --warn-ink: #f2c46b; --error-bg: #3a1f1d;
+    --av-bg: #2e3239; --av-ink: #737a86; --av-hair: #5d636e;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --board: #0f1114; --board-ink: #dfe3ea; --board-muted: #8b93a1; --board-line: #2a2f37;
+  --bg: #16181c; --fg: #e6e6e6; --muted: #9aa0a6; --error: #f97066; --accent: #7aa7ff;
+  --card-bg: #22252b; --card-stroke: #3c4048; --card-m: #1f2a3d; --card-f: #3a2430; --card-u: #2a2c30;
+  --ref-bg: #3a3020; --ref-stroke: #b48a35; --edge: #7d828b;
+  --group-bg: rgba(122, 167, 255, 0.06); --group-stroke: rgba(122, 167, 255, 0.35);
+  --on-accent: #0f1624;
+  --tile-bg: #1c2433; --tile-stroke: #2c3a55; --tile-ink: #a9c5ff;
+    --warn-ink: #f2c46b; --error-bg: #3a1f1d;
+    --av-bg: #2e3239; --av-ink: #737a86; --av-hair: #5d636e;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+}
+
+body { background: var(--board); color: var(--board-ink); font: 14px/1.5 var(--font-ui); padding: 0 20px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 32px 64px; display: grid; gap: 44px; }
+
+header.board-head { display: grid; gap: 6px; }
+.board-head h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; text-wrap: balance; }
+.board-head p { margin: 0; color: var(--board-muted); max-width: 68ch; }
+.board-head code, .ab-note code { font-family: var(--font-mono); font-size: .85em; }
+
+.artboard { display: grid; gap: 10px; min-width: 0; }
+.ab-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.ab-label h2 { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+.ab-label span { color: var(--board-muted); font-size: .8rem; font-family: var(--font-mono); }
+.ab-note { margin: 0; color: var(--board-muted); font-size: .85rem; max-width: 72ch; }
+.scroller { overflow-x: auto; padding-bottom: 4px; }
+.row-boards { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+
+/* ---------- FamTee app surface (mirrors main.css) ---------- */
+.app { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-ui); border: 1px solid var(--board-line);
+  border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+.app.desktop { width: 1100px; height: 640px; }
+.app.phone { width: 390px; max-width: 100%; height: 780px; border-radius: 28px; flex-shrink: 0; }
+.app .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1.25rem; padding: .75rem 1.25rem; border-bottom: 1px solid var(--card-stroke); }
+.app .topbar h1 { margin: 0; font-size: 1.15rem; }
+.doc-title { display: flex; align-items: center; gap: .5rem; }
+.title-ico { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 8px; background: var(--tile-bg);
+  border: 1px solid var(--tile-stroke); color: var(--accent); }
+.title-ico .hi { width: 1.15rem; height: 1.15rem; }
+.crumbs { display: flex; align-items: center; gap: .4rem; }
+.crumbs a, .crumbs b { display: inline-flex; align-items: center; gap: .3rem; }
+.crumbs .hi { width: 1em; height: 1em; }
+.crumbs { font-size: .85rem; color: var(--muted); }
+.crumbs b { color: var(--fg); font-weight: 500; }
+.crumbs a { color: var(--accent); text-decoration: none; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-left: auto; }
+.app button { font: inherit; font-size: .85rem; padding: .3rem .7rem; border: 1px solid var(--card-stroke); border-radius: 6px;
+  background: var(--card-bg); color: var(--fg); cursor: pointer; }
+.app button:hover:not(:disabled) { border-color: var(--accent); }
+.app button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.app button:disabled { opacity: .45; cursor: default; }
+.app button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.app button.link { border: 0; padding: 0; background: none; color: var(--accent); font-size: inherit; }
+.app button.armed { background: var(--error); border-color: var(--error); color: var(--on-accent); }
+.app input, .app select { font: inherit; font-size: .9rem; padding: .3rem .45rem; border: 1px solid var(--card-stroke);
+  border-radius: 6px; background: var(--card-bg); color: var(--fg); min-width: 0; }
+.save-state { font-size: .8rem; color: var(--muted); }
+button.with-icon { display: inline-flex; align-items: center; gap: .35em; }
+button.with-icon .hi { width: 1.05em; height: 1.05em; }
+.save-state.dirty, .save-state.error { display: inline-flex; align-items: center; gap: .4em; font-weight: 700; padding: .15rem .6rem;
+  border-radius: 999px; border: 1px solid; }
+.save-state.dirty { color: var(--warn-ink); background: var(--ref-bg); border-color: var(--ref-stroke); }
+.save-state.dirty::before { content: ""; width: .5em; height: .5em; border-radius: 50%; background: currentColor; }
+.save-state.error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
+.save-state.error::before { content: "!"; display: grid; place-items: center; width: 1.1em; height: 1.1em; border-radius: 50%;
+  background: var(--error); color: var(--error-bg); font-size: .75em; }
+
+.main { flex: 1; min-height: 0; display: flex; position: relative; }
+.canvas { flex: 1; min-width: 0; position: relative; overflow: hidden; }
+.canvas svg { display: block; width: 100%; height: 100%; }
+.zoom { position: absolute; left: .75rem; bottom: .75rem; display: flex; gap: .25rem; }
+.zoom button { min-width: 2.2rem; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.panel { width: 300px; flex-shrink: 0; overflow-y: auto; padding: 1rem 1.1rem 2rem; border-left: 1px solid var(--card-stroke); background: var(--card-bg); }
+.panel h2 { margin: 0 0 .75rem; font-size: 1rem; }
+.panel h3 { margin: 1.1rem 0 .45rem; font-size: .8rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--fg); }
+.panel h3 .hi, .panel summary .hi { color: var(--accent); }
+.panel .form { display: grid; gap: .5rem; }
+.panel label { display: grid; gap: .25rem; padding: .45rem .55rem .55rem; border-radius: 8px;
+  background: var(--tile-bg); border: 1px solid var(--tile-stroke); }
+.panel label > span { font-size: .78rem; font-weight: 650; letter-spacing: .02em; color: var(--tile-ink); }
+.panel label input, .panel label select { background: var(--card-bg); font-size: .95rem; }
+.panel label:focus-within { border-color: var(--accent); }
+.panel .two { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.panel .row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
+.panel .row select { flex: 1; }
+.panel .people { list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem; }
+.panel .photo-wrap { display: grid; justify-items: start; gap: .3rem; margin-bottom: .75rem; }
+.panel .photo svg { width: 100%; height: 100%; display: block; }
+.panel .photo { overflow: hidden; background: var(--av-bg) !important; margin-bottom: 0 !important; display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; border: 1px solid var(--card-stroke);
+  background: var(--card-u); font-size: .75rem; color: var(--muted); margin-bottom: .75rem; }
+.panel details { margin-top: 1.25rem; border-top: 1px solid var(--card-stroke); padding-top: .5rem; }
+.panel summary { cursor: pointer; font-size: .8rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--fg); padding: .25rem 0; }
+.panel .danger { margin-top: 1.5rem; }
+.phone .main { flex-direction: column; }
+.phone .canvas { flex: 0 0 50%; border-bottom: 1px solid var(--card-stroke); }
+.phone .panel { width: auto; border-left: 0; flex: 1; }
+.phone .topbar { padding: .6rem .9rem; }
+.phone .toolbar { margin-left: 0; }
+
+/* graph (renderer classes) */
+.g .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+.g .edge.dashed { stroke-dasharray: 5 4; }
+.g .edge.divorced { stroke-dasharray: 2 4; }
+.g .edge.custom { stroke-dasharray: 1 5; stroke-linecap: round; }
+.g .union { fill: var(--edge); }
+.g .port { fill: var(--edge); stroke: var(--bg); stroke-width: 1.5; }
+.g .card { stroke: var(--card-stroke); stroke-width: 1; }
+.g .sex-M { fill: var(--card-m); } .g .sex-F { fill: var(--card-f); } .g .sex-U { fill: var(--card-u); }
+.g .ref { fill: var(--ref-bg); stroke: var(--ref-stroke); stroke-width: 1.5; }
+.g .group { fill: var(--group-bg); stroke: var(--group-stroke); stroke-dasharray: 4 3; }
+.g .group-label { fill: var(--accent); font-size: 11px; text-anchor: start; }
+.g text { fill: var(--fg); text-anchor: middle; font-size: 13px; font-family: var(--font-ui); }
+.g .name { font-weight: 600; }
+.g .dates { fill: var(--muted); font-size: 11px; }
+.g .avatar { fill: var(--av-bg); stroke: var(--card-stroke); }
+.av { fill: var(--av-ink); }
+.av-hair { fill: var(--av-hair); }
+.av-cut { fill: none; stroke: var(--av-bg); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.av-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: .78rem; color: var(--muted); }
+.av-legend span { display: grid; justify-items: center; gap: 4px; }
+.av-legend svg { width: 40px; height: 40px; border-radius: 50%; background: var(--av-bg); border: 1px solid var(--card-stroke); }
+.g .sel { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.g .badge circle { fill: var(--accent); }
+.g .badge text { fill: var(--on-accent); font-size: 12px; font-weight: 700; }
+
+.ports-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 24px; }
+.ports-fig { margin: 0; height: 460px; }
+.ports-fig figcaption { padding: .55rem 1rem; font-size: .8rem; font-weight: 650; text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid var(--card-stroke); }
+
+
+/* hover snapshot */
+.g .pnode { cursor: pointer; outline: none; }
+.g .pnode:hover .card, .g .pnode:focus-visible .card { stroke: var(--accent); stroke-width: 1.5; }
+.snap { position: absolute; z-index: 5; width: 250px; padding: .65rem .75rem .55rem; border: 1px solid var(--card-stroke); border-radius: 10px;
+  background: var(--card-bg); color: var(--fg); box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: .8rem; line-height: 1.4; pointer-events: none; }
+.snap::before { content: ""; position: absolute; top: calc(var(--arrow-y, 22px) - 6px); width: 10px; height: 10px; background: var(--card-bg);
+  border: 1px solid var(--card-stroke); transform: rotate(45deg); }
+.snap.on-right::before { left: -6px; border-top-color: transparent; border-right-color: transparent; }
+.snap.on-left::before { right: -6px; border-bottom-color: transparent; border-left-color: transparent; }
+.snap-head { display: flex; align-items: center; gap: .55rem; padding-bottom: .5rem; margin-bottom: .45rem; border-bottom: 1px solid var(--card-stroke); }
+.snap-head > div { display: grid; flex: 1; min-width: 0; }
+.snap-head b { font-size: .9rem; }
+.snap-head span { color: var(--muted); font-size: .75rem; }
+.snap-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 650;
+  color: var(--fg) !important; border: 1px solid var(--card-stroke); flex-shrink: 0; }
+.snap-av { overflow: hidden; background: var(--av-bg); }
+.snap-av svg { width: 100%; height: 100%; display: block; }
+.chip { font-size: .68rem !important; font-weight: 650; padding: .1rem .45rem; border-radius: 999px; align-self: start; }
+.chip.live { background: var(--tile-bg); color: var(--tile-ink) !important; }
+.chip.dead { background: var(--card-u); color: var(--muted); }
+.snap dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem .7rem; margin: 0; }
+.snap dt { color: var(--tile-ink); font-weight: 650; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; padding-top: .1rem; }
+.snap dd { margin: 0; overflow-wrap: anywhere; }
+.snap-foot { margin: .5rem 0 0; color: var(--muted); font-size: .72rem; }
+
+
+/* connect people */
+.connect-app .canvas { touch-action: none; }
+.cx-hint { margin: 0; padding: .45rem 1.25rem; font-size: .85rem; background: var(--tile-bg); color: var(--tile-ink); border-bottom: 1px solid var(--tile-stroke); }
+.cx-hint.warn { background: var(--ref-bg); color: var(--fg); border-color: var(--ref-stroke); }
+kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; border: 1px solid var(--board-line); border-bottom-width: 2px; border-radius: 4px; background: var(--bg); color: var(--fg); }
+.g .tray { fill: none; stroke: var(--card-stroke); stroke-dasharray: 6 5; }
+.g .tray-label { fill: var(--muted); font-size: 11px; text-anchor: start; text-transform: uppercase; letter-spacing: .06em; }
+.g .loose .card { stroke-dasharray: 5 4; stroke-width: 1.5; }
+.g .pnode.target .card, .g .pnode.source .card { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: none; }
+.g .handle { opacity: 0; cursor: crosshair; transition: opacity .12s; }
+.g .handle circle { fill: var(--card-bg); stroke: var(--accent); stroke-width: 1.5; }
+.g .handle path { stroke: var(--accent); stroke-width: 1.5; }
+.g .pnode:hover .handle, .g .pnode:focus-visible .handle, .g .pnode.source .handle { opacity: 1; }
+.g .rubber { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
+.g .rubber-end { fill: var(--accent); }
+.g .edge-label { fill: var(--muted); font-size: 11px; }
+.g .fresh { animation: fresh 1.2s ease-out; }
+@keyframes fresh { from { stroke: var(--accent); stroke-width: 3; } }
+@media (prefers-reduced-motion: reduce) { .g .fresh { animation: none; } .g .handle { transition: none; } }
+.pop { position: absolute; z-index: 6; width: 300px; padding: .8rem .9rem .75rem; border: 1px solid var(--card-stroke); border-radius: 10px;
+  background: var(--card-bg); color: var(--fg); box-shadow: 0 10px 30px rgba(0,0,0,.18); display: grid; gap: .55rem; font-size: .85rem; }
+.pop h4 { margin: 0; font-size: .95rem; line-height: 1.3; text-wrap: balance; }
+.pop .fld { display: grid; gap: .25rem; padding: .45rem .55rem .55rem; border-radius: 8px; background: var(--tile-bg); border: 1px solid var(--tile-stroke); }
+.pop .fld > span { font-size: .78rem; font-weight: 650; color: var(--tile-ink); }
+.pop .fld:focus-within { border-color: var(--accent); }
+.pop .two { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.pop .note { margin: 0; color: var(--muted); font-size: .8rem; }
+.pop-preview { margin: 0; padding-top: .5rem; border-top: 1px solid var(--card-stroke); font-size: .82rem; }
+.pop-actions { display: flex; align-items: center; gap: .4rem; }
+.pop-actions .muted { margin-left: auto; color: var(--muted); font-size: .75rem; }
+
+/* start screen */
+.start-wrap { flex: 1; display: grid; place-items: center; padding: 1.5rem 1rem; overflow-y: auto; }
+.start { width: min(40rem, 100%); }
+.start h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+.start-intro { margin: 0 0 1rem; color: var(--muted); }
+.start-intro strong { color: var(--fg); }
+.choices { display: grid; gap: .75rem; }
+.choice { padding: .9rem 1.1rem; border: 1px solid var(--card-stroke); border-radius: 10px; background: var(--card-bg); }
+.choice.primary { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.choice h2 { margin: 0 0 .2rem; font-size: 1.05rem; }
+.choice-head { display: flex; align-items: center; gap: .65rem; margin-bottom: .35rem; }
+.choice-head h2 { margin: 0; }
+.ico { width: 32px; height: 32px; flex-shrink: 0; display: grid; place-items: center; border-radius: 8px;
+  background: var(--card-u); color: var(--muted); }
+.ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.choice.primary .ico { background: var(--card-m); color: var(--accent); }
+.choice p { margin: 0 0 .5rem; font-size: .9rem; color: var(--muted); }
+.choice .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.choice .row input { flex: 1; min-width: 10rem; }
+
+/* component sheet */
+.sheet { flex: 1 1 300px; min-width: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--board-line); border-radius: 10px; box-shadow: var(--shadow);
+  padding: 24px; display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-content: start; }
+.sheet h3 { margin: 0 0 10px; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.swatches { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.sw { display: flex; align-items: center; gap: 8px; font-size: .78rem; line-height: 1.3; }
+.sw i { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--card-stroke); flex-shrink: 0; }
+.sw code { font-family: var(--font-mono); color: var(--muted); font-size: .72rem; }
+.stack { display: grid; gap: 8px; justify-items: start; }
+.stack .btns { display: flex; flex-wrap: wrap; gap: .4rem; }
+.stack button { font: inherit; font-size: .85rem; padding: .3rem .7rem; border: 1px solid var(--card-stroke); border-radius: 6px; background: var(--card-bg); color: var(--fg); }
+.stack button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.stack button.armed { background: var(--error); border-color: var(--error); color: var(--on-accent); }
+.stack button:disabled { opacity: .45; }
+.legend { display: grid; grid-template-columns: 64px 1fr; gap: 8px 12px; align-items: center; font-size: .82rem; }
+/* small header icons (original drawings, no attribution needed) */
+.hi { width: 1.15em; height: 1.15em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ab-label h2, .panel h2, .panel h3, .sheet h3 { display: flex; align-items: center; gap: .45em; }
+.panel h2 .hi { color: var(--accent); }
+.panel summary { list-style: none; display: flex; align-items: center; gap: .45em; }
+.panel summary::-webkit-details-marker { display: none; }
+@media (prefers-reduced-motion: no-preference) { .app button { transition: border-color .15s; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><clipPath id="av-clip" clipPathUnits="userSpaceOnUse"><circle cx="20" cy="20" r="19.5"/></clipPath></defs>
+<symbol id="av-U" viewBox="0 0 40 40"><g clip-path="url(#av-clip)"><circle cx="20" cy="16" r="7"/><path d="M5 41c0-8.5 6.7-14 15-14s15 5.5 15 14z"/></g></symbol>
+<symbol id="av-M" viewBox="0 0 40 40"><g clip-path="url(#av-clip)"><path d="M13 15.5c0-5 3-8.5 7-8.5s7 3.5 7 8.5c0 4.5-3 8-7 8s-7-3.5-7-8z"/><path d="M12.6 14c.4-5.2 3.3-8.3 7.4-8.3s7 3.1 7.4 8.3c-1.6-1.9-4.2-2.6-7.4-2.6s-5.8.7-7.4 2.6z" class="av-hair"/><path d="M3 41c0-9 7-14.5 17-14.5S37 32 37 41z"/><path d="M16.8 26.8 20 31l3.2-4.2" class="av-cut"/></g></symbol>
+<symbol id="av-F" viewBox="0 0 40 40"><g clip-path="url(#av-clip)"><path d="M11.5 25c-1.2-2.5-1.5-5.5-1.5-8.5C10 10.5 14.3 6 20 6s10 4.5 10 10.5c0 3-.3 6-1.5 8.5z" class="av-hair"/><circle cx="20" cy="16.5" r="6.5"/><path d="M7 41c0-8 5.8-13.5 13-13.5S33 33 33 41z"/></g></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol><symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol><symbol id="i-family" viewBox="0 0 24 24"><circle cx="7" cy="6.5" r="2.5"/><circle cx="17" cy="6.5" r="2.5"/><circle cx="12" cy="12.5" r="2"/><path d="M2.5 19v-3.5A3.5 3.5 0 0 1 6 12h2a3.5 3.5 0 0 1 1.8.5M21.5 19v-3.5A3.5 3.5 0 0 0 18 12h-2a3.5 3.5 0 0 0-1.8.5M8.5 20.5v-1A2.5 2.5 0 0 1 11 17h2a2.5 2.5 0 0 1 2.5 2.5v1"/></symbol><symbol id="i-families" viewBox="0 0 24 24"><rect x="2.5" y="3" width="8" height="8" rx="2"/><rect x="13.5" y="3" width="8" height="8" rx="2"/><rect x="8" y="14" width="8" height="7" rx="2"/><path d="M6.5 11v1.5h11V11M12 12.5V14"/></symbol><symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol><symbol id="i-tree" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><rect x="15" y="17" width="6" height="4" rx="1"/><path d="M12 7v5M6 17v-5h12v5"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol><symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol><symbol id="i-add" viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.6-5.5 7-5.5 1.6 0 3 .4 4.2 1.1M18 14v6M15 17h6"/></symbol><symbol id="i-rings" viewBox="0 0 24 24"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/><path d="M10 4.5 12 6l2-1.5"/></symbol><symbol id="i-parents" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.6-3 2.7-4.5 5.5-4.5s4.9 1.5 5.5 4.5M13 15c.9-.3 1.9-.5 3-.5 2.8 0 4.9 1.5 5.5 4.5"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol><symbol id="i-swatch" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol><symbol id="i-edges" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h3M14 12h3"/><circle cx="12" cy="12" r="1" fill="currentColor"/></symbol><symbol id="i-button" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="9" rx="2.5"/><path d="M13 13l4 8 1.3-3.2L21.5 16.5z"/></symbol><symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8" cy="12" r="2.5"/><path d="M13 10.5h5M13 13.5h3"/></symbol></svg>
+<div class="wrap">
+  <header class="board-head">
+    <h1>FamTee screens</h1>
+    <p>The app as the code builds it today: the start screen, the tree view with a person selected, the phone layout and the parts it is made of. Colors come from <code>src/styles/main.css</code>; the 160×56 card and the 72px generation gap come from <code>src/layout/layout.js</code>. The people are from <code>samples/sample.famtee.json</code>, plus a few example additions.</p>
+  </header>
+
+  <section class="artboard">
+    <div class="ab-label"><h2><svg class="hi" aria-hidden="true"><use href="#i-screen"/></svg>Start screen</h2><span>src/ui/start.js · 1100×640</span></div>
+    <p class="ab-note">Shown every time the app opens (ADR 0017). Here the file has a family stored in it, and this browser holds an unsaved session that continues it, so Continue is the primary choice.</p>
+    <div class="scroller">
+      <div class="app desktop">
+        <div class="start-wrap">
+          <div class="start">
+            <h1>FamTee</h1>
+            <p class="start-intro">While you work, your changes are kept <strong>in this browser only</strong>. Nothing is written to your disk until you click <strong>Download</strong>. Each download is a new file named with the date, time and a fingerprint of its content, so earlier files are never overwritten.</p>
+            <div class="choices">
+              <section class="choice">
+                <div class="choice-head"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><circle cx="12" cy="10.5" r="1.4"/><circle cx="9" cy="16.5" r="1.4"/><circle cx="15" cy="16.5" r="1.4"/><path d="M12 12v1.5M9 15v-1.5h6V15"/></svg></span><h2>Open “Sample family”</h2></div>
+                <p>9 people · saved 10/12/2026, 9:14 AM · fingerprint 3f9a1c</p>
+                <div class="row"><button type="button" id="s-open">Open</button></div>
+              </section>
+              <section class="choice primary">
+                <div class="choice-head"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v4h4"/><path d="M12 7.5V12l3 2"/></svg></span><h2>Continue your unsaved session</h2></div>
+                <p>“Sample family” · 10 people · last change 10/13/2026, 8:02 AM · kept in this browser, not downloaded</p>
+                <div class="row"><button type="button" class="primary" id="s-continue">Continue</button><button type="button" class="link" id="s-discard">Discard it</button></div>
+              </section>
+              <section class="choice">
+                <div class="choice-head"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 15.5c0-3-2.5-5.5-6.5-5.5 0 3 2.5 5.5 6.5 5.5z"/></svg></span><h2>Start a new tree</h2></div>
+                <p>An empty family. You can add people right away.</p>
+                <div class="row"><input type="text" id="s-title" placeholder="e.g. Hanna family" aria-label="Family name"><button type="button" id="s-start">Start</button></div>
+              </section>
+              <section class="choice">
+                <div class="choice-head"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5v5M9.5 13l2.5 2.5 2.5-2.5"/></svg></span><h2>Open another file…</h2></div>
+                <p>A FamTee file (.html), FamTee data (.famtee.json) or a GEDCOM file (.ged) from other genealogy software.</p>
+                <div class="row"><button type="button" id="s-choose">Choose file…</button></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="artboard">
+    <div class="ab-label"><h2><svg class="hi" aria-hidden="true"><use href="#i-tree"/></svg>Tree view · person selected</h2><span>index.html + renderer.js + panel.js · 1100×640</span></div>
+    <p class="ab-note">The Smith family graph with Sarah selected. Pointing at a card shows a read-only snapshot of that person beside it, on the right, or on the left when there is no room; John’s is shown here. Click opens the full editor. The toolbar says the changes are kept in this browser and not downloaded yet. The panel shows the simple person form, with Advanced collapsed.</p>
+    <div class="scroller">
+      <div class="app desktop">
+        <header class="topbar">
+          <h1 class="doc-title"><span class="title-ico" aria-hidden="true"><svg class="hi"><use href="#i-family"/></svg></span>Sample family</h1>
+          <nav class="crumbs" aria-label="Graph path"><a href="#"><svg class="hi" aria-hidden="true"><use href="#i-families"/></svg>Families</a><span aria-hidden="true">›</span><b><svg class="hi" aria-hidden="true"><use href="#i-family"/></svg>Smith family</b></nav>
+          <div class="toolbar">
+            <button type="button" id="t-undo" class="with-icon" title="Undo Add partner (Ctrl+Z)"><svg class="hi" aria-hidden="true"><use href="#i-undo"/></svg>Undo</button><button type="button" id="t-redo" class="with-icon" disabled title="Nothing to redo"><svg class="hi" aria-hidden="true"><use href="#i-redo"/></svg>Redo</button>
+            <span class="save-state dirty">Kept in this browser 08:02 · not downloaded</span>
+            <button type="button" class="primary" id="t-dl">Download</button>
+            <button type="button" id="t-export">Export ▾</button><button type="button" id="t-open">Open…</button>
+          </div>
+        </header>
+        <div class="main">
+          <div class="canvas"><svg class="g" id="tree-desktop" viewBox="40 40 760 520" role="img" aria-label="Smith family tree"></svg>
+            <div class="zoom"><button type="button" id="z-in">+</button><button type="button" id="z-out">−</button><button type="button" id="z-fit">Fit</button></div>
+          </div>
+          <aside class="panel" aria-label="Details">
+            <h2><svg class="hi" aria-hidden="true"><use href="#i-person"/></svg>Person</h2>
+            <div class="photo-wrap"><div class="photo"><svg class="av av-F" viewBox="0 0 40 40"><use href="#av-F"/></svg></div><button type="button" class="link" id="p-photo">Add photo</button></div>
+            <div class="form">
+              <div class="two">
+                <label for="p-given"><span>Given name</span><input id="p-given" value="Sarah"></label>
+                <label for="p-surname"><span>Surname</span><input id="p-surname" value="Smith"></label>
+              </div>
+              <label for="p-sex"><span>Sex</span><select id="p-sex"><option>Female</option><option>Male</option><option>Unknown</option></select></label>
+              <label for="p-status"><span>Living or deceased</span><select id="p-status"><option>Automatic (from dates)</option><option>Living</option><option>Deceased</option></select></label>
+              <label for="p-born"><span>Born</span><input id="p-born" value="1978"></label>
+              <label for="p-bplace"><span>Birthplace</span><input id="p-bplace"></label>
+            </div>
+            <h3><svg class="hi" aria-hidden="true"><use href="#i-add"/></svg>Add relative</h3>
+            <div class="row"><button type="button" id="r-partner">+ Partner</button><button type="button" id="r-parent" disabled>+ Parent</button></div>
+            <div class="row"><button type="button" id="r-child">+ Child</button><select id="r-union" aria-label="Other parent"><option>with Mark Lee</option><option>alone (new)</option></select></div>
+            <h3><svg class="hi" aria-hidden="true"><use href="#i-rings"/></svg>Partners</h3>
+            <ul class="people"><li><button type="button" class="link" id="l-mark">Mark Lee</button></li></ul>
+            <h3><svg class="hi" aria-hidden="true"><use href="#i-parents"/></svg>Parents</h3>
+            <ul class="people"><li><button type="button" class="link" id="l-john">John Smith</button></li><li><button type="button" class="link" id="l-anne">Anne Smith</button></li></ul>
+            <details><summary><svg class="hi" aria-hidden="true"><use href="#i-sliders"/></svg>Advanced</summary></details>
+            <div class="row danger"><button type="button" id="r-delete">Delete person</button></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="artboard">
+    <div class="ab-label"><h2><svg class="hi" aria-hidden="true"><use href="#i-edges"/></svg>Connection points · top-down and left to right</h2><span>renderer.js drawEdges · TB / LR</span></div>
+    <p class="ab-note">Every line starts and ends on a fixed point on the card, marked with a dot. Top-down: children enter at the top centre and partners join at the left or right middle. Left to right: children enter at the left middle and partners join at the top or bottom centre. Lines bend at right angles into these points, so a card that has been dragged a little off its row still connects cleanly instead of being joined at an angle.</p>
+    <div class="ports-pair">
+      <figure class="app ports-fig"><figcaption>Top-down (TB)</figcaption><div class="canvas"><svg class="g" id="ports-tb" role="img" aria-label="Smith family tree, top-down"></svg></div></figure>
+      <figure class="app ports-fig"><figcaption>Left to right (LR)</figcaption><div class="canvas"><svg class="g" id="ports-lr" role="img" aria-label="Smith family tree, left to right"></svg></div></figure>
+    </div>
+  </section>
+
+  <section class="artboard">
+    <div class="ab-label"><h2><svg class="hi" aria-hidden="true"><use href="#i-add"/></svg>Connect people · try it</h2><span>new · interaction.js + panel.js</span></div>
+    <p class="ab-note">Add someone before you know where they fit, then connect them later. <b>+ Person</b> places a new person in the “Not connected yet” area. Hold <kbd>Ctrl</kbd> (<kbd>⌘</kbd> on a Mac) and drag from one person to another, or drag the round handle on a card’s right edge. When you let go, choose how they are related. With the keyboard, focus a person, press <kbd>C</kbd>, then pick the other person. <kbd>Esc</kbd> cancels. The demo opens part-way through: Rosa has just been dragged onto David.</p>
+    <div class="scroller">
+      <div class="app desktop connect-app">
+        <header class="topbar">
+          <h1 class="doc-title"><span class="title-ico" aria-hidden="true"><svg class="hi"><use href="#i-family"/></svg></span>Sample family</h1>
+          <div class="toolbar">
+            <button type="button" id="cx-add" title="Add someone who isn’t connected to anyone yet">+ Person</button>
+            <button type="button" id="cx-reset">Reset demo</button>
+          </div>
+        </header>
+        <p class="cx-hint" id="cx-hint" aria-live="polite">Hold Ctrl or ⌘ and drag from one person to another to connect them.</p>
+        <div class="main"><div class="canvas" id="cx-canvas"><svg class="g" id="connect-demo" role="img" aria-label="Connect people demo"></svg></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="artboard">
+    <div class="ab-label"><h2><svg class="hi" aria-hidden="true"><use href="#i-phone"/></svg>Phone and parts</h2><span>@media (max-width: 700px) · 390×780</span></div>
+    <p class="ab-note">Below 700px the panel moves under the canvas. The sheet next to it collects the tokens and marks the renderer uses, so you can judge a change to any of them in one place.</p>
+    <div class="row-boards">
+      <div class="app phone">
+        <header class="topbar">
+          <h1 class="doc-title"><span class="title-ico" aria-hidden="true"><svg class="hi"><use href="#i-family"/></svg></span>Sample family</h1>
+          <div class="toolbar"><button type="button" id="m-undo" class="with-icon"><svg class="hi" aria-hidden="true"><use href="#i-undo"/></svg>Undo</button><button type="button" class="primary" id="m-dl">Download</button><button type="button" id="m-more">Export ▾</button></div>
+          <span class="save-state dirty">Changes not downloaded yet</span>
+        </header>
+        <div class="main">
+          <div class="canvas"><svg class="g" id="tree-phone" viewBox="60 40 720 540" role="img" aria-label="Smith family tree"></svg></div>
+          <aside class="panel" aria-label="Details">
+            <h2><svg class="hi" aria-hidden="true"><use href="#i-person"/></svg>Person</h2>
+            <div class="form">
+              <div class="two">
+                <label for="m-given"><span>Given name</span><input id="m-given" value="Sarah"></label>
+                <label for="m-surname"><span>Surname</span><input id="m-surname" value="Smith"></label>
+              </div>
+              <label for="m-born"><span>Born</span><input id="m-born" value="1978"></label>
+            </div>
+            <h3><svg class="hi" aria-hidden="true"><use href="#i-add"/></svg>Add relative</h3>
+            <div class="row"><button type="button" id="m-partner">+ Partner</button><button type="button" id="m-child">+ Child</button></div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div>
+          <h3><svg class="hi" aria-hidden="true"><use href="#i-swatch"/></svg>Tokens</h3>
+          <div class="swatches">
+            <div class="sw"><i style="background:var(--bg)"></i><span>Background<br><code>--bg</code></span></div>
+            <div class="sw"><i style="background:var(--accent)"></i><span>Accent<br><code>--accent</code></span></div>
+            <div class="sw"><i style="background:var(--card-m)"></i><span>Card, male<br><code>--card-m</code></span></div>
+            <div class="sw"><i style="background:var(--card-f)"></i><span>Card, female<br><code>--card-f</code></span></div>
+            <div class="sw"><i style="background:var(--card-u)"></i><span>Card, unknown<br><code>--card-u</code></span></div>
+            <div class="sw"><i style="background:var(--ref-bg);border-color:var(--ref-stroke)"></i><span>Graph link<br><code>--ref-bg</code></span></div>
+            <div class="sw"><i style="background:var(--edge)"></i><span>Edge<br><code>--edge</code></span></div>
+            <div class="sw"><i style="background:var(--error)"></i><span>Error<br><code>--error</code></span></div>
+          </div>
+        </div>
+        <div>
+          <h3><svg class="hi" aria-hidden="true"><use href="#i-edges"/></svg>Edges</h3>
+          <div class="legend g">
+            <svg width="64" height="12"><line class="edge" x1="2" y1="6" x2="62" y2="6"/></svg><span>Birth child, married partner</span>
+            <svg width="64" height="12"><line class="edge dashed" x1="2" y1="6" x2="62" y2="6"/></svg><span>Adopted, foster, step</span>
+            <svg width="64" height="12"><line class="edge divorced" x1="2" y1="6" x2="62" y2="6"/></svg><span>Divorced partner</span>
+            <svg width="64" height="12"><line class="edge custom" x1="2" y1="6" x2="62" y2="6"/></svg><span>Custom link, e.g. godparent</span>
+            <svg width="64" height="12"><circle class="union" cx="32" cy="6" r="5"/></svg><span>Union node (ADR 0005)</span>
+          </div>
+        </div>
+        <div>
+          <h3><svg class="hi" aria-hidden="true"><use href="#i-button"/></svg>Buttons and save state</h3>
+          <div class="stack">
+            <div class="btns"><button type="button" class="primary" id="c-primary">Download</button><button type="button" id="c-default">Open…</button><button type="button" disabled id="c-disabled" class="with-icon"><svg class="hi" aria-hidden="true"><use href="#i-redo"/></svg>Redo</button><button type="button" class="armed" id="c-armed">Click again to delete</button></div>
+            <span class="save-state">No unsaved changes</span>
+            <span class="save-state dirty">Kept in this browser 08:02 · not downloaded</span>
+            <span class="save-state error">Not backed up · download to keep your work</span>
+          </div>
+        </div>
+        <div>
+          <h3><svg class="hi" aria-hidden="true"><use href="#i-card"/></svg>Nodes</h3>
+          <svg class="g" viewBox="0 0 340 150" width="100%" style="max-width:340px"><g id="sheet-nodes"></g></svg>
+          <div class="av-legend" aria-label="Placeholder portraits"><span><svg class="av av-M" viewBox="0 0 40 40"><use href="#av-M"/></svg>Male</span><span><svg class="av av-F" viewBox="0 0 40 40"><use href="#av-F"/></svg>Female</span><span><svg class="av av-U" viewBox="0 0 40 40"><use href="#av-U"/></svg>Unknown</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const W = 160, H = 56;
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.append(e);
+  return e;
+}
+function text(parent, attrs, value) { el('text', attrs, parent).textContent = value; }
+function person(g, cx, cy, p) {
+  el('rect', { class: `card sex-${p.sex}`, x: cx - W / 2, y: cy - H / 2, width: W, height: H, rx: 8 }, g);
+  el('circle', { class: 'avatar', cx: cx - W / 2 + 26, cy, r: 19 }, g);
+  // no photo: a placeholder portrait by sex (M, F, or neutral for U)
+  el('use', { class: `av av-${p.sex}`, href: `#av-${p.sex}`, x: cx - W / 2 + 7, y: cy - 19, width: 38, height: 38 }, g);
+  text(g, { class: 'name', x: cx + 20, y: cy - 2 }, `${p.given} ${p.surname}`.trim());
+  text(g, { class: 'dates', x: cx + 20, y: cy + 15 }, p.dates);
+  if (p.selected) el('rect', { class: 'sel', x: cx - W / 2 - 4, y: cy - H / 2 - 4, width: W + 8, height: H + 8, rx: 10 }, g);
+}
+// Connection points ("ports"). Every edge starts and ends on one of these, so lines
+// meet cards at the same spot in both orientations:
+//   TB  child in: top centre    partner: left / right middle    bus: below the union
+//   LR  child in: left middle   partner: top / bottom centre    bus: right of the union
+function port(c, side, lr) {
+  const { x, y } = c;
+  if (side === 'in') return lr ? { x: x - W / 2, y } : { x, y: y - H / 2 };
+  // side = +1 toward a partner further along the row, -1 toward one before
+  return lr ? { x, y: y + side * H / 2 } : { x: x + side * W / 2, y };
+}
+function dot(g, pt) { el('circle', { class: 'port', cx: pt.x, cy: pt.y, r: 3.5 }, g); }
+
+const FAMILY = {
+  // along: position within a generation (units), rank: generation
+  people: {
+    john:  { along: 13, rank: 0, given: 'John', surname: 'Smith', sex: 'M', dates: 'b. 1948', born: '1948', place: 'Leeds, England' },
+    anne:  { along: 23, rank: 0, given: 'Anne', surname: 'Smith', sex: 'F', dates: '1950 – 2021', born: '1950', place: 'Cork, Ireland', died: '2021' },
+    david: { along: 10, rank: 1, given: 'David', surname: 'Smith', sex: 'M', dates: 'b. 1975', born: '1975', place: 'Leeds, England' },
+    sarah: { along: 24, rank: 1, given: 'Sarah', surname: 'Smith', sex: 'F', dates: 'b. 1978', born: '1978', place: 'Leeds, England' },
+    mark:  { along: 34, rank: 1, given: 'Mark', surname: 'Lee', sex: 'M', dates: 'b. 1976', born: '1976', place: 'York, England', badge: 2, groups: ['Household'] },
+    emma:  { along: 24, rank: 2, given: 'Emma', surname: 'Lee', sex: 'F', dates: 'b. 2006', born: '2006', place: 'Leeds, England' },
+    sam:   { along: 34, rank: 2, given: 'Sam', surname: 'Lee', sex: 'U', dates: 'b. 2010 · adopted', born: '2010', place: 'Bradford, England' },
+  },
+  unions: [
+    { partners: ['john', 'anne'], kind: 'married', start: '1972', children: [['david'], ['sarah']] },
+    { partners: ['sarah', 'mark'], kind: 'married', start: '2003', children: [['emma'], ['sam', 'dashed']] },
+  ],
+  group: { label: 'Household', members: ['sarah', 'mark'] },
+  links: { mark: ['Same person as Mark Lee in “Lee family”', 'Related to Ana Garcia (godparent)'] },
+};
+
+// Map the abstract layout to coordinates. LR = TB rotated, with the row pitch
+// taken from the card's width instead of its height (as src/layout/layout.js does).
+function place(lr) {
+  const GAP = 72 + 30, ALONG_TB = 20, ALONG_LR = 9.6;
+  const pos = {};
+  for (const [id, p] of Object.entries(FAMILY.people)) {
+    pos[id] = lr
+      ? { x: 100 + p.rank * (W + GAP), y: 40 + p.along * ALONG_LR }
+      : { x: p.along * ALONG_TB, y: 100 + p.rank * (H + GAP) };
+  }
+  return pos;
+}
+
+function tree(svg, { lr = false, selected = 'sarah' } = {}) {
+  const pos = place(lr);
+  const edges = el('g', {}, svg), nodes = el('g', {}, svg), ports = el('g', {}, svg);
+  const used = [];
+
+  // group box behind its members
+  const m = FAMILY.group.members.map((id) => pos[id]);
+  const gx0 = Math.min(...m.map((c) => c.x - W / 2)) - 14, gx1 = Math.max(...m.map((c) => c.x + W / 2)) + 14;
+  const gy0 = Math.min(...m.map((c) => c.y - H / 2)) - 30, gy1 = Math.max(...m.map((c) => c.y + H / 2)) + 14;
+  el('rect', { class: 'group', x: gx0, y: gy0, width: gx1 - gx0, height: gy1 - gy0, rx: 12 }, nodes);
+  text(nodes, { class: 'group-label', x: gx0 + 10, y: gy0 + 16 }, FAMILY.group.label);
+
+  for (const u of FAMILY.unions) {
+    const [a, b] = u.partners.map((id) => pos[id]);
+    const ux = (a.x + b.x) / 2, uy = (a.y + b.y) / 2;
+    // partner edges: leave the card at the port facing the union, then square into the dot
+    for (const [c, other] of [[a, b], [b, a]]) {
+      const side = (lr ? other.y > c.y : other.x > c.x) ? 1 : -1;
+      const pt = port(c, side, lr);
+      used.push(pt);
+      el('path', { class: 'edge', d: lr ? `M ${pt.x} ${pt.y} V ${uy} H ${ux}` : `M ${pt.x} ${pt.y} H ${ux} V ${uy}` }, edges);
+    }
+    // child edges: one shared bus between the generations, then into each child's in-port
+    const kids = u.children.map(([id, kind]) => ({ c: pos[id], kind }));
+    const bus = lr ? Math.min(...kids.map(({ c }) => c.x - W / 2)) - 36 : Math.min(...kids.map(({ c }) => c.y - H / 2)) - 36;
+    el('path', { class: 'edge', d: lr ? `M ${ux} ${uy} H ${bus}` : `M ${ux} ${uy} V ${bus}` }, edges);
+    for (const { c, kind } of kids) {
+      const pt = port(c, 'in', lr);
+      used.push(pt);
+      el('path', { class: kind ? `edge ${kind}` : 'edge', d: lr ? `M ${bus} ${uy} V ${pt.y} H ${pt.x}` : `M ${ux} ${bus} H ${pt.x} V ${pt.y}` }, edges);
+    }
+    el('circle', { class: 'union', cx: ux, cy: uy, r: 5 }, ports);
+  }
+
+  for (const [id, p] of Object.entries(FAMILY.people)) {
+    const c = pos[id];
+    const pg = el('g', { class: 'pnode', 'data-id': id, tabindex: 0, 'aria-label': `${p.given} ${p.surname}` }, nodes);
+    person(pg, c.x, c.y, { ...p, selected: id === selected });
+    if (p.badge) {
+      const b = el('g', { class: 'badge' }, pg);
+      el('circle', { cx: c.x + W / 2 - 4, cy: c.y - H / 2 + 4, r: 9 }, b);
+      text(b, { x: c.x + W / 2 - 4, y: c.y - H / 2 + 8 }, String(p.badge));
+    }
+  }
+  for (const pt of used) dot(ports, pt);
+
+  // fit the drawing
+  const xs = Object.values(pos).map((c) => c.x), ys = Object.values(pos).map((c) => c.y);
+  const x0 = Math.min(...xs, gx0 + W / 2) - W / 2 - 30, x1 = Math.max(...xs) + W / 2 + 30;
+  const y0 = Math.min(...ys, gy0 + H / 2) - H / 2 - 30, y1 = Math.max(...ys) + H / 2 + 30;
+  svg.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+}
+tree(document.getElementById('tree-desktop'));
+tree(document.getElementById('tree-phone'));
+tree(document.getElementById('ports-tb'), { selected: null });
+tree(document.getElementById('ports-lr'), { lr: true, selected: null });
+
+// --- hover snapshot: a small read-only summary of a person, floating beside the card ---
+const fullName = (id) => `${FAMILY.people[id].given} ${FAMILY.people[id].surname}`;
+function relationsOf(id) {
+  const partners = [], parents = [], children = [];
+  for (const u of FAMILY.unions) {
+    if (u.partners.includes(id)) {
+      const other = u.partners.find((x) => x !== id);
+      partners.push(`${fullName(other)} · ${u.kind} ${u.start}`);
+      children.push(...u.children.map(([c, kind]) => fullName(c) + (kind ? ' · adopted' : '')));
+    }
+    if (u.children.some(([c]) => c === id)) parents.push(...u.partners.map(fullName));
+  }
+  return { partners, parents, children };
+}
+// ADR 0018: living unless a death is recorded or born 100+ years ago
+const living = (p) => !p.died && 2026 - Number(p.born) < 100;
+
+function snapshot(id) {
+  const p = FAMILY.people[id];
+  const r = relationsOf(id);
+  const rows = [
+    ['Born', `${p.born}${p.place ? ` · ${p.place}` : ''}`],
+    p.died && ['Died', p.died],
+    r.parents.length && ['Parents', r.parents.join(', ')],
+    r.partners.length && ['Partner', r.partners.join('; ')],
+    r.children.length && ['Children', r.children.join(', ')],
+    p.groups && ['Groups', p.groups.join(', ')],
+    FAMILY.links[id] && ['Elsewhere', FAMILY.links[id].join('; ')],
+  ].filter(Boolean);
+  const card = document.createElement('div');
+  card.className = 'snap';
+  card.setAttribute('role', 'tooltip');
+  card.innerHTML = `<div class="snap-head"><span class="snap-av"><svg class="av av-${p.sex}" viewBox="0 0 40 40"><use href="#av-${p.sex}"/></svg></span>
+    <div><b>${fullName(id)}</b><span>${p.dates}</span></div>
+    <span class="chip ${living(p) ? 'live' : 'dead'}">${living(p) ? 'Living' : 'Deceased'}</span></div>
+    <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+    <p class="snap-foot">Click to edit</p>`;
+  return card;
+}
+
+function attachSnapshots(svg, pinned = null) {
+  const host = svg.closest('.canvas');
+  let card = null;
+  function show(id) {
+    hide();
+    const g = svg.querySelector(`.pnode[data-id="${id}"]`);
+    if (!g) return;
+    card = snapshot(id);
+    host.append(card);
+    const box = g.querySelector('rect.card').getBoundingClientRect();
+    const frame = host.getBoundingClientRect();
+    const cw = card.offsetWidth, ch = card.offsetHeight, gap = 12;
+    const right = box.right - frame.left + gap;
+    const left = box.left - frame.left - gap - cw;
+    const onRight = right + cw <= frame.width - 8 || left < 8;
+    card.classList.add(onRight ? 'on-right' : 'on-left');
+    card.style.left = `${Math.max(8, onRight ? right : left)}px`;
+    const top = box.top - frame.top + box.height / 2 - 22;
+    card.style.top = `${Math.min(Math.max(8, top), frame.height - ch - 8)}px`;
+    card.style.setProperty('--arrow-y', `${box.top - frame.top + box.height / 2 - Math.min(Math.max(8, top), frame.height - ch - 8)}px`);
+  }
+  function hide() { card?.remove(); card = null; }
+  for (const g of svg.querySelectorAll('.pnode')) {
+    g.addEventListener('pointerenter', () => show(g.dataset.id));
+    g.addEventListener('focus', () => show(g.dataset.id));
+    g.addEventListener('pointerleave', () => (pinned ? show(pinned) : hide()));
+    g.addEventListener('blur', () => (pinned ? show(pinned) : hide()));
+  }
+  if (pinned) requestAnimationFrame(() => show(pinned));
+}
+attachSnapshots(document.getElementById('tree-desktop'), 'john');
+attachSnapshots(document.getElementById('ports-tb'));
+attachSnapshots(document.getElementById('ports-lr'));
+
+// --- connect people demo ---------------------------------------------------------
+(function connectDemo() {
+  const svg = document.getElementById('connect-demo');
+  const host = document.getElementById('cx-canvas');
+  const hint = document.getElementById('cx-hint');
+  const HINT = 'Hold Ctrl or ⌘ and drag from one person to another to connect them.';
+  const TRAY = { x: 690, y: 30, w: 300, h: 420 };
+  const SLOTS = [110, 200, 290, 380];
+  const KINDS = ['married', 'partner', 'divorced', 'widowed'];
+  let st, drag = null, pickFrom = null, pop = null, newCount = 0;
+
+  function initial() {
+    return {
+      people: {
+        john: { x: 200, y: 90, given: 'John', surname: 'Smith', sex: 'M', dates: 'b. 1948' },
+        anne: { x: 420, y: 90, given: 'Anne', surname: 'Smith', sex: 'F', dates: '1950 – 2021' },
+        david: { x: 310, y: 250, given: 'David', surname: 'Smith', sex: 'M', dates: 'b. 1975' },
+        rosa: { x: TRAY.x + TRAY.w / 2, y: SLOTS[0], given: 'Rosa', surname: 'Garcia', sex: 'F', dates: 'b. 1977', loose: true, inTray: true },
+      },
+      unions: [{ partners: ['john', 'anne'], children: ['david'], kind: 'married', start: '1972' }],
+      custom: [],
+      fresh: null,
+    };
+  }
+  const name = (id) => `${st.people[id].given} ${st.people[id].surname}`.trim();
+  const first = (id) => st.people[id].given;
+  const looseIds = () => Object.keys(st.people).filter((id) => st.people[id].inTray);
+  const partnerUnions = (id) => st.unions.filter((u) => u.partners.includes(id));
+  const parentUnion = (id) => st.unions.find((u) => u.children.includes(id));
+
+  function unionPoint(u) {
+    const ps = u.partners.map((id) => st.people[id]);
+    return ps.length === 2 ? { x: (ps[0].x + ps[1].x) / 2, y: (ps[0].y + ps[1].y) / 2 } : { x: ps[0].x, y: ps[0].y + H / 2 + 18 };
+  }
+
+  function render() {
+    svg.replaceChildren();
+    const edges = el('g', {}, svg), nodes = el('g', {}, svg), top = el('g', {}, svg);
+    // tray for people who aren't connected yet
+    el('rect', { class: 'tray', x: TRAY.x, y: TRAY.y, width: TRAY.w, height: TRAY.h, rx: 14 }, nodes);
+    text(nodes, { class: 'tray-label', x: TRAY.x + 14, y: TRAY.y + 22 }, 'Not connected yet');
+    if (!looseIds().length) text(nodes, { class: 'dates', x: TRAY.x + TRAY.w / 2, y: TRAY.y + TRAY.h / 2 }, 'No one here. + Person adds someone.');
+
+    for (const u of st.unions) {
+      const up = unionPoint(u);
+      const cls = u === st.fresh ? 'edge fresh' : 'edge';
+      if (u.partners.length === 2) {
+        for (const id of u.partners) {
+          const c = st.people[id], other = st.people[u.partners.find((x) => x !== id)];
+          const pt = port(c, other.x > c.x ? 1 : -1, false);
+          el('path', { class: u.kind === 'divorced' ? `${cls} divorced` : cls, d: `M ${pt.x} ${pt.y} H ${up.x} V ${up.y}` }, edges);
+        }
+      } else {
+        const c = st.people[u.partners[0]];
+        el('path', { class: cls, d: `M ${c.x} ${c.y + H / 2} V ${up.y}` }, edges);
+      }
+      if (u.children.length) {
+        const bus = Math.min(...u.children.map((id) => st.people[id].y - H / 2)) - 30;
+        el('path', { class: cls, d: `M ${up.x} ${up.y} V ${bus}` }, edges);
+        for (const id of u.children) {
+          const pt = port(st.people[id], 'in', false);
+          el('path', { class: (u.freshChild === id) ? 'edge fresh' : 'edge', d: `M ${up.x} ${bus} H ${pt.x} V ${pt.y}` }, edges);
+        }
+      }
+      el('circle', { class: 'union', cx: up.x, cy: up.y, r: 5 }, top);
+    }
+    for (const l of st.custom) {
+      const a = st.people[l.a], b = st.people[l.b];
+      const mx = (a.x + b.x) / 2, my = Math.min(a.y, b.y) - 60;
+      el('path', { class: `edge custom${l === st.fresh ? ' fresh' : ''}`, d: `M ${a.x} ${a.y - H / 2} Q ${mx} ${my} ${b.x} ${b.y - H / 2}` }, edges);
+      text(edges, { class: 'edge-label', x: mx, y: my + 22 }, l.label);
+    }
+
+    for (const [id, p] of Object.entries(st.people)) {
+      const cls = ['pnode', p.loose ? 'loose' : '', drag?.from === id || pickFrom === id || pop?.from === id ? 'source' : '',
+        drag?.over === id || pop?.to === id ? 'target' : ''].join(' ').replace(/\s+/g, ' ').trim();
+      const g = el('g', { class: cls, 'data-id': id, tabindex: 0, 'aria-label': `${name(id)}${p.loose ? ', not connected yet' : ''}` }, nodes);
+      person(g, p.x, p.y, p);
+      const hd = el('g', { class: 'handle', 'data-handle': id }, g);
+      el('circle', { cx: p.x + W / 2, cy: p.y, r: 8 }, hd);
+      el('path', { d: `M ${p.x + W / 2 - 4} ${p.y} h 8 M ${p.x + W / 2} ${p.y - 4} v 8` }, hd);
+    }
+
+    const end = drag?.pt ?? (pop && st.people[pop.to]);
+    const from = drag ? st.people[drag.from] : pop && st.people[pop.from];
+    if (from && end) {
+      const a = { x: from.x + (end.x < from.x ? -W / 2 : W / 2), y: from.y };
+      const b = drag?.over || pop ? (() => { const t = st.people[drag?.over ?? pop.to]; return { x: t.x + (a.x < t.x ? -W / 2 : W / 2), y: t.y }; })() : end;
+      const mx = (a.x + b.x) / 2;
+      el('path', { class: 'rubber', d: `M ${a.x} ${a.y} C ${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}` }, top);
+      el('circle', { class: 'rubber-end', cx: b.x, cy: b.y, r: 4 }, top);
+    }
+
+    // fit
+    const ps = Object.values(st.people);
+    const x0 = Math.min(0, ...ps.map((p) => p.x - W / 2 - 30)), y0 = Math.min(0, ...ps.map((p) => p.y - H / 2 - 40));
+    const x1 = Math.max(TRAY.x + TRAY.w + 20, ...ps.map((p) => p.x + W / 2 + 30)), y1 = Math.max(TRAY.y + TRAY.h + 20, ...ps.map((p) => p.y + H / 2 + 30));
+    svg.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+  }
+
+  function toSvg(evt) {
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  const nodeAt = (evt) => document.elementFromPoint(evt.clientX, evt.clientY)?.closest?.('#connect-demo .pnode')?.dataset.id ?? null;
+  function say(msg, warn = false) { hint.textContent = msg; hint.classList.toggle('warn', warn); }
+
+  svg.addEventListener('pointerdown', (evt) => {
+    const handle = evt.target.closest('.handle');
+    const id = handle?.dataset.handle ?? evt.target.closest('.pnode')?.dataset.id;
+    if (!id) return;
+    if (pickFrom) { evt.preventDefault(); finishPick(id); return; }
+    if (!handle && !(evt.ctrlKey || evt.metaKey)) return;
+    evt.preventDefault();
+    closePop();
+    drag = { from: id, pt: toSvg(evt), over: null };
+    svg.setPointerCapture(evt.pointerId);
+    say(`Drop on the person ${name(id)} is related to.`);
+    render();
+  });
+  svg.addEventListener('pointermove', (evt) => {
+    if (!drag) return;
+    drag.pt = toSvg(evt);
+    const over = nodeAt(evt);
+    drag.over = over && over !== drag.from ? over : null;
+    render();
+  });
+  svg.addEventListener('pointerup', (evt) => {
+    if (!drag) return;
+    const { from } = drag;
+    const to = nodeAt(evt);
+    drag = null;
+    if (to && to !== from) openPop(from, to);
+    else { say(HINT); render(); }
+  });
+
+  svg.addEventListener('keydown', (evt) => {
+    const id = evt.target.closest?.('.pnode')?.dataset.id;
+    if (!id) return;
+    if ((evt.key === 'c' || evt.key === 'C') && !pickFrom && !pop) {
+      pickFrom = id;
+      say(`Connect ${name(id)} to… Click a person, or focus one and press Enter. Esc cancels.`);
+      render();
+      svg.querySelector(`.pnode[data-id="${id}"]`)?.focus();
+    } else if (evt.key === 'Enter' && pickFrom && id !== pickFrom) {
+      finishPick(id);
+    }
+  });
+  function finishPick(id) {
+    const from = pickFrom;
+    pickFrom = null;
+    if (id === from) { say(HINT); render(); return; }
+    openPop(from, id);
+  }
+  document.addEventListener('keydown', (evt) => {
+    if (evt.key !== 'Escape' || !(drag || pickFrom || pop)) return;
+    drag = null; pickFrom = null; closePop(); say(HINT); render();
+  });
+
+  // --- relation popover ---
+  function options(subject, anchor) {
+    const pu = parentUnion(anchor);
+    const parents = pu ? pu.partners.length : 0;
+    return [
+      ['partner', 'Partner', ''],
+      ['child', 'Child', ''],
+      ['parent', 'Parent', parents >= 2 ? `${first(anchor)} already has two parents` : ''],
+      ['sibling', 'Brother or sister', pu ? '' : `add ${first(anchor)}’s parents first`],
+      ['other', 'Other relation…', ''],
+    ];
+  }
+
+  function openPop(a, b, focus = true) {
+    // The person who isn't connected yet is the one who moves into the tree.
+    const pa = st.people[a], pb = st.people[b];
+    if (!pa.loose && !pb.loose) {
+      say(`${name(a)} and ${name(b)} are both in the tree already. In this demo, connect someone from “Not connected yet”.`, true);
+      render();
+      return;
+    }
+    if (pa.loose && pb.loose) {
+      say('Both people are still unconnected. Connect one of them to the tree first.', true);
+      render();
+      return;
+    }
+    const subject = pa.loose ? a : b, anchor = pa.loose ? b : a;
+    pop = { from: subject, to: anchor };
+    render();
+    const opts = options(subject, anchor);
+    const el2 = document.createElement('div');
+    el2.className = 'pop';
+    el2.setAttribute('role', 'dialog');
+    el2.setAttribute('aria-label', `Connect ${name(subject)} and ${name(anchor)}`);
+    el2.innerHTML = `<h4>Connect ${name(subject)} to ${name(anchor)}</h4>
+      <label class="fld" for="cx-rel"><span>${first(subject)} is ${first(anchor)}’s</span>
+        <select id="cx-rel">${opts.map(([v, t, why]) => `<option value="${v}"${why ? ' disabled' : ''}>${t}${why ? ` (${why})` : ''}</option>`).join('')}</select></label>
+      <div id="cx-extra"></div>
+      <p class="pop-preview" id="cx-preview"></p>
+      <div class="pop-actions"><button type="button" class="primary" id="cx-ok">Connect</button><button type="button" id="cx-cancel">Cancel</button><span class="muted">Esc to cancel</span></div>`;
+    host.append(el2);
+    pop.el = el2;
+    const rel = el2.querySelector('#cx-rel');
+    const extra = el2.querySelector('#cx-extra');
+    const preview = el2.querySelector('#cx-preview');
+
+    function fields() {
+      const v = rel.value;
+      if (v === 'partner') {
+        extra.innerHTML = `<div class="two"><label class="fld" for="cx-kind"><span>Relationship</span><select id="cx-kind">${KINDS.map((k) => `<option value="${k}">${k[0].toUpperCase() + k.slice(1)}</option>`).join('')}</select></label>
+          <label class="fld" for="cx-year"><span>From</span><input id="cx-year" placeholder="e.g. 2001" inputmode="numeric"></label></div>`;
+      } else if (v === 'child') {
+        const withs = partnerUnions(anchor).filter((u) => u.partners.length === 2);
+        extra.innerHTML = `<label class="fld" for="cx-with"><span>Other parent</span><select id="cx-with">${withs.map((u, i) => `<option value="${i}">with ${name(u.partners.find((x) => x !== anchor))}</option>`).join('')}<option value="alone">alone (new)</option></select></label>`;
+      } else if (v === 'sibling') {
+        const pu = parentUnion(anchor);
+        extra.innerHTML = `<p class="note">${first(subject)} joins ${pu.partners.map(name).join(' & ')} as their child.</p>`;
+      } else if (v === 'parent') {
+        extra.innerHTML = `<p class="note">${first(subject)} becomes a parent of ${first(anchor)}.</p>`;
+      } else {
+        extra.innerHTML = `<label class="fld" for="cx-label"><span>How are they related?</span><input id="cx-label" placeholder="e.g. godparent"></label>`;
+      }
+      extra.querySelectorAll('input, select').forEach((x) => x.addEventListener('input', sentence));
+      sentence();
+    }
+    function sentence() {
+      const v = rel.value;
+      const S = name(subject), A = name(anchor);
+      let t;
+      if (v === 'partner') {
+        const k = el2.querySelector('#cx-kind').value, y = el2.querySelector('#cx-year').value.trim();
+        t = `${S} becomes ${A}’s partner (${k}${y ? ` ${y}` : ''}).`;
+      } else if (v === 'child') {
+        const w = el2.querySelector('#cx-with').value;
+        const u = w === 'alone' ? null : partnerUnions(anchor).filter((x) => x.partners.length === 2)[w];
+        t = `${S} becomes the child of ${A}${u ? ` and ${name(u.partners.find((x) => x !== anchor))}` : ''}.`;
+      } else if (v === 'sibling') t = `${S} becomes ${A}’s brother or sister.`;
+      else if (v === 'parent') t = `${S} becomes ${A}’s parent.`;
+      else { const l = el2.querySelector('#cx-label').value.trim(); t = `${S} is linked to ${A}${l ? ` as “${l}”` : ''}, outside the family lines.`; }
+      preview.textContent = t;
+    }
+    rel.addEventListener('change', fields);
+    fields();
+    el2.querySelector('#cx-cancel').addEventListener('click', () => { closePop(); say(HINT); render(); });
+    el2.querySelector('#cx-ok').addEventListener('click', () => connect(subject, anchor, rel.value));
+
+    // place beside the anchor card, inside the canvas
+    const card = svg.querySelector(`.pnode[data-id="${anchor}"] rect.card`).getBoundingClientRect();
+    const frame = host.getBoundingClientRect();
+    const w = el2.offsetWidth, h = el2.offsetHeight;
+    let left = card.right - frame.left + 14;
+    if (left + w > frame.width - 8) left = card.left - frame.left - 14 - w;
+    el2.style.left = `${Math.max(8, left)}px`;
+    el2.style.top = `${Math.min(Math.max(8, card.top - frame.top - 20), frame.height - h - 8)}px`;
+    say(`Choose how ${name(subject)} is related to ${name(anchor)}.`);
+    if (focus) rel.focus({ preventScroll: true });
+  }
+  function closePop() { pop?.el?.remove(); pop = null; }
+
+  function connect(subject, anchor, how) {
+    const S = st.people[subject], A = st.people[anchor];
+    const val = (sel) => pop.el.querySelector(sel)?.value?.trim() ?? '';
+    st.fresh = null;
+    if (how === 'partner') {
+      Object.assign(S, { x: A.x + 220, y: A.y });
+      st.fresh = { partners: [anchor, subject], children: [], kind: val('#cx-kind'), start: val('#cx-year') };
+      st.unions.push(st.fresh);
+    } else if (how === 'child') {
+      const w = val('#cx-with');
+      let u = w === 'alone' ? null : partnerUnions(anchor).filter((x) => x.partners.length === 2)[w];
+      if (!u) { u = { partners: [anchor], children: [] }; st.unions.push(u); }
+      const sibs = u.children.length;
+      Object.assign(S, { x: unionPoint(u).x + sibs * 200, y: A.y + H + 102 });
+      u.children.push(subject);
+      u.freshChild = subject;
+    } else if (how === 'sibling') {
+      const u = parentUnion(anchor);
+      Object.assign(S, { x: A.x - 200, y: A.y });
+      u.children.push(subject);
+      u.freshChild = subject;
+    } else if (how === 'parent') {
+      let u = parentUnion(anchor);
+      Object.assign(S, { x: A.x, y: A.y - H - 102 });
+      if (u) { u.partners.push(subject); S.x = st.people[u.partners[0]].x + 220; }
+      else st.unions.push({ partners: [subject], children: [anchor], freshChild: anchor });
+    } else {
+      st.fresh = { a: subject, b: anchor, label: val('#cx-label') || 'related' };
+      st.custom.push(st.fresh);
+    }
+    S.loose = false;
+    if (how !== 'other') S.inTray = false;
+    const msg = pop.el.querySelector('#cx-preview').textContent.replace('becomes', 'is now').replace(' is linked', ' is now linked');
+    closePop();
+    reflowTray();
+    say(`${msg} Undo with Ctrl+Z.`);
+    render();
+  }
+
+  function reflowTray() {
+    looseIds().forEach((id, i) => Object.assign(st.people[id], { x: TRAY.x + TRAY.w / 2, y: SLOTS[i] }));
+  }
+
+  document.getElementById('cx-add').addEventListener('click', () => {
+    const ids = looseIds();
+    if (ids.length >= SLOTS.length) { say('“Not connected yet” is full in this demo. Connect someone first.', true); return; }
+    newCount += 1;
+    const id = `new${newCount}`;
+    st.people[id] = { x: TRAY.x + TRAY.w / 2, y: SLOTS[ids.length], given: 'New', surname: `person ${newCount}`, sex: 'U', dates: 'no details yet', loose: true, inTray: true };
+    say(`Added New person ${newCount}. Ctrl- or ⌘-drag them onto someone in the tree to connect them.`);
+    render();
+  });
+  document.getElementById('cx-reset').addEventListener('click', () => { closePop(); drag = null; pickFrom = null; st = initial(); newCount = 0; say(HINT); render(); });
+
+  st = initial();
+  render();
+  // open part-way through: Rosa has just been dragged onto David
+  requestAnimationFrame(() => openPop('rosa', 'david', false));
+})();
+
+const s = document.getElementById('sheet-nodes');
+person(s, 90, 40, { given: 'Anne', surname: 'Smith', sex: 'F', dates: 'b. 1950', selected: true });
+el('rect', { class: 'ref', x: 190, y: 12, width: 140, height: H, rx: 8 }, s);
+text(s, { class: 'name', x: 260, y: 45 }, 'Garcia family ›');
+person(s, 90, 115, { given: 'Living', surname: '', sex: 'U', dates: 'details hidden' });
+text(s, { class: 'dates', x: 260, y: 112 }, 'Copy shared without');
+text(s, { class: 'dates', x: 260, y: 127 }, 'living people (ADR 0018)');
+</script>
