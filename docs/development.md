@@ -44,7 +44,8 @@ in this browser, start a new tree, or open another file. `#start=file|new|contin
 | Add person, rename the family | Panel with nothing selected (click empty canvas or press Esc) |
 | Photos | Person panel → **Add photo…** (or drop an image on the circle). Shrunk to 256 px JPEG and embedded |
 | Advanced (collapsed) | Groups, links to other graphs, sub-graphs, adding GEDCOM as a sub-graph, position/layout reset |
-| Move a card | Drag it (one undoable step). Advanced → "Reset position" / "Reset layout" |
+| Move a card | Drag it (one undoable step); cards in the way move aside. Advanced → "Reset position" / "Reset layout" |
+| Layout direction | Family panel → **Layout**: generations top to bottom or left to right (saved per graph) |
 | Pan / zoom | Drag the background; scroll wheel or pinch; + / − / Fit buttons; keys `+` `-` `0` |
 | Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person or group |
 | Undo / redo | Toolbar, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or Ctrl+Y |
@@ -149,9 +150,8 @@ Not supported (the build fails with a clear message): default imports/exports, `
 
 ## Current limitations
 
-- Top-down orientation only (left-to-right is reserved as a layout option).
-- Moved cards (`attrs.nudge`) are offset after the automatic layout; neighbours don't move out of the way, so a
-  card can be dragged on top of another. No momentum panning.
+- Moved cards push other cards aside within their row; two cards both moved by hand can still overlap. No momentum
+  panning.
 - Sub-graph tiles can't be edited or deleted in place: clicking a tile opens the graph, and the graph can be
   renamed or deleted from there. Links can be made only from people (the model also allows unions and tiles).
 - Group outlines are bounding boxes, so a group whose members are far apart can enclose other cards.

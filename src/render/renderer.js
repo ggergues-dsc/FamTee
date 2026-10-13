@@ -52,7 +52,8 @@ export function createRenderer(svg) {
   function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions } = {}) {
     const graph = doc.graphs[graphId];
     if (!graph) throw new Error(`Unknown graph: ${graphId}`);
-    const layout = layoutGraph(graph, { ...layoutOptions, preview });
+    const orientation = layoutOptions?.orientation ?? graph.layout?.orientation;
+    const layout = layoutGraph(graph, { ...layoutOptions, orientation, preview });
     for (const layer of Object.values(layers)) layer.replaceChildren();
 
     const { bounds } = layout;
@@ -101,7 +102,8 @@ function drawGroups(graph, layout, layers) {
 }
 
 function drawEdges(graph, layout, layer) {
-  const { cardHeight, rankGap } = layout.options;
+  const { cardWidth, cardHeight, rankGap } = layout.options;
+  const lr = layout.options.orientation === 'LR';
   const lanes = busLanes(graph, layout);
   for (const edge of graph.edges) {
     const a = layout.nodes[edge.from];
@@ -110,10 +112,19 @@ function drawEdges(graph, layout, layer) {
     const kind = edge.attrs?.kind;
     const cls = ['edge', `edge-${edge.type}`, kind ? `kind-${kind}` : ''].join(' ').trim();
     let d;
-    if (edge.type === 'partner') {
+    if (edge.type === 'partner' && lr) {
+      // Partners are stacked: from the card edge facing the union dot.
+      const side = b.y >= a.y ? 1 : -1;
+      d = `M ${a.x} ${a.y + (side * a.height) / 2} L ${b.x} ${b.y}`;
+    } else if (edge.type === 'partner') {
       // From the side of the card facing the union to the union dot.
       const side = b.x >= a.x ? 1 : -1;
       d = `M ${a.x + (side * a.width) / 2} ${a.y} L ${b.x} ${b.y}`;
+    } else if (edge.type === 'child' && lr) {
+      // Orthogonal "bus" to the right: out of the union, along, then into the child's left edge.
+      const left = b.x - b.width / 2;
+      const mid = Math.max(a.x + cardWidth / 2 + 6, left - rankGap / 2 + (lanes.get(edge.from) ?? 0));
+      d = `M ${a.x} ${a.y} H ${mid} V ${b.y} H ${left}`;
     } else if (edge.type === 'child') {
       // Orthogonal "bus": down from the union, across, down to the child's top edge.
       const top = b.y - b.height / 2;
@@ -132,15 +143,19 @@ function drawEdges(graph, layout, layer) {
 // line where their spans overlap. Give overlapping spans separate lanes (y offsets).
 const LANE_SPACING = 10;
 
+// Rows run along x (top-down) or along y (left to right).
 function busLanes(graph, layout) {
-  const spans = new Map(); // union id → { row, x0, x1 }
+  const lr = layout.options.orientation === 'LR';
+  const along = lr ? 'y' : 'x';
+  const across = lr ? 'x' : 'y';
+  const spans = new Map(); // union id → { row, x0, x1 } in row coordinates
   for (const edge of graph.edges) {
     const u = layout.nodes[edge.from];
     const c = layout.nodes[edge.to];
     if (edge.type !== 'child' || !u || !c) continue;
-    const span = spans.get(edge.from) ?? { row: Math.round(u.y), x0: u.x, x1: u.x };
-    span.x0 = Math.min(span.x0, c.x);
-    span.x1 = Math.max(span.x1, c.x);
+    const span = spans.get(edge.from) ?? { row: Math.round(u[across]), x0: u[along], x1: u[along] };
+    span.x0 = Math.min(span.x0, c[along]);
+    span.x1 = Math.max(span.x1, c[along]);
     spans.set(edge.from, span);
   }
   const rows = new Map();

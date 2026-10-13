@@ -4,8 +4,11 @@
 //   2. order  — partners kept adjacent in "blocks"; blocks ordered by barycentre sweeps
 //   3. place  — x by centring children under their union and parents over their children,
 //               resolving overlaps per row; y = rank × row height
-//   4. nudge  — attrs.nudge {dx, dy} offsets a node from its automatic position (set by
-//               dragging); a union between nudged partners follows them
+//   4. manual moves — attrs.nudge {dx, dy} offsets a card from its automatic position
+//               (set by dragging); cards it would cover are pushed aside along their row,
+//               and partnership dots move with their partners (ADR 0019)
+// Orientation 'TB' (generations top to bottom, default) or 'LR' (left to right): the
+// core layout always runs top-down, with card sizes swapped for 'LR', then is rotated.
 
 export const LAYOUT_DEFAULTS = {
   cardWidth: 160,
@@ -14,34 +17,43 @@ export const LAYOUT_DEFAULTS = {
   gap: 24, // minimum horizontal gap between blocks
   rankGap: 72, // vertical gap between generations
   sweeps: 4,
+  orientation: 'TB', // 'TB' or 'LR'
   preview: null, // { [nodeId]: { dx, dy } } extra offsets while a drag is in progress
 };
 
+export const ORIENTATIONS = ['TB', 'LR'];
+
 export function layoutGraph(graph, options = {}) {
   const o = { ...LAYOUT_DEFAULTS, ...options };
+  o.orientation = ORIENTATIONS.includes(o.orientation) ? o.orientation : 'TB';
+  const lr = o.orientation === 'LR';
+  // Left to right = top-down with each card's width and height swapped, then rotated.
+  const core = lr ? { ...o, cardWidth: o.cardHeight, cardHeight: o.cardWidth } : o;
   const rel = relations(graph);
   const rank = assignRanks(graph, rel);
-  const rows = buildRows(graph, rel, rank, o);
-  orderRows(rows, rel, o.sweeps);
-  placeRows(rows, rel, o);
+  const rows = buildRows(graph, rel, rank, core);
+  orderRows(rows, rel, core.sweeps);
+  placeRows(rows, rel, core);
 
-  const rowHeight = o.cardHeight + o.rankGap;
+  const rowHeight = core.cardHeight + core.rankGap;
   const nodes = {};
   for (const row of rows) {
     for (const block of row) {
       for (const item of block.items) {
+        const along = block.left + item.offset + item.width / 2;
+        const across = item.rank * rowHeight;
         nodes[item.id] = {
           kind: item.kind,
           rank: item.rank,
-          x: block.left + item.offset + item.width / 2,
-          y: item.rank * rowHeight,
+          x: lr ? across : along,
+          y: lr ? along : across,
           width: item.kind === 'union' ? 0 : o.cardWidth,
           height: item.kind === 'union' ? 0 : o.cardHeight,
         };
       }
     }
   }
-  applyNudges(graph, rel, nodes, o.preview);
+  applyManualMoves(graph, rel, nodes, o);
   return { nodes, bounds: bounds(nodes), options: o };
 }
 
@@ -305,30 +317,87 @@ export function resolveRow(blocks, desired, gap) {
   }
 }
 
-// --- 4. manual nudges -------------------------------------------------------------
+// --- 4. manual moves ---------------------------------------------------------------
 
 // Offsets are relative to the automatic position, so a moved card travels with its
 // family when the automatic layout shifts (e.g. after adding someone on the left).
 const isNudge = (n) => n && Number.isFinite(n.dx) && Number.isFinite(n.dy);
 
-function applyNudges(graph, rel, nodes, preview) {
+function applyManualMoves(graph, rel, nodes, o) {
+  const moves = new Map(); // card id → { dx, dy } it was moved by (manually or pushed aside)
   for (const [id, n] of Object.entries(nodes)) {
     const stored = graph.nodes[id].attrs?.nudge;
-    const extra = preview?.[id];
+    const extra = o.preview?.[id];
     const dx = (isNudge(stored) ? stored.dx : 0) + (isNudge(extra) ? extra.dx : 0);
     const dy = (isNudge(stored) ? stored.dy : 0) + (isNudge(extra) ? extra.dy : 0);
     if (dx || dy) {
       n.x += dx;
       n.y += dy;
       n.nudged = true;
+      moves.set(id, { dx, dy });
     }
   }
+  pushAside(nodes, o, moves);
+  // A partnership dot moves by the average of its partners' moves, so it stays between
+  // two partners and beside a single one.
   for (const [id, n] of Object.entries(nodes)) {
     if (n.kind !== 'union' || n.nudged) continue;
     const partners = rel.partners(id).filter((p) => nodes[p]);
-    if (partners.some((p) => nodes[p].nudged)) {
-      n.x = partners.reduce((s, p) => s + nodes[p].x, 0) / partners.length;
-      n.y = partners.reduce((s, p) => s + nodes[p].y, 0) / partners.length;
+    if (!partners.some((p) => moves.has(p))) continue;
+    const zero = { dx: 0, dy: 0 };
+    n.x += partners.reduce((s, p) => s + (moves.get(p) ?? zero).dx, 0) / partners.length;
+    n.y += partners.reduce((s, p) => s + (moves.get(p) ?? zero).dy, 0) / partners.length;
+  }
+}
+
+// Cards that a manually moved card would cover are pushed along their row (or column,
+// left to right), keeping their order and never onto another card. Moved cards stay
+// exactly where the user put them.
+function pushAside(nodes, o, moves) {
+  const lr = o.orientation === 'LR';
+  const along = lr ? 'y' : 'x';
+  const across = lr ? 'x' : 'y';
+  const size = { x: 'width', y: 'height' };
+  const moved = Object.values(nodes).filter((n) => n.nudged && n.kind === 'card');
+  if (!moved.length) return;
+
+  const rows = new Map(); // rank → [id, node] of cards that weren't moved
+  for (const [id, n] of Object.entries(nodes)) {
+    if (n.kind !== 'card' || n.nudged) continue;
+    if (!rows.has(n.rank)) rows.set(n.rank, []);
+    rows.get(n.rank).push([id, n]);
+  }
+  for (const row of rows.values()) {
+    const [, sample] = row[0];
+    const lo = sample[across] - sample[size[across]] / 2;
+    const hi = sample[across] + sample[size[across]] / 2;
+    const obstacles = moved
+      .filter((m) => m[across] + m[size[across]] / 2 > lo && m[across] - m[size[across]] / 2 < hi)
+      .map((m) => [m[along] - m[size[along]] / 2, m[along] + m[size[along]] / 2]);
+    if (!obstacles.length) continue;
+    row.sort(([, a], [, b]) => a[along] - b[along]);
+    let cursor = -Infinity;
+    for (const [id, n] of row) {
+      const length = n[size[along]];
+      let start = Math.max(n[along] - length / 2, cursor + o.gap);
+      for (let clash = true; clash;) {
+        clash = false;
+        for (const [a0, a1] of obstacles) {
+          if (start < a1 + o.gap && start + length > a0 - o.gap) {
+            start = a1 + o.gap;
+            clash = true;
+          }
+        }
+      }
+      const shift = start + length / 2 - n[along];
+      if (shift) {
+        n[along] += shift;
+        const m = moves.get(id) ?? { dx: 0, dy: 0 };
+        if (lr) m.dy += shift;
+        else m.dx += shift;
+        moves.set(id, m);
+      }
+      cursor = start + length;
     }
   }
 }
