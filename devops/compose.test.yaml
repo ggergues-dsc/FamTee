@@ -1,0 +1,30 @@
+# Disposable test environment (ADR 0014). Run via devops/test.sh, or:
+#   docker compose -f devops/compose.test.yaml run --rm --build tests
+#
+# Nothing persists and nothing on the host is written:
+#   - the repo is mounted read-only; tests run on a copy in tmpfs
+#   - the container's root filesystem is read-only; all writable places are tmpfs
+#   - no volumes, no network (only loopback, which the test runner uses)
+name: famtee-test
+
+services:
+  tests:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.test
+    image: famtee-test:local
+    volumes:
+      - type: bind
+        source: ..
+        target: /src
+        read_only: true
+    read_only: true
+    tmpfs:
+      - /work:size=512m,mode=1777
+      - /tmp:size=256m,mode=1777
+      - /home/tester:size=256m,mode=1777
+    network_mode: none
+    shm_size: 512m # Firefox needs more shared memory than Docker's 64 MB default
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
