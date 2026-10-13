@@ -62,6 +62,15 @@ Runs the Python build tests, then the JS test suite in headless Firefox twice (a
 the bundled file from `file://`), then the end-to-end test against the built app (`tests/e2e.html`). For interactive debugging, serve the repo as above and open
 `http://localhost:8000/tests/index.html`.
 
+### In a disposable container
+
+```bash
+devops/test.sh
+```
+
+Runs the same suite in Docker with Python and Firefox ESR, on a read-only copy of the repo, with no network,
+leaving nothing behind. See [devops/README.md](../devops/README.md) and ADR 0014.
+
 ## Code layout
 
 ```
