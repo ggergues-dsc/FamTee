@@ -17,6 +17,8 @@ import {
   groupsOf, linksOf, sameAsIdentity, graphsContaining,
 } from '../store/family.js';
 import { endpoint } from '../store/schema.js';
+import { addMedia, setPhoto, isSafeImageData, mediaUsage, imageBytes, formatSize } from '../store/media.js';
+import { photoFromFile, ACCEPTED_TYPES } from '../io/photo.js';
 
 const UNION_KINDS = ['married', 'partner', 'divorced', 'widowed', 'single'];
 const SEXES = [['U', 'Unknown'], ['F', 'Female'], ['M', 'Male']];
@@ -158,6 +160,60 @@ export function createPanel(container, ctx) {
     return section;
   }
 
+  // --- photo (person) -------------------------------------------------------------
+
+  function photoSection(graphId, personId) {
+    const attrs = () => ctx.store.doc.graphs[graphId]?.nodes[personId]?.attrs ?? {};
+    const img = h('img', { class: 'photo', alt: '' });
+    const empty = h('span', { class: 'photo placeholder' }, 'No photo');
+    const size = h('span', { class: 'muted hint' });
+    const input = h('input', { type: 'file', accept: ACCEPTED_TYPES.join(','), hidden: true, name: 'photo-file' });
+    const choose = h('button', { type: 'button', onclick: () => input.click() }, 'Add photo…');
+    const remove = h('button', { type: 'button', onclick: () => ctx.edit('Remove photo', (d) => setPhoto(d, graphId, personId, null)) }, 'Remove');
+
+    async function use(file) {
+      if (!file || ctx.store.readOnly) return;
+      try {
+        const photo = await photoFromFile(file);
+        ctx.edit(attrs().photo ? 'Change photo' : 'Add photo', (d) => setPhoto(d, graphId, personId, addMedia(d, photo)));
+      } catch (e) {
+        ctx.notify(e.message, 'error');
+      }
+    }
+    input.addEventListener('change', () => {
+      const [file] = input.files;
+      input.value = '';
+      return use(file);
+    });
+
+    // Dropping an image file onto the photo area works too.
+    const frame = h('div', { class: 'photo-frame', title: 'Drop an image here' }, img, empty);
+    frame.addEventListener('dragover', (event) => {
+      if ([...(event.dataTransfer?.items ?? [])].some((i) => i.kind === 'file')) {
+        event.preventDefault();
+        frame.classList.add('drop');
+      }
+    });
+    frame.addEventListener('dragleave', () => frame.classList.remove('drop'));
+    frame.addEventListener('drop', (event) => {
+      event.preventDefault();
+      frame.classList.remove('drop');
+      return use(event.dataTransfer?.files?.[0]);
+    });
+
+    refreshers.push(() => {
+      const media = ctx.store.doc.media?.[attrs().photo];
+      const ok = media && isSafeImageData(media.data);
+      img.hidden = !ok;
+      empty.hidden = !!ok;
+      if (ok && img.src !== media.data) img.src = media.data;
+      choose.textContent = ok ? 'Change…' : 'Add photo…';
+      remove.hidden = !ok;
+      size.textContent = ok ? `${media.width}×${media.height}, ${formatSize(imageBytes(media.data))}` : '';
+    });
+    return h('section', { class: 'photo-section' }, frame, h('div', { class: 'row' }, choose, remove, input), size);
+  }
+
   // --- cross-graph links (person) ------------------------------------------------
 
   function linksSection(graphId, personId) {
@@ -290,6 +346,7 @@ export function createPanel(container, ctx) {
 
     return [
       h('h2', {}, 'Person'),
+      photoSection(graphId, personId),
       nodeForm(graphId, personId, PERSON_FIELDS, 'Edit person'),
       h('section', { class: 'actions' },
         h('h3', {}, 'Add relative'),
@@ -369,6 +426,7 @@ export function createPanel(container, ctx) {
         ctx.edit('Rename family', (d) => { d.meta.title = value.trim() || 'Untitled family'; })),
       form(graphFields, () => ctx.store.doc.graphs[graphId] ?? {}, (field, value) =>
         ctx.edit('Rename graph', (d) => { d.graphs[graphId].title = value.trim() || 'Untitled graph'; })),
+      photoUsage(),
       h('section', { class: 'actions' },
         h('div', { class: 'row' },
           h('button', { type: 'button', onclick: () =>
@@ -391,6 +449,17 @@ export function createPanel(container, ctx) {
           ctx.edit('Delete graph', (d) => removeGraph(d, graphId));
         })),
     ];
+  }
+
+  // How much the embedded photos add to the saved file.
+  function photoUsage() {
+    const line = h('p', { class: 'muted hint photo-usage' });
+    refreshers.push(() => {
+      const { count, bytes } = mediaUsage(ctx.store.doc);
+      line.hidden = count === 0;
+      line.textContent = `${count} photo${count === 1 ? '' : 's'} embedded, ${formatSize(bytes)} of the file`;
+    });
+    return line;
   }
 
   // Clears every manual move (attrs.nudge) in the graph as one undoable step.

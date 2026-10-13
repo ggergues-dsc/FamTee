@@ -245,6 +245,42 @@ test('GEDCOM merged: a person copied into a sub-graph is written once', async ()
   assert(doc.querySelector('.menu').hidden, 'menu closed after choosing');
 });
 
+test('photos: add and replace in the built app; saved file holds only the current one', async () => {
+  let { win, doc, app } = await load({ srcdoc: savedHtml });
+  const imageFile = async (color, name) => {
+    const canvas = Object.assign(doc.createElement('canvas'), { width: 800, height: 600 });
+    const g = canvas.getContext('2d');
+    g.fillStyle = color;
+    g.fillRect(0, 0, 800, 600);
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+    return new win.File([blob], name, { type: 'image/png' });
+  };
+  const pick = async (file) => {
+    const input = doc.querySelector('[name="photo-file"]');
+    const transfer = new win.DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    input.dispatchEvent(new win.Event('change'));
+    await sleep(300);
+  };
+  app.ctx.select('p-mary');
+  await pick(await imageFile('#36c', 'mary.png'));
+  await pick(await imageFile('#c63', 'mary2.png'));
+  assert(doc.querySelector('.avatar[data-id="p-mary"]'), 'avatar drawn on the card');
+
+  const saved = capturePicker(win);
+  byText(doc, 'Save').click();
+  await sleep(150);
+  const media = JSON.parse(new DOMParser().parseFromString(saved[0], 'text/html')
+    .getElementById('famtee-data').textContent).media;
+  assertEqual(Object.keys(media).length, 1, 'the replaced photo is not saved');
+  assert(Object.values(media)[0].data.length < 40000, 'photo is small (shrunk to 256 px)');
+
+  ({ win, doc, app } = await load({ srcdoc: saved[0] }));
+  assert(doc.querySelector('.avatar[data-id="p-mary"]'), 'photo still there after reopening');
+  assert(doc.querySelector('defs pattern image').getAttribute('href').startsWith('data:image/jpeg;base64,'));
+});
+
 run();
 </script>
 </body>

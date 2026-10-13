@@ -2,6 +2,7 @@
 // Returns a list of problems; an empty list means the document is valid.
 
 import { FORMAT, NODE_TYPES, EDGE_TYPES, LINK_TYPES, endpoint, parseEndpoint } from './schema.js';
+import { isSafeImageData } from './media.js';
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
@@ -15,6 +16,11 @@ export function validate(doc) {
   if (!isObject(doc.meta)) fail('meta', 'meta must be an object');
   if (!isObject(doc.graphs)) return [...errors, { code: 'graphs', message: 'graphs must be an object' }];
   if (!Array.isArray(doc.links)) fail('links', 'links must be an array');
+  if (doc.media !== undefined && !isObject(doc.media)) fail('media', 'media must be an object');
+  const media = isObject(doc.media) ? doc.media : {};
+  for (const [id, m] of Object.entries(media)) {
+    if (!isObject(m) || !isSafeImageData(m.data)) fail('media-data', `media ${id}: must be an inline JPEG, PNG, WebP or GIF image`);
+  }
   if (isObject(doc.meta) && !doc.graphs[doc.meta.rootGraph]) {
     fail('root-graph', `meta.rootGraph "${doc.meta?.rootGraph}" is not a graph`);
   }
@@ -44,6 +50,9 @@ export function validate(doc) {
       if (!isObject(node.attrs)) {
         fail('node-attrs', `node ${where}: attrs must be an object`);
         continue;
+      }
+      if (node.attrs.photo !== undefined && !media[node.attrs.photo]) {
+        fail('photo', `node ${where}: photo "${node.attrs.photo}" is not in media`);
       }
       if (node.type === 'graphRef' && !doc.graphs[node.attrs.graph]) {
         fail('graph-ref', `node ${where}: refers to unknown graph "${node.attrs.graph}"`);

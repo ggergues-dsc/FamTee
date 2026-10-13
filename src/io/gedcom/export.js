@@ -184,6 +184,7 @@ function lostIn(graphs) {
     [graphs.flatMap((g) => g.edges).filter((e) => e.type === 'custom').length, 'custom relation(s)'],
     [count((n) => n.attrs?.nudge), 'manual card position(s)'],
     [count((n) => n.type === 'union' && n.attrs.kind === 'widowed'), '"widowed" status(es) (exported as married)'],
+    [count((n) => n.type === 'person' && n.attrs.photo), 'photo(s)'],
   ];
 }
 

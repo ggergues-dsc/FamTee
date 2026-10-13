@@ -6,12 +6,15 @@ import { layoutGraph } from '../layout/layout.js';
 import { parseEndpoint } from '../store/schema.js';
 import { displayName, lifespan, fitText } from './format.js';
 import { transformAttr } from '../ui/viewport.js';
+import { isSafeImageData } from '../store/media.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 export const LAYERS = ['background', 'edges', 'nodes', 'labels', 'annotations', 'overlay', 'ui'];
 const MARGIN = 40;
 const UNION_RADIUS = 5;
 const BADGE_RADIUS = 9;
+const AVATAR_RADIUS = 19;
+let rendererCount = 0;
 
 export function svgEl(tag, attrs = {}, parent = null) {
   const el = document.createElementNS(SVG_NS, tag);
@@ -26,6 +29,22 @@ export function createRenderer(svg) {
   svg.classList.add('famtee-canvas');
   svg.removeAttribute('viewBox');
   svg.replaceChildren();
+  const instance = ++rendererCount;
+  // Photo patterns persist across renders: each image is parsed once, not on every
+  // frame of a drag (ADR 0013).
+  const defs = svgEl('defs', {}, svg);
+  const patterns = new Map(); // media id → pattern element id
+  function photoFill(doc, mediaId) {
+    const media = doc.media?.[mediaId];
+    if (!media || !isSafeImageData(media.data)) return null;
+    if (!patterns.has(mediaId)) {
+      const id = `famtee-photo-${instance}-${patterns.size}`;
+      const pattern = svgEl('pattern', { id, patternContentUnits: 'objectBoundingBox', width: 1, height: 1 }, defs);
+      svgEl('image', { href: media.data, width: 1, height: 1, preserveAspectRatio: 'xMidYMid slice' }, pattern);
+      patterns.set(mediaId, id);
+    }
+    return `url(#${patterns.get(mediaId)})`;
+  }
   const viewport = svgEl('g', { class: 'viewport' }, svg);
   const layers = Object.fromEntries(LAYERS.map((name) => [name, svgEl('g', { class: `layer layer-${name}` }, viewport)]));
 
@@ -45,7 +64,7 @@ export function createRenderer(svg) {
 
     const groupBoxes = drawGroups(graph, layout, layers);
     drawEdges(graph, layout, layers.edges);
-    drawNodes(doc, graph, layout, layers, preview);
+    drawNodes(doc, graph, layout, layers, preview, photoFill);
     drawLinkBadges(doc, graphId, layout, layers.annotations);
     drawSelection(selection, layout, groupBoxes, layers.ui);
     return layout;
@@ -146,7 +165,7 @@ function busLanes(graph, layout) {
   return offsets;
 }
 
-function drawNodes(doc, graph, layout, layers, preview) {
+function drawNodes(doc, graph, layout, layers, preview, photoFill) {
   for (const [id, node] of Object.entries(graph.nodes)) {
     const pos = layout.nodes[id];
     if (!pos) continue;
@@ -157,7 +176,11 @@ function drawNodes(doc, graph, layout, layers, preview) {
 
     const left = pos.x - pos.width / 2;
     const top = pos.y - pos.height / 2;
-    const textWidth = pos.width - 20;
+    // With a photo, the avatar sits on the left and the text centres in the rest.
+    const photo = node.attrs.photo ? photoFill(doc, node.attrs.photo) : null;
+    const textLeft = photo ? left + 8 + 2 * AVATAR_RADIUS : left;
+    const textX = (textLeft + left + pos.width) / 2;
+    const textWidth = left + pos.width - textLeft - 20;
     let title;
     let subtitle;
     let cls;
@@ -180,11 +203,16 @@ function drawNodes(doc, graph, layout, layers, preview) {
       x: left, y: top, width: pos.width, height: pos.height, rx: 8,
     }, layers.nodes);
     svgEl('title', {}, card).textContent = subtitle ? `${title}\n${subtitle}` : title;
+    if (photo) {
+      svgEl('circle', {
+        class: 'avatar', 'data-id': id, cx: left + 6 + AVATAR_RADIUS, cy: pos.y, r: AVATAR_RADIUS, fill: photo,
+      }, layers.labels);
+    }
 
-    const name = svgEl('text', { class: 'name', x: pos.x, y: subtitle ? pos.y - 4 : pos.y + 5 }, layers.labels);
+    const name = svgEl('text', { class: 'name', x: textX, y: subtitle ? pos.y - 4 : pos.y + 5 }, layers.labels);
     name.textContent = fitText(title, textWidth);
     if (subtitle) {
-      const sub = svgEl('text', { class: 'dates', x: pos.x, y: pos.y + 15 }, layers.labels);
+      const sub = svgEl('text', { class: 'dates', x: textX, y: pos.y + 15 }, layers.labels);
       sub.textContent = fitText(subtitle, textWidth, 6.5);
     }
   }

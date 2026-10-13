@@ -5,6 +5,16 @@ import { validate } from './validate.js';
 
 const UNDO_LIMIT = 200;
 
+// Undo snapshot: a deep copy of everything except doc.media, which is append-only
+// (ADR 0013) and therefore safe to share. Copying embedded photos on every edit
+// would cost megabytes per undo step.
+function snapshot(doc) {
+  const { media, ...rest } = doc;
+  const copy = structuredClone(rest);
+  if (media) copy.media = media;
+  return copy;
+}
+
 export class ValidationError extends Error {
   constructor(errors) {
     super(errors.map((e) => e.message).join('; '));
@@ -14,6 +24,8 @@ export class ValidationError extends Error {
 
 export class Store {
   constructor(doc, { readOnly = false } = {}) {
+    // Created up front so every undo snapshot shares the same media object.
+    if (!readOnly) doc.media ??= {};
     this.doc = doc;
     this.readOnly = readOnly;
     this.dirty = false;
@@ -25,7 +37,7 @@ export class Store {
   // Runs fn(doc) as one undoable change and returns its result.
   apply(label, fn) {
     if (this.readOnly) throw new Error('Document is read-only');
-    const before = structuredClone(this.doc);
+    const before = snapshot(this.doc);
     let result;
     try {
       result = fn(this.doc);

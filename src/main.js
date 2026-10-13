@@ -95,6 +95,7 @@ function boot() {
       view.selection = new Set();
       update();
     },
+    notify: (message, kind) => showNotice(message, kind),
     // Navigates to another graph (if needed) and selects a node there.
     openNode(graphId, nodeId) {
       if (currentGraph() !== graphId) view.path.push(graphId);
@@ -322,7 +323,13 @@ function boot() {
   });
 
   // --- persistence -------------------------------------------------------------
-  const autosave = debounce(() => { if (storage && store.dirty) saveDraft(storage, store.doc); }, 800);
+  // Browser storage holds only a few MB; with many photos the draft backup can fail.
+  let draftWarningShown = false;
+  const autosave = debounce(() => {
+    if (!storage || !store.dirty || saveDraft(storage, store.doc) || draftWarningShown) return;
+    draftWarningShown = true;
+    showNotice('Unsaved changes can’t be backed up in this browser (the family, with its photos, is too big for browser storage). Save regularly.', 'error');
+  }, 800);
   store.subscribe(() => {
     update();
     if (store.dirty) autosave();
