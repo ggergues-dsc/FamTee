@@ -100,6 +100,11 @@ graphs without duplicating edges). The UI shows linked nodes with a marker and l
 3. No person is their own ancestor (cycle check over partner/child edges, `same-as` collapsed).
 4. `graphRef` targets exist; the graphRef hierarchy is acyclic.
 5. IDs are unique document-wide.
+6. A link joins nodes in **two different graphs** (relations inside one graph are edges). The editing helpers
+   also refuse duplicate links (same type, same two endpoints in either direction).
+
+Editing conventions (enforced by the editing helpers, not by validation): a group whose last member is removed
+is deleted, and copying a person into another graph creates a `same-as` link to the copy.
 
 ## Versioning
 

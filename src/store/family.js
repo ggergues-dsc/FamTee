@@ -1,7 +1,8 @@
 // Family-level editing operations built on the model helpers. These are what the
 // editing UI calls (inside Store.apply), so it never manipulates unions directly.
 
-import { getGraph, getNode, addPerson, addUnion, addChild, addEdge, removeNode } from './model.js';
+import { getGraph, getNode, addPerson, addUnion, addChild, addEdge, addLink, removeNode } from './model.js';
+import { endpoint, parseEndpoint } from './schema.js';
 
 // --- queries --------------------------------------------------------------
 
@@ -27,6 +28,63 @@ export function unionsOfPerson(graph, personId) {
 // Unions the person is a child of.
 export function parentUnionsOf(graph, personId) {
   return graph.edges.filter((e) => e.type === 'child' && e.to === personId).map((e) => e.from);
+}
+
+// Groups in the graph that contain the node.
+export function groupsOf(graph, nodeId) {
+  return Object.entries(graph.nodes)
+    .filter(([, n]) => n.type === 'group' && n.attrs.members?.includes(nodeId))
+    .map(([id]) => id);
+}
+
+// --- cross-graph links ------------------------------------------------------
+
+// Links touching graphId:nodeId, each with the endpoint on the other side.
+export function linksOf(doc, graphId, nodeId) {
+  const self = endpoint(graphId, nodeId);
+  return doc.links
+    .filter((l) => l.from === self || l.to === self)
+    .map((link) => ({ link, other: parseEndpoint(link.from === self ? link.to : link.from) }));
+}
+
+// Every "graphId:nodeId" that is the same person as the given one (same-as links are
+// transitive), including itself.
+export function sameAsIdentity(doc, graphId, nodeId) {
+  const seen = new Set([endpoint(graphId, nodeId)]);
+  const queue = [...seen];
+  while (queue.length) {
+    const current = queue.pop();
+    for (const l of doc.links) {
+      if (l.type !== 'same-as') continue;
+      const next = l.from === current ? l.to : l.to === current ? l.from : null;
+      if (next && !seen.has(next)) {
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return seen;
+}
+
+// Graphs where this person already appears (directly or through same-as links).
+export function graphsContaining(doc, graphId, nodeId) {
+  return new Set([...sameAsIdentity(doc, graphId, nodeId)].map((e) => parseEndpoint(e).graphId));
+}
+
+// Places a copy of a person into another graph, linked to the original as the same
+// person. Layout offsets are not copied. Returns the new person's id.
+export function copyPersonTo(doc, graphId, personId, targetGraphId) {
+  const person = getNode(doc, graphId, personId);
+  if (person.type !== 'person') throw new Error('Only people can be copied to another graph');
+  getGraph(doc, targetGraphId);
+  if (graphsContaining(doc, graphId, personId).has(targetGraphId)) {
+    throw new Error('This person is already in that graph');
+  }
+  const attrs = structuredClone(person.attrs);
+  delete attrs.nudge;
+  const copyId = addPerson(doc, targetGraphId, attrs);
+  addLink(doc, { type: 'same-as', from: endpoint(graphId, personId), to: endpoint(targetGraphId, copyId) });
+  return copyId;
 }
 
 // --- edits ----------------------------------------------------------------

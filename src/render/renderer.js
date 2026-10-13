@@ -43,11 +43,11 @@ export function createRenderer(svg) {
       width: bounds.width + 2 * MARGIN, height: bounds.height + 2 * MARGIN,
     }, layers.background);
 
-    drawGroups(graph, layout, layers);
+    const groupBoxes = drawGroups(graph, layout, layers);
     drawEdges(graph, layout, layers.edges);
     drawNodes(doc, graph, layout, layers, preview);
     drawLinkBadges(doc, graphId, layout, layers.annotations);
-    drawSelection(selection, layout, layers.ui);
+    drawSelection(selection, layout, groupBoxes, layers.ui);
     return layout;
   }
 
@@ -59,7 +59,9 @@ export function createRenderer(svg) {
   return { svg, layers, render, setTransform };
 }
 
+// Returns Map(group id → box) so the selection outline can reuse it.
 function drawGroups(graph, layout, layers) {
+  const boxes = new Map();
   for (const [id, node] of Object.entries(graph.nodes)) {
     if (node.type !== 'group') continue;
     const members = (node.attrs.members ?? []).map((m) => layout.nodes[m]).filter(Boolean);
@@ -69,10 +71,14 @@ function drawGroups(graph, layout, layers) {
     const y0 = Math.min(...members.map((n) => n.y - n.height / 2)) - pad - 16;
     const x1 = Math.max(...members.map((n) => n.x + n.width / 2)) + pad;
     const y1 = Math.max(...members.map((n) => n.y + n.height / 2)) + pad;
-    svgEl('rect', { class: 'group', 'data-id': id, x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 12 }, layers.nodes);
+    const box = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+    boxes.set(id, box);
+    const rect = svgEl('rect', { class: 'group', 'data-id': id, ...box, rx: 12 }, layers.nodes);
+    svgEl('title', {}, rect).textContent = `${node.attrs.label || 'Group'} (click to edit)`;
     const label = svgEl('text', { class: 'group-label', x: x0 + 10, y: y0 + 16 }, layers.labels);
-    label.textContent = node.attrs.label ?? 'Group';
+    label.textContent = node.attrs.label || 'Group';
   }
+  return boxes;
 }
 
 function drawEdges(graph, layout, layer) {
@@ -184,8 +190,10 @@ function drawNodes(doc, graph, layout, layers, preview) {
   }
 }
 
-// Marks nodes that also appear in, or are linked to, another graph.
+// Marks nodes that also appear in, or are linked to, another graph. Several badges
+// on one card are spaced out along its top edge.
 function drawLinkBadges(doc, graphId, layout, layer) {
+  const perNode = new Map();
   for (const link of doc.links) {
     const ends = [link.from, link.to].map(parseEndpoint);
     ends.forEach((end, i) => {
@@ -193,7 +201,9 @@ function drawLinkBadges(doc, graphId, layout, layer) {
       if (!end || !other || end.graphId !== graphId || other.graphId === graphId) return;
       const pos = layout.nodes[end.nodeId];
       if (!pos) return;
-      const cx = pos.x + pos.width / 2 - 4;
+      const index = perNode.get(end.nodeId) ?? 0;
+      perNode.set(end.nodeId, index + 1);
+      const cx = pos.x + pos.width / 2 - 4 - index * (2 * BADGE_RADIUS + 4);
       const cy = pos.y - pos.height / 2 + 4;
       const badge = svgEl('g', {
         class: `link-badge link-${link.type}`,
@@ -203,14 +213,20 @@ function drawLinkBadges(doc, graphId, layout, layer) {
       svgEl('circle', { cx, cy, r: BADGE_RADIUS }, badge);
       svgEl('text', { x: cx, y: cy + 4 }, badge).textContent = link.type === 'same-as' ? '=' : '↔';
       const target = doc.graphs[other.graphId]?.title ?? other.graphId;
+      const label = link.attrs?.label ? `${link.attrs.label}: ` : '';
       svgEl('title', {}, badge).textContent =
-        link.type === 'same-as' ? `Same person in “${target}”` : `Linked to “${target}”`;
+        link.type === 'same-as' ? `Same person in “${target}”` : `${label}linked to “${target}”`;
     });
   }
 }
 
-function drawSelection(selection, layout, layer) {
+function drawSelection(selection, layout, groupBoxes, layer) {
   for (const id of selection) {
+    const box = groupBoxes.get(id);
+    if (box) {
+      svgEl('rect', { class: 'selection', 'data-id': id, ...box, rx: 12 }, layer);
+      continue;
+    }
     const pos = layout.nodes[id];
     if (!pos) continue;
     const pad = 4;

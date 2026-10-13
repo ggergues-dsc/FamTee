@@ -102,6 +102,26 @@ test('graphRefs, groups, link badges, custom edges and selection', () => {
   svg.remove();
 });
 
+test('several badges on one card are spaced out; custom labels in tooltips', () => {
+  const svg = canvas();
+  const { doc, g, kid, mum, dad } = smallFamily();
+  const other = addGraph(doc, { title: 'Other' });
+  const twin = addPerson(doc, other);
+  addLink(doc, { type: 'same-as', from: `${g}:${kid}`, to: `${other}:${twin}` });
+  addLink(doc, { type: 'custom', from: `${g}:${kid}`, to: `${other}:${addPerson(doc, other)}`, attrs: { label: 'godchild' } });
+  const group = addGroup(doc, g, [mum, dad]);
+  createRenderer(svg).render(doc, g, { selection: new Set([group]) });
+  const xs = all(svg, '.link-badge circle').map((c) => Number(c.getAttribute('cx')));
+  assertEqual(xs.length, 2);
+  assert(Math.abs(xs[0] - xs[1]) >= 18, 'badges do not overlap');
+  assert(all(svg, '.link-badge title').some((t) => t.textContent === 'godchild: linked to “Other”'));
+  const outline = svg.querySelector(`.layer-ui .selection[data-id="${group}"]`);
+  const hull = svg.querySelector(`.group[data-id="${group}"]`);
+  assert(outline, 'selected group is outlined');
+  assertEqual(outline.getAttribute('width'), hull.getAttribute('width'));
+  svg.remove();
+});
+
 test('text is inserted as text, never as markup', () => {
   const svg = canvas();
   const { doc, g, mum } = smallFamily();

@@ -32,3 +32,16 @@ A JSON document with (full spec in [../data-model.md](../data-model.md)):
 - + Readable/diffable; safe merges thanks to ULIDs.
 - − Store must enforce integrity (endpoints exist, no ancestry cycles, acyclic graphRefs).
 - − `same-as` identity requires UI care (show it is "the same person" in two graphs).
+
+## Implementation notes (2026-10-12)
+
+Added while building the links and groups UI:
+
+- **Links must join two different graphs** (new validation rule `link-same-graph`). A relation inside one graph
+  is an edge, so allowing both would give two ways to say the same thing. Duplicate links (same type and
+  endpoints, either direction) are refused when they are added.
+- **"Copy into another graph"** is the main way a person ends up in two graphs. It copies the person's details
+  (not their layout offset) and links the copy with `same-as`. A person is never copied into a graph where their
+  same-as identity already appears; identity is followed transitively through same-as links.
+- **Empty groups are deleted.** An empty group has no members to draw a hull around, so it would be invisible
+  and impossible to select.

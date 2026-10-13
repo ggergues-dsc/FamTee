@@ -38,7 +38,9 @@ divorce, adoption and a cousin marriage. Append `#g=<graphId>&sel=<nodeId>` to t
 | Edit a person / partnership | Click it; edit fields in the side panel (applied when a field loses focus or on Enter) |
 | Add partner, child, parent | Buttons in the person panel; "+ Child" asks which partnership |
 | Add person / sub-graph, rename | Panel with nothing selected (click empty canvas or press Esc) |
-| Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person |
+| Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person or group |
+| Link across graphs | Person panel → "In other graphs": **Copy into that graph** (same person, new card there), or link to someone there as the **same person** or **related** (with a label). The **=** / **↔** badge on a card opens the other side |
+| Groups | Person panel → "Add to group" (existing or new). Click a group's outline to rename it, remove members or delete it |
 | Move a card | Drag it (one undoable step). "Reset position" in the panel, or "Reset layout" for the whole graph |
 | Pan / zoom | Drag the background; scroll wheel or pinch; + / − / Fit buttons; keys `+` `-` `0` |
 | Undo / redo | Toolbar, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or Ctrl+Y |
@@ -123,6 +125,7 @@ Not supported (the build fails with a clear message): default imports/exports, `
 - Top-down orientation only (left-to-right is reserved as a layout option).
 - Moved cards (`attrs.nudge`) are offset after the automatic layout; neighbours don't move out of the way, so a
   card can be dragged on top of another. No momentum panning.
-- No UI yet for cross-graph links (`same-as`), groups, or editing/deleting a sub-graph tile in place. Clicking a
-  tile opens the graph, and the graph can be renamed or deleted from there.
+- Sub-graph tiles can't be edited or deleted in place: clicking a tile opens the graph, and the graph can be
+  renamed or deleted from there. Links can be made only from people (the model also allows unions and tiles).
+- Group outlines are bounding boxes, so a group whose members are far apart can enclose other cards.
 - GEDCOM import/export (ADR 0010) is not implemented.

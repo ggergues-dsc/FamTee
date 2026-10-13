@@ -7,7 +7,7 @@
 import { captureTemplate, isSelfContained, documentContents, writeFile, fileName, FORMATS } from './persist/save.js';
 import { saveDraft, findNewerDraft, clearDraft, debounce } from './persist/autosave.js';
 import { parseImport } from './persist/import.js';
-import { createDocument, updateNodeAttrs } from './store/model.js';
+import { createDocument, updateNodeAttrs, removeNode } from './store/model.js';
 import { replaceDocument, removePerson } from './store/family.js';
 import { loadDocument, readEmbedded } from './store/serialize.js';
 import { Store } from './store/store.js';
@@ -92,6 +92,11 @@ function boot() {
       view.path.push(graphId);
       view.selection = new Set();
       update();
+    },
+    // Navigates to another graph (if needed) and selects a node there.
+    openNode(graphId, nodeId) {
+      if (currentGraph() !== graphId) view.path.push(graphId);
+      ctx.select(nodeId);
     },
     back() {
       if (view.path.length > 1) view.path.pop();
@@ -233,10 +238,8 @@ function boot() {
     const badge = event.target.closest('[data-link-graph]');
     const node = event.target.closest('[data-id]');
     if (ref) ctx.open(ref.dataset.refGraph);
-    else if (badge) {
-      view.path.push(badge.dataset.linkGraph);
-      ctx.select(badge.dataset.linkNode);
-    } else if (node && !node.classList.contains('edge')) ctx.select(node.dataset.id);
+    else if (badge) ctx.openNode(badge.dataset.linkGraph, badge.dataset.linkNode);
+    else if (node && !node.classList.contains('edge')) ctx.select(node.dataset.id);
     else ctx.select(null);
   });
 
@@ -260,9 +263,11 @@ function boot() {
       store.redo();
     } else if ((event.key === 'Delete' || event.key === 'Backspace') && !store.readOnly) {
       const [id] = view.selection;
-      if (id && store.doc.graphs[currentGraph()].nodes[id]?.type === 'person') {
+      const type = id && store.doc.graphs[currentGraph()].nodes[id]?.type;
+      if (type === 'person' || type === 'group') {
         event.preventDefault();
-        ctx.edit('Delete person', (d) => removePerson(d, currentGraph(), id));
+        ctx.edit(type === 'person' ? 'Delete person' : 'Delete group', (d) =>
+          (type === 'person' ? removePerson(d, currentGraph(), id) : removeNode(d, currentGraph(), id)));
       }
     } else if (mod || event.altKey) {
       return;

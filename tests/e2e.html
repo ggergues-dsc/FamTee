@@ -153,6 +153,41 @@ test('drag moves a card (undoably); pan and zoom never touch the document', asyn
   assertEqual(app.getTransform(), t1, 'Fit returns to the initial fitted view');
 });
 
+test('copy a person into a sub-graph, follow the badge there and back; group via the panel', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  byText(doc, '+ Sub-graph').click();
+  const sub = app.view.path.at(-1);
+  assertEqual(app.store.doc.graphs[sub].title, 'New family');
+  doc.querySelector('#breadcrumb button').click();
+  app.ctx.select('p-nadia');
+  const graphSelect = doc.querySelector('[name="link-graph"]');
+  change(graphSelect, sub);
+  byText(doc, 'Copy into that graph').click();
+  assertEqual(Object.keys(app.store.doc.graphs[sub].nodes).length, 1, 'the new graph now holds the copy');
+
+  const badge = doc.querySelector('.link-badge');
+  assert(badge, 'badge on the original card');
+  badge.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  assertEqual(app.view.path.at(-1), sub, 'badge opens the other graph');
+  const [copy] = app.view.selection;
+  assertEqual(app.store.doc.graphs[sub].nodes[copy].attrs.name.given, 'Nadia');
+  doc.querySelector('.link-badge').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  assertEqual([app.view.path.at(-1), [...app.view.selection][0]], ['g-hanna', 'p-nadia'], 'and back');
+
+  byText(doc, 'Add to group').click();
+  app.ctx.select('p-peter');
+  byText(doc, 'Add to group').click();
+  const groups = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'group');
+  assertEqual(groups.map((n) => n.attrs.members), [['p-nadia', 'p-peter']], 'joined the existing group');
+  const hull = doc.querySelector('rect.group');
+  assert(hull, 'group drawn');
+  hull.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  assertEqual(doc.querySelector('#panel h2').textContent, 'Group');
+  app.store.undo();
+  app.store.undo();
+  assert(!doc.querySelector('rect.group'), 'undo removes the group');
+});
+
 run();
 </script>
 </body>

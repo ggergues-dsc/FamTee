@@ -75,7 +75,8 @@ body {
 .famtee-canvas .person.sex-F { fill: var(--card-f); }
 .famtee-canvas .person.sex-U { fill: var(--card-u); }
 .famtee-canvas .graph-ref { fill: var(--ref-bg); stroke: var(--ref-stroke); stroke-width: 1.5; }
-.famtee-canvas .group { fill: var(--group-bg); stroke: var(--group-stroke); stroke-dasharray: 4 3; }
+.famtee-canvas .group { fill: var(--group-bg); stroke: var(--group-stroke); stroke-dasharray: 4 3; cursor: pointer; }
+.famtee-canvas .group:hover { stroke: var(--accent); }
 .famtee-canvas .layer-labels { pointer-events: none; }
 .famtee-canvas text { fill: var(--fg); text-anchor: middle; font-size: 13px; }
 .famtee-canvas .name { font-weight: 600; }
@@ -158,6 +159,13 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .panel .row select { flex: 1; }
 .panel .danger { margin-top: 1.5rem; }
 .panel .people { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.2rem; }
+.panel .people li { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.panel .people li .link { text-align: left; }
+button.icon { padding: 0 0.45rem; line-height: 1.4; color: var(--muted); }
+button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--error); }
+.panel .link-form { display: grid; gap: 0.1rem; margin-top: 0.5rem; }
+.panel .link-form .row input { flex: 1; }
+.panel .row select { min-width: 0; }
 .panel .hint { font-size: 0.85rem; }
 
 @media (max-width: 700px) {

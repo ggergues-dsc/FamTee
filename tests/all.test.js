@@ -14,5 +14,6 @@ import './persist.test.js';
 import './ui.test.js';
 import './viewport.test.js';
 import './interaction.test.js';
+import './links-groups.test.js';
 
 run();

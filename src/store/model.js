@@ -97,7 +97,20 @@ export function addChild(doc, graphId, unionId, childId, kind = 'biological') {
 
 export function addGroup(doc, graphId, memberIds = [], attrs = {}) {
   for (const mid of memberIds) getNode(doc, graphId, mid);
-  return addNode(doc, graphId, 'group', { ...attrs, members: [...memberIds] });
+  return addNode(doc, graphId, 'group', { ...attrs, members: [...new Set(memberIds)] });
+}
+
+export function addGroupMember(doc, graphId, groupId, nodeId) {
+  const group = expectType(doc, graphId, groupId, 'group');
+  getNode(doc, graphId, nodeId);
+  if (!group.attrs.members.includes(nodeId)) group.attrs.members.push(nodeId);
+}
+
+// Removes a member; a group left empty is removed too (it would be invisible).
+export function removeGroupMember(doc, graphId, groupId, nodeId) {
+  const group = expectType(doc, graphId, groupId, 'group');
+  group.attrs.members = group.attrs.members.filter((m) => m !== nodeId);
+  if (!group.attrs.members.length) delete getGraph(doc, graphId).nodes[groupId];
 }
 
 export function addGraphRef(doc, graphId, targetGraphId, attrs = {}) {
@@ -114,14 +127,17 @@ export function updateNodeAttrs(doc, graphId, nodeId, patch) {
   }
 }
 
-// Removes a node with its incident edges, cross-graph links and group memberships.
+// Removes a node with its incident edges, cross-graph links and group memberships
+// (groups left empty are removed).
 export function removeNode(doc, graphId, nodeId) {
   const graph = getGraph(doc, graphId);
   getNode(doc, graphId, nodeId);
   delete graph.nodes[nodeId];
   graph.edges = graph.edges.filter((e) => e.from !== nodeId && e.to !== nodeId);
-  for (const node of Object.values(graph.nodes)) {
-    if (node.type === 'group') node.attrs.members = node.attrs.members.filter((m) => m !== nodeId);
+  for (const [id, node] of Object.entries(graph.nodes)) {
+    if (node.type !== 'group' || !node.attrs.members.includes(nodeId)) continue;
+    node.attrs.members = node.attrs.members.filter((m) => m !== nodeId);
+    if (!node.attrs.members.length) delete graph.nodes[id];
   }
   const key = endpoint(graphId, nodeId);
   doc.links = doc.links.filter((l) => l.from !== key && l.to !== key);
@@ -148,13 +164,19 @@ export function removeEdge(doc, graphId, edgeId) {
 
 // --- cross-graph links ----------------------------------------------------
 
+// Links join nodes in two different graphs (relations inside one graph are edges).
 export function addLink(doc, { type, from, to, attrs = {} }) {
   if (!LINK_TYPES.includes(type)) throw new Error(`Unknown link type: ${type}`);
-  for (const value of [from, to]) {
+  const ends = [from, to].map((value) => {
     const ep = parseEndpoint(value);
     if (!ep) throw new Error(`Bad link endpoint: ${value}`);
     getNode(doc, ep.graphId, ep.nodeId);
-  }
+    return ep;
+  });
+  if (ends[0].graphId === ends[1].graphId) throw new Error('A link must join two different graphs');
+  const duplicate = doc.links.some((l) => l.type === type &&
+    ((l.from === from && l.to === to) || (l.from === to && l.to === from)));
+  if (duplicate) throw new Error('These two are already linked');
   const id = newId('link');
   doc.links.push({ id, type, from, to, attrs: { ...attrs } });
   return id;

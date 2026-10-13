@@ -3,7 +3,8 @@ import { createPanel } from '../src/ui/panel.js';
 import { createToolbar } from '../src/ui/toolbar.js';
 import { h, confirmButton } from '../src/ui/dom.js';
 import { Store } from '../src/store/store.js';
-import { unionsOfPerson, parentUnionsOf } from '../src/store/family.js';
+import { unionsOfPerson, parentUnionsOf, groupsOf } from '../src/store/family.js';
+import { addGraph, addPerson } from '../src/store/model.js';
 import { smallFamily } from './fixtures.js';
 
 // A panel wired to a real Store, with the same ctx contract main.js provides.
@@ -23,6 +24,7 @@ function setup({ readOnly = false } = {}) {
     editAndSelect(label, fn) { const id = ctx.edit(label, fn); if (id) ctx.select(id); },
     select(id) { view.selection = id ? new Set([id]) : new Set(); panel.render(); },
     open(graphId) { view.path.push(graphId); panel.render(); },
+    openNode(graphId, nodeId) { if (view.path.at(-1) !== graphId) view.path.push(graphId); ctx.select(nodeId); },
     back() { view.path.pop(); panel.render(); },
   };
   const panel = createPanel(container, ctx);
@@ -187,6 +189,90 @@ test('toolbar reflects store state', () => {
   assertEqual(container.querySelector('.save-state').textContent, '● Unsaved changes');
   button(container, 'Save').click();
   assertEqual(saved, 1);
+});
+
+test('links: copy into another graph, link, label, open and remove', () => {
+  const s = setup();
+  s.ctx.select(s.mum);
+  assert(!s.container.querySelector('.link-form') || s.container.querySelector('.link-form').hidden, 'no other graphs yet');
+  let other;
+  let stranger;
+  s.store.apply('setup', (d) => {
+    other = addGraph(d, { title: 'In-laws' });
+    stranger = addPerson(d, other, { name: { given: 'Zed' } });
+  });
+  assert(!s.container.querySelector('.link-form').hidden);
+  assertEqual(field(s.container, 'link-graph').value, other);
+  s.store.apply('empty graph first', (d) => {
+    const { [other]: moved, ...rest } = d.graphs;
+    d.graphs = { ...rest, 'g-empty': { title: 'Empty', nodes: {}, edges: [] }, [other]: moved };
+  });
+  s.ctx.select(null);
+  s.ctx.select(s.mum); // fresh panel: no remembered choice
+  assertEqual(field(s.container, 'link-graph').options[0].textContent, 'Empty');
+  assertEqual(field(s.container, 'link-graph').value, other, 'defaults to a graph with people, not the first one');
+  assertEqual([...field(s.container, 'link-person').options].map((o) => o.textContent), ['Zed']);
+
+  button(s.container, 'Copy into that graph').click();
+  const copyLink = s.store.doc.links[0];
+  assertEqual(copyLink.type, 'same-as');
+  assert(button(s.container, 'Copy into that graph').disabled, 'already in that graph');
+  assertEqual([...field(s.container, 'link-person').options].map((o) => o.textContent), ['Zed'], 'own copy is not offered');
+
+  change(field(s.container, 'link-type'), 'custom');
+  assert(!field(s.container, 'link-label').hidden);
+  assertEqual(field(s.container, 'link-person').options.length, 2, 'related-to may target anyone');
+  field(s.container, 'link-person').value = stranger;
+  field(s.container, 'link-label').value = 'godparent';
+  button(s.container, 'Link').click();
+  assertEqual(s.store.doc.links[1].attrs, { label: 'godparent' });
+  const items = [...s.container.querySelectorAll('.links li')].map((li) => li.querySelector('.link').textContent);
+  assertEqual(items, ['Same person in In-laws', 'godparent: Zed (In-laws)']);
+
+  s.container.querySelectorAll('.links li')[1].querySelector('.link').click();
+  assertEqual([s.view.path.at(-1), [...s.view.selection][0]], [other, stranger]);
+  s.ctx.select(stranger);
+  s.container.querySelector('.links li .icon').click();
+  assertEqual(s.store.doc.links.length, 1);
+  s.container.remove();
+});
+
+test('groups: create, add, remove, rename and delete from the panels', () => {
+  const s = setup();
+  const graph = () => s.store.doc.graphs[s.g];
+  s.ctx.select(s.mum);
+  assertEqual(field(s.container, 'add-group').value, '', 'only "New group" when none exist');
+  button(s.container, 'Add to group').click();
+  const [group] = groupsOf(graph(), s.mum);
+  assertEqual(graph().nodes[group].attrs.label, 'New group');
+
+  s.ctx.select(s.dad);
+  assertEqual(field(s.container, 'add-group').value, group, 'existing group offered first');
+  button(s.container, 'Add to group').click();
+  assertEqual(graph().nodes[group].attrs.members, [s.mum, s.dad]);
+
+  s.ctx.select(group);
+  change(field(s.container, 'group-label'), 'Household');
+  assertEqual(graph().nodes[group].attrs.label, 'Household');
+  assertEqual([...s.container.querySelectorAll('.people li .link')].map((b) => b.textContent), ['Ann', 'Bob']);
+  s.container.querySelector('.people li .icon').click();
+  assertEqual(graph().nodes[group].attrs.members, [s.dad]);
+
+  s.ctx.select(s.dad);
+  s.container.querySelector('.people li .icon[title^="Remove from"]').click();
+  assert(!graph().nodes[group], 'removing the last member removes the group');
+
+  s.ctx.select(s.kid);
+  button(s.container, 'Add to group').click();
+  const [g2] = groupsOf(graph(), s.kid);
+  s.ctx.select(null);
+  assert([...s.container.querySelectorAll('.people li .link')].some((b) => b.textContent === 'New group'), 'graph panel lists groups');
+  s.ctx.select(g2);
+  const del = button(s.container, 'Delete group');
+  del.click();
+  del.click();
+  assert(!graph().nodes[g2] && graph().nodes[s.kid], 'group deleted, member kept');
+  s.container.remove();
 });
 
 test('h() treats strings as text, never markup', () => {

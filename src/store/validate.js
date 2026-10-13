@@ -85,6 +85,8 @@ export function validate(doc) {
       if (!node) fail('dangling-link', `${where}: endpoint "${value}" not found`);
       return node;
     });
+    const [a, b] = [parseEndpoint(link.from), parseEndpoint(link.to)];
+    if (a && b && a.graphId === b.graphId) fail('link-same-graph', `${where}: links must join two different graphs`);
     if (link.type === 'same-as' && nodes.every(Boolean) && nodes.some((n) => n.type !== 'person')) {
       fail('same-as', `${where}: same-as links must join two persons`);
     }
