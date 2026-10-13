@@ -24,6 +24,7 @@ import { createToolbar } from './ui/toolbar.js';
 import { startScreen } from './ui/start.js';
 import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
+import { createSnapshot } from './ui/snapshot.js';
 import { createInteraction } from './ui/interaction.js';
 import { IDENTITY, fitTransform, zoomAt } from './ui/viewport.js';
 
@@ -321,7 +322,11 @@ async function boot() {
   let drag = null; // { id, dx, dy } while a card is being dragged
   let layout = null;
 
+  // Read-only person summary beside the card under the pointer.
+  const snapshot = createSnapshot(document.getElementById('app'), document.getElementById('canvas'));
+
   function renderCanvas() {
+    snapshot.hide(); // cards are redrawn (and may move)
     const graphId = currentGraph();
     layout = renderer.render(store.doc, graphId, {
       selection: view.selection,
@@ -337,6 +342,7 @@ async function boot() {
 
   const getTransform = () => transforms.get(currentGraph()) ?? IDENTITY;
   const setTransform = (t) => {
+    snapshot.hide();
     transforms.set(currentGraph(), t);
     renderer.setTransform(t);
   };
@@ -390,6 +396,17 @@ async function boot() {
       renderCanvas();
     },
   });
+
+  // Snapshot on hover (mouse and pen; touch has no hover, a tap opens the editor).
+  svg.addEventListener('pointerover', (event) => {
+    if (event.pointerType === 'touch' || event.buttons || interaction.dragging) return;
+    const card = event.target.closest?.('rect.card.person[data-id]');
+    if (card) snapshot.show(store.doc, currentGraph(), card.dataset.id, card);
+  });
+  svg.addEventListener('pointerout', (event) => {
+    if (event.target.closest?.('rect.card.person')) snapshot.hide();
+  });
+  svg.addEventListener('pointerdown', () => snapshot.hide());
 
   const zoomButton = (label, title, onclick) => h('button', { type: 'button', title, 'aria-label': title, onclick }, label);
   svg.after(h('div', { class: 'zoom-controls' },
