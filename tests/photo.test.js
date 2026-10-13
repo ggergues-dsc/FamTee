@@ -137,19 +137,21 @@ test('cards show the photo; one pattern per image, reused across renders', () =>
   renderer.render(doc, g);
   assertEqual(svg.querySelectorAll('defs pattern').length, 1);
   assertEqual(svg.querySelector('defs pattern image').getAttribute('href'), JPEG);
-  const avatars = [...svg.querySelectorAll('.avatar')];
+  const avatars = [...svg.querySelectorAll('.avatar:not(.placeholder)')];
   assertEqual(avatars.map((a) => a.dataset.id).sort(), [mum, dad].sort());
+  assertEqual([...svg.querySelectorAll('.avatar.placeholder')].map((a) => a.dataset.id), [kid], 'no photo: a placeholder portrait');
+  assertEqual(svg.querySelectorAll('.portrait-art').length, 1);
   assert(avatars.every((a) => a.getAttribute('fill') === `url(#${svg.querySelector('defs pattern').id})`));
   const nameX = (nodeId) => Number([...svg.querySelectorAll('.name')]
     .find((t) => t.textContent === { [mum]: 'Ann', [kid]: 'Cid' }[nodeId]).getAttribute('x'));
   const cardX = (nodeId) => Number(svg.querySelector(`.card[data-id="${nodeId}"]`).getAttribute('x')) + 80;
   assert(nameX(mum) > cardX(mum) + 10, 'text moves right of the photo');
-  assertEqual(nameX(kid), cardX(kid), 'no photo: text centred');
+  assertEqual(nameX(kid), nameX(mum) - cardX(mum) + cardX(kid), 'placeholder portrait: text placed as with a photo');
 
   doc.media[id] = { ...doc.media[id], data: 'javascript:alert(1)' }; // bypassing validation
   const fresh = createRenderer(svg);
   fresh.render(doc, g);
-  assertEqual(svg.querySelectorAll('.avatar').length, 0, 'unsafe data is never rendered');
+  assertEqual(svg.querySelectorAll('.avatar:not(.placeholder)').length, 0, 'unsafe data is never rendered');
   svg.remove();
 });
 

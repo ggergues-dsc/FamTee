@@ -23,6 +23,7 @@ import { createPanel } from './ui/panel.js';
 import { createToolbar } from './ui/toolbar.js';
 import { startScreen } from './ui/start.js';
 import { h } from './ui/dom.js';
+import { icon } from './ui/icons.js';
 import { createInteraction } from './ui/interaction.js';
 import { IDENTITY, fitTransform, zoomAt } from './ui/viewport.js';
 
@@ -140,6 +141,7 @@ async function boot() {
   const store = new Store(doc, { readOnly });
   if (choice.kind === 'continue') store.dirty = true;
 
+  document.getElementById('title-icon')?.replaceChildren(icon('family'));
   const renderer = createRenderer(document.getElementById('canvas'));
   const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false };
   const start = hash.get('g');
@@ -491,12 +493,15 @@ function renderBreadcrumb(doc, view, update) {
   nav.replaceChildren(...view.path.flatMap((graphId, i) => {
     const title = doc.graphs[graphId].title || graphId;
     const last = i === view.path.length - 1;
-    const crumb = last ? h('span', {}, title) : h('button', { type: 'button', class: 'link', onclick: () => {
+    // The overview (a graph of other graphs) gets the "families" icon; a family graph the "family" one.
+    const nodes = Object.values(doc.graphs[graphId].nodes);
+    const kind = nodes.some((n) => n.type === 'graphRef') && !nodes.some((n) => n.type === 'person') ? 'families' : 'family';
+    const crumb = last ? h('span', {}, icon(kind), title) : h('button', { type: 'button', class: 'link', onclick: () => {
       view.path = view.path.slice(0, i + 1);
       view.selection = new Set();
       update();
-    } }, title);
-    return i ? [document.createTextNode(' › '), crumb] : [crumb];
+    } }, icon(kind), title);
+    return i ? [h('span', { class: 'crumb-sep', 'aria-hidden': 'true' }, '›'), crumb] : [crumb];
   }));
 }
 

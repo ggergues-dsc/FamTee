@@ -100,9 +100,34 @@ test('renderer draws left-to-right connectors sideways', () => {
   createRenderer(svg).render(doc, g);
   const child = svg.querySelector('.edge-child').getAttribute('d');
   assert(/^M \S+ \S+ H \S+ V \S+ H \S+$/.test(child), `child connector goes right first: ${child}`);
-  const partner = svg.querySelector('.edge-partner').getAttribute('d').split(' ');
-  assertEqual(partner[1], partner[4], 'partner link is vertical');
+  const partner = svg.querySelector('.edge-partner').getAttribute('d');
+  const [, x0, , , , , x1] = partner.split(' ');
+  assert(/^M \S+ \S+ V \S+ H \S+$/.test(partner), `partner link leaves the card vertically: ${partner}`);
+  assertEqual(x0, x1, 'partner link is vertical');
   svg.remove();
+});
+
+test('partner links meet a moved card square on, in both orientations', () => {
+  for (const orientation of ['TB', 'LR']) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    document.body.append(svg);
+    const { doc, g, mum } = smallFamily();
+    doc.graphs[g].layout = { orientation };
+    doc.graphs[g].nodes[mum].attrs.nudge = { dx: 23, dy: 37 };
+    const layout = createRenderer(svg).render(doc, g);
+    const card = layout.nodes[mum];
+    const d = [...svg.querySelectorAll('.edge-partner')].map((p) => p.getAttribute('d'))
+      .find((path) => {
+        const [, x, y] = path.split(' ').map(Number);
+        return orientation === 'TB'
+          ? y === card.y && Math.abs(Math.abs(x - card.x) - card.width / 2) < 1e-6
+          : x === card.x && Math.abs(Math.abs(y - card.y) - card.height / 2) < 1e-6;
+      });
+    assert(d, `${orientation}: a partner link starts at the middle of the moved card's edge`);
+    assert(orientation === 'TB' ? /^M \S+ \S+ H \S+ V \S+$/.test(d) : /^M \S+ \S+ V \S+ H \S+$/.test(d),
+      `${orientation}: right angles only: ${d}`);
+    svg.remove();
+  }
 });
 
 test('graph layout is validated', () => {

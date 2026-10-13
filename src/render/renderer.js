@@ -7,6 +7,7 @@ import { parseEndpoint } from '../store/schema.js';
 import { displayName, lifespan, fitText } from './format.js';
 import { transformAttr } from '../ui/viewport.js';
 import { isSafeImageData } from '../store/media.js';
+import { portraitMarkup } from '../ui/icons.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 export const LAYERS = ['background', 'edges', 'nodes', 'labels', 'annotations', 'overlay', 'ui'];
@@ -45,6 +46,9 @@ export function createRenderer(svg) {
     }
     return `url(#${patterns.get(mediaId)})`;
   }
+  // Placeholder portraits (no photo) are clipped to the avatar circle.
+  const portraitClip = `famtee-portrait-clip-${instance}`;
+  svgEl('circle', { cx: 20, cy: 20, r: 19.5 }, svgEl('clipPath', { id: portraitClip }, defs));
   const viewport = svgEl('g', { class: 'viewport' }, svg);
   const layers = Object.fromEntries(LAYERS.map((name) => [name, svgEl('g', { class: `layer layer-${name}` }, viewport)]));
 
@@ -65,7 +69,7 @@ export function createRenderer(svg) {
 
     const groupBoxes = drawGroups(graph, layout, layers);
     drawEdges(graph, layout, layers.edges);
-    drawNodes(doc, graph, layout, layers, preview, photoFill);
+    drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip);
     drawLinkBadges(doc, graphId, layout, layers.annotations);
     drawSelection(selection, layout, groupBoxes, layers.ui);
     return layout;
@@ -113,13 +117,14 @@ function drawEdges(graph, layout, layer) {
     const cls = ['edge', `edge-${edge.type}`, kind ? `kind-${kind}` : ''].join(' ').trim();
     let d;
     if (edge.type === 'partner' && lr) {
-      // Partners are stacked: from the card edge facing the union dot.
+      // Partners are stacked: out of the middle of the card edge facing the union dot,
+      // then square into the dot, so a moved card still meets the line at that point.
       const side = b.y >= a.y ? 1 : -1;
-      d = `M ${a.x} ${a.y + (side * a.height) / 2} L ${b.x} ${b.y}`;
+      d = `M ${a.x} ${a.y + (side * a.height) / 2} V ${b.y} H ${b.x}`;
     } else if (edge.type === 'partner') {
-      // From the side of the card facing the union to the union dot.
+      // Out of the middle of the side facing the union, then square into the dot.
       const side = b.x >= a.x ? 1 : -1;
-      d = `M ${a.x + (side * a.width) / 2} ${a.y} L ${b.x} ${b.y}`;
+      d = `M ${a.x + (side * a.width) / 2} ${a.y} H ${b.x} V ${b.y}`;
     } else if (edge.type === 'child' && lr) {
       // Orthogonal "bus" to the right: out of the union, along, then into the child's left edge.
       const left = b.x - b.width / 2;
@@ -180,7 +185,7 @@ function busLanes(graph, layout) {
   return offsets;
 }
 
-function drawNodes(doc, graph, layout, layers, preview, photoFill) {
+function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip) {
   for (const [id, node] of Object.entries(graph.nodes)) {
     const pos = layout.nodes[id];
     if (!pos) continue;
@@ -191,9 +196,11 @@ function drawNodes(doc, graph, layout, layers, preview, photoFill) {
 
     const left = pos.x - pos.width / 2;
     const top = pos.y - pos.height / 2;
-    // With a photo, the avatar sits on the left and the text centres in the rest.
-    const photo = node.attrs.photo ? photoFill(doc, node.attrs.photo) : null;
-    const textLeft = photo ? left + 8 + 2 * AVATAR_RADIUS : left;
+    // People get an avatar on the left (their photo, or a placeholder portrait by sex)
+    // and the text centres in the rest.
+    const isPerson = node.type === 'person';
+    const photo = isPerson && node.attrs.photo ? photoFill(doc, node.attrs.photo) : null;
+    const textLeft = isPerson ? left + 8 + 2 * AVATAR_RADIUS : left;
     const textX = (textLeft + left + pos.width) / 2;
     const textWidth = left + pos.width - textLeft - 20;
     let title;
@@ -218,10 +225,19 @@ function drawNodes(doc, graph, layout, layers, preview, photoFill) {
       x: left, y: top, width: pos.width, height: pos.height, rx: 8,
     }, layers.nodes);
     svgEl('title', {}, card).textContent = subtitle ? `${title}\n${subtitle}` : title;
-    if (photo) {
+    if (isPerson) {
+      const cx = left + 6 + AVATAR_RADIUS;
       svgEl('circle', {
-        class: 'avatar', 'data-id': id, cx: left + 6 + AVATAR_RADIUS, cy: pos.y, r: AVATAR_RADIUS, fill: photo,
+        class: photo ? 'avatar' : 'avatar placeholder', 'data-id': id, cx, cy: pos.y, r: AVATAR_RADIUS, fill: photo ?? undefined,
       }, layers.labels);
+      if (!photo) {
+        const scale = AVATAR_RADIUS / 20;
+        const g = svgEl('g', {
+          class: 'portrait-art', 'clip-path': `url(#${portraitClip})`,
+          transform: `translate(${cx - AVATAR_RADIUS} ${pos.y - AVATAR_RADIUS}) scale(${scale})`,
+        }, layers.labels);
+        g.innerHTML = portraitMarkup(node.attrs.sex);
+      }
     }
 
     const name = svgEl('text', { class: 'name', x: textX, y: subtitle ? pos.y - 4 : pos.y + 5 }, layers.labels);
