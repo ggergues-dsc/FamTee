@@ -4,6 +4,10 @@
 #
 #   devops/selftest.sh
 #
+# Fake releases are made from build artifacts: FAMTEE_SELFTEST_ARTIFACTS (a folder with
+# famtee.html and SHA256SUMS; default releases/latest). Works in an exported tree too,
+# which is how the merge gate runs it (devops/gate-selftest.sh).
+#
 # Checks: deploys verify what is served; old sites are pruned by deploy time, never
 # the served one (regression: names were once sorted by commit hash); a release with
 # bad checksums is refused and the previous one stays live.
@@ -12,8 +16,11 @@ set -euo pipefail
 usage() { sed -n '2,/^[^#]/s/^# \{0,1\}//p' "$0"; exit 2; }  # prints the comment block above
 [[ ${1:-} == -h || ${1:-} == --help ]] && usage
 
-cd "$(git rev-parse --show-toplevel)"
-[[ -f releases/latest/manifest.json ]] || { echo "Needs a release: run devops/ci.sh --release first" >&2; exit 2; }
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+artifacts=${FAMTEE_SELFTEST_ARTIFACTS:-releases/latest}
+[[ -f $artifacts/famtee.html && -f $artifacts/SHA256SUMS ]] \
+  || { echo "Needs build artifacts in $artifacts: run devops/ci.sh --release, or set FAMTEE_SELFTEST_ARTIFACTS" >&2; exit 2; }
+artifacts=$(cd "$artifacts" && pwd -P)
 
 mkdir -p .cache
 scratch=$(mktemp -d "$PWD/.cache/uat-selftest-XXXXXX")
@@ -28,10 +35,11 @@ served() { curl -fsS --max-time 5 "http://127.0.0.1:$FAMTEE_UAT_PORT/version.jso
 # Two fake releases whose names sort opposite to deploy order ("ffff…" before "0000…").
 make_release() {
   local dir="$scratch/$1"
-  cp -R releases/latest/. "$dir"
+  cp -R "$artifacts/." "$dir"
   python3 - "$dir/manifest.json" "$1" <<'PY'
 import json, sys
-m = json.load(open(sys.argv[1])); m["version"] = sys.argv[2]; json.dump(m, open(sys.argv[1], "w"), indent=2)
+json.dump({"version": sys.argv[2], "commit": "selftest", "tree": "selftest", "subject": "devops self-test",
+           "built": "", "tests": "ALL PASSED"}, open(sys.argv[1], "w"), indent=2)
 PY
   echo "$dir"
 }

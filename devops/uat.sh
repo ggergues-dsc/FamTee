@@ -15,7 +15,9 @@ set -euo pipefail
 
 usage() { sed -n '2,/^[^#]/s/^# \{0,1\}//p' "$0"; exit 2; }  # prints the comment block above
 
-root=$(git rev-parse --show-toplevel)
+# The repo root is found from this script's location, so the script also works in a
+# tree exported with `git archive` (as the merge gate's self-test does).
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 cd "$root"
 uat_dir=${FAMTEE_UAT_DIR:-.uat}
 export FAMTEE_UAT_DIR_ABS

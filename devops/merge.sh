@@ -2,17 +2,19 @@
 # Merge gate (ADR 0015): merges a GitHub PR only after the local CI pipeline is green
 # on exactly what main will contain after the merge, then delivers a release.
 #
-#   devops/merge.sh <pr-number> [--dry-run] [--delete-branch] [--no-uat] [--method merge|squash|rebase]
+#   devops/merge.sh <pr-number> [--dry-run] [--delete-branch] [--no-uat] [--selftest] [--method merge|squash|rebase]
 #
 # Steps:
 #   1. fetch the PR head and origin/main; refuse if the PR isn't open against main
 #   2. compute the merge result locally (git merge-tree), without touching the working copy
 #   3. run devops/ci.sh on that exact tree; stop if red
-#   4. merge on GitHub, pinned to the tested head commit (--match-head-commit)
-#   5. deliver releases/<version>/ for the new main commit: promote the tested run if
+#   4. if the PR changes devops/ (or with --selftest): run that tree's own devops
+#      self-test (devops/gate-selftest.sh) against the artifacts just built; stop if red
+#   5. merge on GitHub, pinned to the tested head commit (--match-head-commit)
+#   6. deliver releases/<version>/ for the new main commit: promote the tested run if
 #      main's tree is exactly what was tested, otherwise run the pipeline again on main
-#   6. deploy that release to UAT and verify it (ADR 0016); --no-uat skips this
-# --dry-run stops after step 3. Nothing is posted to GitHub except the merge itself.
+#   7. deploy that release to UAT and verify it (ADR 0016); --no-uat skips this
+# --dry-run stops after step 4. Nothing is posted to GitHub except the merge itself.
 set -euo pipefail
 
 usage() { sed -n '2,/^[^#]/s/^# \{0,1\}//p' "$0"; exit 2; }  # prints the comment block above
@@ -21,12 +23,14 @@ pr=''
 dry_run=0
 delete_branch=0
 uat=1
+selftest=0
 method=merge
 while (($#)); do
   case $1 in
     --dry-run) dry_run=1; shift ;;
     --delete-branch) delete_branch=1; shift ;;
     --no-uat) uat=0; shift ;;
+    --selftest) selftest=1; shift ;;
     --method) method=${2:?--method needs a value}; shift 2 ;;
     -h | --help) usage ;;
     [0-9]*) pr=$1; shift ;;
@@ -61,6 +65,16 @@ if ! "$ci" --ref "$merged_tree"; then
   exit 1
 fi
 run=$(cat .ci/last-run)
+
+# The devops scripts aren't covered by the app's test suite: test the PR's own version.
+devops_changes=$(git diff --name-only "$(git merge-base origin/main "$head")" "$head" -- devops/)
+if ((selftest)) || [[ -n $devops_changes ]]; then
+  [[ -n $devops_changes ]] && echo "== PR changes devops/ ($(wc -l <<< "$devops_changes") file(s)): running the devops self-test on the merge result"
+  if ! devops/gate-selftest.sh "$merged_tree" "$run/artifacts" 2>&1 | tee "$run/selftest.log"; then
+    echo "== NOT merged: the devops self-test is red for PR #$pr (log: $run/selftest.log)" >&2
+    exit 1
+  fi
+fi
 
 if ((dry_run)); then
   echo "== dry run: pipeline green, PR #$pr NOT merged (run: $run)"
