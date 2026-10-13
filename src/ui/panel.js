@@ -170,11 +170,17 @@ export function createPanel(container, ctx) {
   function people(title, ids, remove = null) {
     const list = h('ul', { class: 'people' });
     const section = h('section', {}, h('h3', {}, title), list);
+    let shown = null;
     refreshers.push(() => {
       const { doc } = ctx.store;
       const graphId = ctx.currentGraph();
       const current = ids().filter((id) => doc.graphs[graphId].nodes[id]);
       section.hidden = current.length === 0;
+      // Rebuild only when the list changed: a commit-on-blur refresh mustn't replace
+      // the link the user is pressing at that moment.
+      const signature = JSON.stringify([ctx.store.readOnly, ...current.map((id) => [id, nodeLabel(doc, graphId, id)])]);
+      if (signature === shown) return;
+      shown = signature;
       list.replaceChildren(...current.map((id) => {
         const text = nodeLabel(doc, graphId, id);
         return h('li', {},
@@ -250,9 +256,14 @@ export function createPanel(container, ctx) {
 
     const list = h('ul', { class: 'people' });
     const none = h('p', { class: 'muted hint' }, 'Not linked to any other graph.');
+    let shown = null;
     refreshers.push(() => {
       const items = linksOf(doc(), graphId, personId);
       none.hidden = items.length > 0;
+      const signature = JSON.stringify([ctx.store.readOnly, ...items.map(({ link, other }) =>
+        [link.id, link.attrs?.label ?? '', nodeLabel(doc(), other.graphId, other.nodeId), doc().graphs[other.graphId]?.title])]);
+      if (signature === shown) return;
+      shown = signature;
       list.replaceChildren(...items.map(({ link, other }) => {
         const where = doc().graphs[other.graphId]?.title ?? other.graphId;
         const who = nodeLabel(doc(), other.graphId, other.nodeId);

@@ -4,8 +4,10 @@
 //   - two fingers               → pinch-zoom (and pan)
 //   - wheel / trackpad pinch    → zoom around the cursor
 //   - drag a card (editable)    → move it; reported live and once on drop
-// A press that moves less than a few pixels stays a click. Any click that ends a
-// pan or drag is swallowed so it doesn't also change the selection.
+//   - press and release without moving → a tap, reported with what was under the
+//     pointer AT PRESS TIME (opts.describe), so a redraw between press and release
+//     (e.g. a field committing as it loses focus) can't redirect it
+// The browser's own click events on the canvas are swallowed; taps replace them.
 
 import { zoomAt } from './viewport.js';
 
@@ -14,6 +16,8 @@ const WHEEL_SPEED = 0.0015;
 
 export function createInteraction(svg, opts) {
   const { getTransform, setTransform, draggableId, onDragMove, onDrop, onDragCancel } = opts;
+  const describe = opts.describe ?? (() => null);
+  const onTap = opts.onTap ?? (() => {});
   const pointers = new Map(); // pointerId → { x, y } in svg-local px
   let gesture = null;
   let swallowClickUntil = 0;
@@ -25,8 +29,8 @@ export function createInteraction(svg, opts) {
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
-  function startPan(point) {
-    gesture = { type: 'pan', start: point, t0: getTransform(), moved: false };
+  function startPan(point, tap = null) {
+    gesture = { type: 'pan', start: point, t0: getTransform(), moved: false, tap };
   }
 
   function startPinch() {
@@ -46,9 +50,10 @@ export function createInteraction(svg, opts) {
     }
     if (pointers.size === 2) return startPinch();
     if (pointers.size > 2) return;
+    const tap = describe(event.target);
     const id = draggableId(event.target);
-    if (id) gesture = { type: 'press', id, start: point, t0: getTransform(), moved: false };
-    else startPan(point);
+    if (id) gesture = { type: 'press', id, start: point, t0: getTransform(), moved: false, tap };
+    else startPan(point, tap);
   }
 
   function onPointerMove(event) {
@@ -79,7 +84,11 @@ export function createInteraction(svg, opts) {
     const point = pointers.get(event.pointerId);
     pointers.delete(event.pointerId);
     if (!gesture) return;
-    if (gesture.moved) swallowClickUntil = performance.now() + 400;
+    // Taps and drags both replace the browser's click on the canvas.
+    swallowClickUntil = performance.now() + 400;
+    if (!gesture.moved && (gesture.type === 'press' || gesture.type === 'pan') && event.type === 'pointerup' && pointers.size === 0) {
+      onTap(gesture.tap);
+    }
     if (gesture.type === 'drag') {
       const dx = (point.x - gesture.start.x) / gesture.t0.k;
       const dy = (point.y - gesture.start.y) / gesture.t0.k;

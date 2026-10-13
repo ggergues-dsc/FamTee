@@ -14,7 +14,7 @@ function setup({ k = 1 } = {}) {
   Object.entries({ x: 10, y: 10, width: 100, height: 50, 'data-id': 'p-1' }).forEach(([a, v]) => card.setAttribute(a, v));
   svg.append(card);
   document.body.append(svg);
-  const log = { moves: [], drops: [], cancels: 0, clicks: 0 };
+  const log = { moves: [], drops: [], cancels: 0, clicks: 0, taps: [] };
   let transform = { x: 0, y: 0, k };
   const ix = createInteraction(svg, {
     getTransform: () => transform,
@@ -23,6 +23,8 @@ function setup({ k = 1 } = {}) {
     onDragMove: (id, dx, dy) => log.moves.push([id, dx, dy]),
     onDrop: (id, dx, dy) => log.drops.push([id, dx, dy]),
     onDragCancel: () => log.cancels++,
+    describe: (target) => target.closest?.('[data-id]')?.dataset.id ?? 'background',
+    onTap: (what) => log.taps.push(what),
   });
   svg.addEventListener('click', () => log.clicks++);
   const rect = svg.getBoundingClientRect();
@@ -46,15 +48,44 @@ test('dragging the background pans and swallows the click', () => {
   s.done();
 });
 
-test('a press without movement stays a click', () => {
+test('a press without movement is a tap on what was pressed; the browser click is swallowed', () => {
   const s = setup();
   s.fire('pointerdown', s.card, 50, 30);
   s.fire('pointermove', s.svg, 52, 31);
   s.fire('pointerup', s.svg, 52, 31);
+  assertEqual(s.log.taps, ['p-1']);
   s.click(s.card);
-  assertEqual(s.log.clicks, 1);
+  assertEqual(s.log.clicks, 0, 'native click replaced by the tap');
   assertEqual([s.log.moves.length, s.log.drops.length], [0, 0]);
   assertEqual(s.transform, { x: 0, y: 0, k: 1 });
+  s.fire('pointerdown', s.svg, 300, 200);
+  s.fire('pointerup', s.svg, 300, 200);
+  assertEqual(s.log.taps, ['p-1', 'background']);
+  s.done();
+});
+
+test('a tap is decided at press time, even if the canvas is redrawn before release', () => {
+  const s = setup();
+  s.fire('pointerdown', s.card, 50, 30);
+  s.card.remove(); // e.g. a field commits on blur and the canvas redraws
+  s.fire('pointerup', s.svg, 50, 30);
+  assertEqual(s.log.taps, ['p-1']);
+  s.done();
+});
+
+test('pans, drags and pinches are not taps', () => {
+  const s = setup();
+  s.fire('pointerdown', s.svg, 100, 100);
+  s.fire('pointermove', s.svg, 150, 100);
+  s.fire('pointerup', s.svg, 150, 100);
+  s.fire('pointerdown', s.card, 50, 30);
+  s.fire('pointermove', s.svg, 90, 30);
+  s.fire('pointerup', s.svg, 90, 30);
+  s.fire('pointerdown', s.svg, 100, 100, { pointerId: 1, pointerType: 'touch' });
+  s.fire('pointerdown', s.svg, 200, 100, { pointerId: 2, pointerType: 'touch' });
+  s.fire('pointerup', s.svg, 100, 100, { pointerId: 1, pointerType: 'touch' });
+  s.fire('pointerup', s.svg, 200, 100, { pointerId: 2, pointerType: 'touch' });
+  assertEqual(s.log.taps, []);
   s.done();
 });
 

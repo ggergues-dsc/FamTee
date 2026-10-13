@@ -48,3 +48,19 @@ pan/zoom, mainly because touch and pinch handling are fiddly to write. In the me
 - − No inertia/momentum panning; can be added later if missed.
 - − Nudged cards are not avoided by the automatic layout, so a card can be moved on top of another.
   "Reset position" (person) and "Reset layout" (graph) undo moves.
+
+## Addendum (2026-10-13): taps are decided at press time
+
+Reported in UAT: after adding a relative and typing in it, going back to the parent didn't work. Fields commit when
+they lose focus. Pressing on the parent's card or its link in the panel took focus, committed the field, and
+**redrew the canvas and the panel in the middle of the click**, so the element under the pointer was replaced:
+- in the panel, the click was dropped;
+- on the canvas, it landed on the background, which deselects everything.
+
+- The interaction handler now reports a **tap** (press and release without moving) together with **what was under
+  the pointer at press time** (`describe` / `onTap`). The browser's own `click` on the canvas is ignored, so a redraw
+  between press and release can no longer redirect it.
+- The panel's relatives and links lists are rebuilt only when their content changes, so a refresh doesn't replace
+  the link being pressed.
+- A regression test in the built app replays the reported sequence for both the panel link and the card. It fails
+  on the old code.
