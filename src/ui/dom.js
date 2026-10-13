@@ -40,3 +40,37 @@ export function confirmButton(label, confirmLabel, action, props = {}) {
   });
   return button;
 }
+
+// A button that opens a small menu of actions: items are { label, title, run }.
+// Closes on choosing an item, Escape, or a click outside.
+export function menuButton(label, items, props = {}) {
+  const button = h('button', { type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', ...props }, label);
+  const menu = h('div', { class: 'menu', role: 'menu', hidden: true }, items.map((item) =>
+    h('button', { type: 'button', role: 'menuitem', title: item.title ?? '', onclick: () => { close(); item.run(); } }, item.label)));
+  const wrap = h('div', { class: 'menu-wrap' }, button, menu);
+
+  function open() {
+    menu.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    menu.querySelector('button')?.focus();
+    document.addEventListener('pointerdown', onOutside, true);
+  }
+  function close() {
+    menu.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', onOutside, true);
+  }
+  function onOutside(event) {
+    if (!wrap.contains(event.target)) close();
+  }
+  button.addEventListener('click', () => (menu.hidden ? open() : close()));
+  wrap.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !menu.hidden) {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      button.focus();
+    }
+  });
+  return { element: wrap, button, menu, close };
+}

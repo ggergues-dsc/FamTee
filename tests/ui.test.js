@@ -1,7 +1,7 @@
 import { test, assert, assertEqual } from './harness.js';
 import { createPanel } from '../src/ui/panel.js';
 import { createToolbar } from '../src/ui/toolbar.js';
-import { h, confirmButton } from '../src/ui/dom.js';
+import { h, confirmButton, menuButton } from '../src/ui/dom.js';
 import { Store } from '../src/store/store.js';
 import { unionsOfPerson, parentUnionsOf, groupsOf } from '../src/store/family.js';
 import { addGraph, addPerson } from '../src/store/model.js';
@@ -273,6 +273,30 @@ test('groups: create, add, remove, rename and delete from the panels', () => {
   del.click();
   assert(!graph().nodes[g2] && graph().nodes[s.kid], 'group deleted, member kept');
   s.container.remove();
+});
+
+test('menu button opens, runs an item, and closes on Escape or an outside click', () => {
+  const ran = [];
+  const menu = menuButton('Export ▾', [
+    { label: 'One', run: () => ran.push(1) },
+    { label: 'Two', run: () => ran.push(2) },
+  ]);
+  document.body.append(menu.element);
+  assert(menu.menu.hidden);
+  menu.button.click();
+  assert(!menu.menu.hidden);
+  assertEqual(menu.button.getAttribute('aria-expanded'), 'true');
+  button(menu.menu, 'Two').click();
+  assertEqual(ran, [2]);
+  assert(menu.menu.hidden, 'closes after choosing');
+
+  menu.button.click();
+  menu.menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert(menu.menu.hidden, 'Escape closes');
+  menu.button.click();
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  assert(menu.menu.hidden, 'outside click closes');
+  menu.element.remove();
 });
 
 test('h() treats strings as text, never markup', () => {

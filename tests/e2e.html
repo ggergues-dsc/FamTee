@@ -91,7 +91,8 @@ test('unsaved edits are recovered from the draft after reopening', async () => {
 test('export JSON and import it back', async () => {
   const { win, doc, app } = await load({ srcdoc: savedHtml });
   const saved = capturePicker(win);
-  byText(doc, 'Export JSON').click();
+  byText(doc, 'Export ▾').click();
+  byText(doc, 'FamTee data (.famtee.json)').click();
   await sleep(100);
   assertEqual(JSON.parse(saved[0]), editedDoc);
 
@@ -193,7 +194,8 @@ test('GEDCOM: export the graph, import it back as a new graph, undo', async () =
   app.store.apply('dirty', (d) => { d.meta.title = 'Unsaved title'; });
   const count = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'person').length;
   const saved = capturePicker(win);
-  byText(doc, 'Export GEDCOM').click();
+  byText(doc, 'Export ▾').click();
+  byText(doc, 'GEDCOM: this graph').click();
   await sleep(100);
   assertEqual(saved.length, 1);
   const ged = saved[0];
@@ -221,6 +223,26 @@ test('GEDCOM: export the graph, import it back as a new graph, undo', async () =
   app.store.undo();
   assertEqual(Object.keys(app.store.doc.graphs).length, graphsBefore);
   assertEqual(app.view.path.at(-1), 'g-hanna', 'view returns when the graph disappears');
+});
+
+test('GEDCOM merged: a person copied into a sub-graph is written once', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  const people = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'person').length;
+  byText(doc, '+ Sub-graph').click();
+  doc.querySelector('#breadcrumb button').click();
+  app.ctx.select('p-nadia');
+  change(doc.querySelector('[name="link-graph"]'), Object.keys(app.store.doc.graphs).find((g) => g !== 'g-hanna'));
+  byText(doc, 'Copy into that graph').click();
+
+  const saved = capturePicker(win);
+  byText(doc, 'Export ▾').click();
+  byText(doc, 'GEDCOM: all graphs merged').click();
+  await sleep(100);
+  assertEqual(saved.length, 1);
+  assertEqual((saved[0].match(/^0 @I\d+@ INDI/gm) ?? []).length, people, 'Nadia once, not twice');
+  const notice = doc.getElementById('notice').textContent;
+  assert(notice.includes(`${people} people`) && notice.includes('2 graph(s) merged'), notice);
+  assert(doc.querySelector('.menu').hidden, 'menu closed after choosing');
 });
 
 run();

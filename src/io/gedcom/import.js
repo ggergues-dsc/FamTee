@@ -57,6 +57,7 @@ export function importGedcom(text, { title = 'Imported family' } = {}) {
     }
     const attrs = {};
     const nameNode = child(indi, 'NAME');
+    for (let i = 1; i < childrenOf(indi, 'NAME').length; i++) skip('NAME (additional names)');
     if (nameNode) {
       const name = nameFromGedcom(unescapeValue(nameNode.value), valueOf(nameNode, 'GIVN'), valueOf(nameNode, 'SURN'));
       if (Object.keys(name).length) attrs.name = name;
