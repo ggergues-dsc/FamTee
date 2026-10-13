@@ -27,9 +27,24 @@ directly from disk does **not** work — browsers block ES modules on `file://`;
 python3 build/build.py --data samples/extended.famtee.json --out dist/extended.html
 ```
 
-Open the file in a browser. `samples/sample.famtee.json` shows multi-graph navigation (overview → family,
+Open the file in a browser and click a person to edit them. `samples/sample.famtee.json` shows multi-graph navigation (overview → family,
 cross-graph "same person" badges); `samples/extended.famtee.json` is a four-generation family with remarriage,
-divorce, adoption and a cousin marriage. Append `#g=<graphId>` to the URL to open a specific graph.
+divorce, adoption and a cousin marriage. Append `#g=<graphId>&sel=<nodeId>` to the URL to open a specific graph with a node selected.
+
+## Editing and saving
+
+| Action | How |
+|---|---|
+| Edit a person / partnership | Click it; edit fields in the side panel (applied when a field loses focus or on Enter) |
+| Add partner, child, parent | Buttons in the person panel; "+ Child" asks which partnership |
+| Add person / sub-graph, rename | Panel with nothing selected (click empty canvas or press Esc) |
+| Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person |
+| Undo / redo | Toolbar, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z or Ctrl+Y |
+| Save | Ctrl/⌘+S or Save. Chromium overwrites the file you pick; Firefox/Safari download a new copy |
+| Export / import | Export JSON writes `.famtee.json`; Import… reads `.famtee.json` or a FamTee `.html` (undoable) |
+
+Edits that would break integrity (e.g. making someone their own ancestor) are rejected with a message, and the
+document is left unchanged.
 
 ## Test
 
@@ -37,8 +52,8 @@ divorce, adoption and a cousin marriage. Append `#g=<graphId>` to the URL to ope
 python3 tests/run.py
 ```
 
-Runs the Python build tests, then the JS test suite in headless Firefox twice: as ES modules over http and as
-the bundled file from `file://`. For interactive debugging, serve the repo as above and open
+Runs the Python build tests, then the JS test suite in headless Firefox twice (as ES modules over http and as
+the bundled file from `file://`), then the end-to-end test against the built app (`tests/e2e.html`). For interactive debugging, serve the repo as above and open
 `http://localhost:8000/tests/index.html`.
 
 ## Code layout
@@ -46,7 +61,7 @@ the bundled file from `file://`. For interactive debugging, serve the repo as ab
 ```
 src/
   index.html          HTML shell: stylesheet link, empty famtee-data block, one module script
-  main.js             bootstrap: embedded data → Store → renderer; breadcrumb navigation, selection
+  main.js             wiring: Store ↔ renderer, panel, toolbar, keyboard, save/autosave/import
   store/
     schema.js         format constants, node/edge/link types, "graphId:nodeId" endpoints
     ids.js            ULID ids with type prefixes (p-, u-, grp-, ref-, g-, e-, l-)
@@ -55,12 +70,21 @@ src/
     migrate.js        schemaVersion migrations; newer files open read-only
     serialize.js      JSON load/save, script-safe embedding, data-block replacement in HTML
     store.js          Store: apply() with snapshot undo/redo, validation rollback, change events
+    family.js         family-level edits: add partner/child/parent, remove person, replace document
   layout/
     layout.js         generational layout (ADR 0008): rank → order → place → pin
   render/
     renderer.js       SVG renderer with fixed layers (ADR 0003), connector lanes, link badges
     format.js         card text: names, lifespans, truncation
-  styles/main.css     theme tokens (light/dark) and graph styles
+  persist/
+    save.js           template capture, HTML/JSON output, File System Access write or download
+    autosave.js       localStorage drafts + debounce
+    import.js         read .famtee.json or FamTee .html
+  ui/
+    panel.js          side panel: person / partnership / graph editing forms
+    toolbar.js        undo, redo, save, export, import, save state
+    dom.js            h() element helper, two-click confirm button
+  styles/main.css     theme tokens (light/dark), graph and app styles
 build/build.py        bundler + inliner
 samples/              example documents
 tests/                harness.js, *.test.js (browser), test_build.py (Python), run.py
@@ -97,4 +121,7 @@ Not supported (the build fails with a clear message): default imports/exports, `
 - Top-down orientation only (left-to-right is reserved as a layout option).
 - Pinned nodes (`attrs.pos`) are placed after the automatic layout. Their neighbours don't move out of the way,
   so a pinned card can overlap others.
-- No editing UI or saving yet. The Store and the data-block replacement are ready for it.
+- No drag-to-move yet (the `attrs.pos` override and "Reset position" exist, but nothing sets positions).
+- No UI yet for cross-graph links (`same-as`), groups, or editing/deleting a sub-graph tile in place. Clicking a
+  tile opens the graph, and the graph can be renamed or deleted from there.
+- GEDCOM import/export (ADR 0010) is not implemented.

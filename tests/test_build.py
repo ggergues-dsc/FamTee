@@ -111,6 +111,17 @@ class HtmlTests(TempModules):
         self.assertEqual(html.lower().count("</script>"), 2)
         self.assertIn('"note":"\\u003c/script>"', html)
 
+    def test_inlined_code_is_not_rewritten(self):
+        self.write("s.css", "")
+        self.write("main.js", "const a = '<link rel=\"stylesheet\" href=\"x.css\">';\n"
+                   "const b = '<script type=\"application/json\" id=\"famtee-data\"><\\/script>';\n")
+        html_path = self.write("index.html", self.SHELL)
+        data = self.write("d.json", json.dumps({"format": "famtee"}))
+        html = build.build_html(html_path, data)
+        self.assertIn('const a = \'<link rel="stylesheet" href="x.css">\';', html)
+        self.assertIn('id="famtee-data"><\\/script>\';', html)
+        self.assertIn('id="famtee-data">{"format":"famtee"}</script>', html)
+
     def test_rejects_non_famtee_data(self):
         self.write("s.css", "")
         self.write("main.js", "")

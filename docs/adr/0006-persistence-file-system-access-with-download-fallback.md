@@ -27,3 +27,21 @@ writing files differs: Chromium has the File System Access (FSA) API; Firefox an
 - + Works everywhere; best experience on Chromium.
 - − Firefox/Safari users manage file versions manually (downloads folder); document clearly.
 - − Safari may evict localStorage after inactivity — acceptable for a draft cache.
+
+## Implementation notes (2026-10-12)
+
+Implemented in `src/persist/` and wired in `src/main.js`:
+
+- **What gets saved.** At startup, before anything renders, the app records `document.documentElement.outerHTML`
+  (`captureTemplate`). Save writes that template back with the data block replaced. Because the template is
+  captured before rendering, no rendered SVG or panel state ends up in the file. Saving a reopened file with no
+  changes produces byte-identical output, and the end-to-end test checks this.
+- **Development mode can't save HTML.** A page loaded from separate module/CSS files would save a broken file.
+  It shows a message instead; Export JSON still works there.
+- **File handles last one session.** A page opened from `file://` can't get a handle to its own file. The first
+  Save in a session shows the picker (choose the original file to overwrite it), and later saves reuse that handle.
+- **Drafts** are written to `localStorage` 800 ms after the last change (and on `beforeunload`), keyed by
+  `meta.id`. They are offered for restore only when newer than the file's `meta.modified`. Saving or exporting
+  clears the draft.
+- **Import** replaces the document through `Store.apply`, so it can be undone. It accepts `.famtee.json` files
+  and FamTee `.html` files (the embedded data is read out).

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FamTee end-to-end</title>
+</head>
+<body>
+<pre id="results">running…</pre>
+<iframe id="app" width="1200" height="800" title="app"></iframe>
+<script type="module">
+// End-to-end: drive the built single-file app in an iframe (served over http so it is
+// same-origin), edit through its real UI, save, reopen the saved file, save again.
+// Run by tests/run.py with ?app=<built html>&report=<url>.
+import { test, assert, assertEqual, run } from './harness.js';
+
+const params = new URLSearchParams(location.search);
+const frame = document.getElementById('app');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function load(props) {
+  const loaded = new Promise((resolve) => { frame.onload = resolve; });
+  frame.removeAttribute('srcdoc');
+  Object.assign(frame, props);
+  await loaded;
+  for (let i = 0; i < 100 && !frame.contentWindow.famtee; i++) await sleep(20);
+  const win = frame.contentWindow;
+  assert(win.famtee, 'app booted');
+  return { win, doc: win.document, app: win.famtee };
+}
+
+// The app saves through the File System Access API when present; stub it to capture output.
+function capturePicker(win) {
+  const saved = [];
+  win.showSaveFilePicker = async () => ({
+    createWritable: async () => ({ write: async (c) => saved.push(c), close: async () => {} }),
+  });
+  return saved;
+}
+
+const byText = (doc, text) => [...doc.querySelectorAll('button')].find((b) => b.textContent === text);
+const change = (el, value) => { el.value = value; el.dispatchEvent(new Event('change')); };
+let savedHtml;
+let editedDoc;
+
+test('edit through the UI, save, and reopen the saved file', async () => {
+  let { win, doc, app } = await load({ src: params.get('app') });
+  win.localStorage.clear();
+  app.ctx.select('p-peter');
+  change(doc.querySelector('[name="given"]'), 'Pierre');
+  byText(doc, '+ Child').click();
+  const [child] = app.view.selection;
+  change(doc.querySelector('[name="given"]'), 'Baby');
+  assert([...doc.querySelectorAll('.layer-labels .name')].some((t) => t.textContent === 'Pierre Hanna'), 'canvas shows edit');
+  assertEqual(doc.querySelector('.save-state').textContent, '● Unsaved changes');
+
+  const saved = capturePicker(win);
+  byText(doc, 'Save').click();
+  await sleep(100);
+  assertEqual(saved.length, 1);
+  assertEqual(doc.querySelector('.save-state').textContent, 'All changes saved');
+  savedHtml = saved[0];
+  editedDoc = JSON.parse(JSON.stringify(app.store.doc));
+  assert(!savedHtml.includes('class="card'), 'saved file has no rendered output baked in');
+
+  ({ win, doc, app } = await load({ srcdoc: savedHtml }));
+  assertEqual(app.store.doc, editedDoc);
+  assertEqual(app.store.doc.graphs['g-hanna'].nodes[child].attrs.name.given, 'Baby');
+  assert(!app.store.dirty);
+
+  const resaved = capturePicker(win);
+  await app.save('html');
+  assertEqual(resaved.length, 1);
+  assert(resaved[0] === savedHtml, 'saving an unchanged reopened file is byte-identical');
+});
+
+test('unsaved edits are recovered from the draft after reopening', async () => {
+  let { win, doc, app } = await load({ srcdoc: savedHtml });
+  app.ctx.select('p-mary');
+  change(doc.querySelector('[name="surname"]'), 'Draftly');
+  await sleep(1100); // autosave debounce
+  ({ win, doc, app } = await load({ srcdoc: savedHtml }));
+  assertEqual(app.store.doc, editedDoc, 'file content is unchanged');
+  const restore = byText(doc, 'Restore');
+  assert(restore && !doc.getElementById('notice').hidden, 'recovery notice shown');
+  restore.click();
+  assertEqual(app.store.doc.graphs['g-hanna'].nodes['p-mary'].attrs.name.surname, 'Draftly');
+  assert(app.store.dirty, 'restored draft still needs saving');
+  win.localStorage.clear();
+});
+
+test('export JSON and import it back', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  const saved = capturePicker(win);
+  byText(doc, 'Export JSON').click();
+  await sleep(100);
+  assertEqual(JSON.parse(saved[0]), editedDoc);
+
+  app.store.apply('wipe', (d) => { d.meta.title = 'Changed'; });
+  const file = new win.File([saved[0]], 'family.famtee.json', { type: 'application/json' });
+  const input = doc.querySelector('.toolbar input[type="file"]');
+  const transfer = new win.DataTransfer();
+  transfer.items.add(file);
+  input.files = transfer.files;
+  input.dispatchEvent(new win.Event('change'));
+  await sleep(200);
+  assertEqual(app.store.doc.meta.title, editedDoc.meta.title);
+  app.store.undo();
+  assertEqual(app.store.doc.meta.title, 'Changed', 'import is undoable');
+});
+
+run();
+</script>
+</body>
+</html>

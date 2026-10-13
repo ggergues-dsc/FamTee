@@ -4,6 +4,7 @@
 1. Python unit tests for the build script.
 2. JS tests as native ES modules over http (development mode).
 3. JS tests bundled by build.py and opened from file:// (distribution mode).
+4. End-to-end: the built app with a sample, driven through its UI (edit, save, reopen).
 
 JS tests run in headless Firefox; results come back via POST to a local server.
 Usage: python3 tests/run.py [--browser firefox]
@@ -102,15 +103,20 @@ def main() -> int:
     bundled = ROOT / "dist" / "tests.html"
     bundled.parent.mkdir(exist_ok=True)
     bundled.write_text(build.build_html(ROOT / "tests" / "index.html"), encoding="utf-8")
+    e2e_app = ROOT / "dist" / "e2e-app.html"
+    e2e_app.write_text(build.build_html(ROOT / "src" / "index.html", ROOT / "samples" / "extended.famtee.json"), encoding="utf-8")
 
     results: queue.Queue = queue.Queue()
     server = start_server(results)
-    report_url = f"http://127.0.0.1:{server.server_port}/__results"
+    base = f"http://127.0.0.1:{server.server_port}"
+    report_url = f"{base}/__results"
     try:
         dev = run_in_browser(args.browser, f"http://127.0.0.1:{server.server_port}/tests/index.html?report={report_url}", results)
         ok = report("ES modules over http", dev) and ok
         dist = run_in_browser(args.browser, f"{bundled.as_uri()}?report={report_url}", results)
         ok = report("bundled from file://", dist) and ok
+        e2e = run_in_browser(args.browser, f"{base}/tests/e2e.html?app=/dist/e2e-app.html&report={report_url}", results)
+        ok = report("end-to-end (built app)", e2e) and ok
     finally:
         server.shutdown()
 

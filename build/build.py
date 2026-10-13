@@ -218,8 +218,6 @@ def build_html(html_path: Path, data_path: Path | None = None) -> str:
     scripts = MODULE_SCRIPT_RE.findall(html)
     if len(scripts) != 1:
         raise BuildError(f"{html_path.name}: expected exactly one module script, found {len(scripts)}")
-    js = bundle(base / scripts[0])
-    html = MODULE_SCRIPT_RE.sub(lambda _: f"<script>\n{inline_safe(js, 'script')}</script>", html)
 
     def inline_css(m: re.Match) -> str:
         css_path = base / m["href"]
@@ -227,11 +225,14 @@ def build_html(html_path: Path, data_path: Path | None = None) -> str:
             raise BuildError(f"{html_path.name}: stylesheet not found: {m['href']}")
         return f"<style>\n{inline_safe(css_path.read_text(encoding='utf-8'), 'style')}</style>"
 
+    # Stylesheets and data go in before the script: the bundled code may contain
+    # strings that look like <link> tags or data blocks, and must not be rewritten.
     html = STYLESHEET_RE.sub(inline_css, html)
-
     if data_path:
         html = embed_data(html, data_path.read_text(encoding="utf-8"))
-    return html
+
+    js = bundle(base / scripts[0])
+    return MODULE_SCRIPT_RE.sub(lambda _: f"<script>\n{inline_safe(js, 'script')}</script>", html, count=1)
 
 
 def main(argv: list[str] | None = None) -> int:

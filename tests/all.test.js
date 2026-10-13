@@ -9,5 +9,8 @@ import './serialize.test.js';
 import './store.test.js';
 import './layout.test.js';
 import './render.test.js';
+import './family.test.js';
+import './persist.test.js';
+import './ui.test.js';
 
 run();

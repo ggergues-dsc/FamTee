@@ -18,6 +18,10 @@ installer on Windows; a browser is installed everywhere the app runs.
   headless Firefox **twice**: as native ES modules over http (development mode) and as the bundled single file
   from `file://` (distribution mode). The second run also proves the bundler output is correct.
 - **Build tests**: Python `unittest` (`tests/test_build.py`).
+- **End-to-end** (added with the editing UI): `tests/e2e.html` loads the built app (with a sample) in a
+  same-origin iframe over http. It edits through the real panel, saves through a stubbed File System Access
+  picker, reopens the saved output, re-saves it (must be byte-identical), and checks draft recovery and
+  JSON export/import.
 
 ## Alternatives considered
 - **Install Node.js + esbuild** — the standard route, but adds a runtime and npm dependency to every
