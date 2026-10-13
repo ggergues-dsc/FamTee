@@ -20,5 +20,6 @@ import './gedcom-merged.test.js';
 import './photo.test.js';
 import './revision.test.js';
 import './session.test.js';
+import './privacy.test.js';
 
 run();
