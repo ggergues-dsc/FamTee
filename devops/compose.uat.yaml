@@ -9,7 +9,7 @@ services:
       - "${FAMTEE_UAT_BIND:-0.0.0.0}:${FAMTEE_UAT_PORT:-8080}:8080"
     volumes:
       - type: bind # deployed sites; only devops/uat.sh writes here
-        source: ../.uat
+        source: ${FAMTEE_UAT_DIR_ABS:-../.uat}
         target: /srv/uat
         read_only: true
       - type: bind

@@ -7,7 +7,8 @@
 #   devops/uat.sh up | down | logs       start / stop and remove / follow the server
 #
 # FAMTEE_UAT_PORT (default 8080) and FAMTEE_UAT_BIND (default 0.0.0.0, i.e. the LAN;
-# use 127.0.0.1 for this computer only) choose where it listens.
+# use 127.0.0.1 for this computer only) choose where it listens. FAMTEE_UAT_DIR and
+# COMPOSE_PROJECT_NAME select another site folder and container (used by selftest.sh).
 # Deploys are atomic: a new site is prepared next to the old one, then a symlink is
 # switched. The last 5 deployed sites are kept in .uat/ (git-ignored).
 set -euo pipefail
@@ -16,6 +17,9 @@ usage() { sed -n '2,/^[^#]/s/^# \{0,1\}//p' "$0"; exit 2; }  # prints the commen
 
 root=$(git rev-parse --show-toplevel)
 cd "$root"
+uat_dir=${FAMTEE_UAT_DIR:-.uat}
+export FAMTEE_UAT_DIR_ABS
+FAMTEE_UAT_DIR_ABS=$(mkdir -p "$uat_dir" && cd "$uat_dir" && pwd -P)
 compose=(docker compose -f devops/compose.uat.yaml)
 port=${FAMTEE_UAT_PORT:-8080}
 keep_sites=5
@@ -44,10 +48,20 @@ wait_healthy() {
 }
 
 up() {
-  mkdir -p .uat
-  [[ -e .uat/current ]] || { mkdir -p .uat/empty && echo "Nothing deployed yet." > .uat/empty/index.html && ln -sfn empty .uat/current; }
+  [[ -e $uat_dir/current ]] || { mkdir -p "$uat_dir/empty" && echo "Nothing deployed yet." > "$uat_dir/empty/index.html" && ln -sfn empty "$uat_dir/current"; }
   "${compose[@]}" up -d --wait --quiet-pull uat >/dev/null 2>&1 || { "${compose[@]}" up -d --wait uat; return 1; }
   wait_healthy
+}
+
+# Keeps the newest $keep_sites sites by deploy time (never the one being served).
+# Names can't be used for ordering: they start with the release version, whose
+# commit part doesn't sort by time.
+prune_sites() {
+  local current site
+  current=$(readlink "$uat_dir/current" || true)
+  ls -1dt "$uat_dir"/site-*/ 2>/dev/null | tail -n +"$((keep_sites + 1))" | while read -r site; do
+    [[ $(basename "$site") == "$current" ]] || rm -rf "$site"
+  done
 }
 
 deploy() {
@@ -58,15 +72,16 @@ deploy() {
 
   local version site
   version=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$release/manifest.json")
-  site="site-$version-$(date -u +%Y%m%dT%H%M%SZ)"
-  mkdir -p ".uat/$site"
-  cp -R "$release/." ".uat/$site/"
-  cp "$release/manifest.json" ".uat/$site/version.json"
-  python3 devops/uat/landing.py "$release" ".uat/$site/index.html"
-  chmod -R a+rX ".uat/$site"
-  ln -sfn "$site" .uat/current.next && mv -T .uat/current.next .uat/current
+  # Unique even for two deploys within one second, so a live site is never overwritten.
+  site=$(basename "$(mktemp -d "$uat_dir/site-$version-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")")
+  cp -R "$release/." "$uat_dir/$site/"
+  cp "$release/manifest.json" "$uat_dir/$site/version.json"
+  python3 devops/uat/landing.py "$release" "$uat_dir/$site/index.html"
+  chmod -R a+rX "$uat_dir/$site"
+  ln -sfn "$site" "$uat_dir/current.next" && mv -T "$uat_dir/current.next" "$uat_dir/current"
 
   up
+  prune_sites
   # Verify: UAT must now serve exactly this release.
   local served
   served=$(fetch /version.json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
@@ -74,7 +89,6 @@ deploy() {
   fetch /famtee.html | sha256sum | grep -q "$(awk '$2 == "./famtee.html" {print $1}' "$release/SHA256SUMS")" \
     || { echo "UAT's famtee.html doesn't match the release checksum" >&2; exit 1; }
 
-  ls -1d .uat/site-*/ 2>/dev/null | sort -t- -k3 | head -n -"$keep_sites" | xargs -r rm -rf
   echo "UAT now serves release $version (verified):"
   urls
 }
@@ -94,7 +108,7 @@ case ${1:-} in
   deploy) shift; deploy "$@" ;;
   status) status ;;
   up) up && status ;;
-  down) "${compose[@]}" down --remove-orphans && echo "UAT stopped and removed (deployed sites stay in .uat/)" ;;
+  down) "${compose[@]}" down --remove-orphans && echo "UAT stopped and removed (deployed sites stay in $uat_dir/)" ;;
   logs) "${compose[@]}" logs -f uat ;;
   *) usage ;;
 esac
