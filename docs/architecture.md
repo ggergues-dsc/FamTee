@@ -82,14 +82,15 @@ src/
   io/               # json.js, gedcom.js, svg-export.js
   styles/           # CSS (themable via custom properties)
 vendor/             # pinned d3 modules + LICENSE files (ADR 0007)
-build/build.mjs     # bundles + inlines everything into dist/famtee.html
+build/build.py      # bundles + inlines everything into dist/famtee.html (ADR 0011)
 samples/            # example .famtee.json files
+tests/              # browser test harness + suites, Python build tests, run.py
 dist/famtee.html    # the shippable single file
 docs/
 ```
 
 Development: open `src/index.html` through any static server (`python3 -m http.server`) to use ES modules
-directly; the build produces the `file://`-safe single file.
+directly; the build produces the `file://`-safe single file. Details in [development.md](development.md).
 
 ## Browser support matrix
 

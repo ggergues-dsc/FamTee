@@ -1,6 +1,6 @@
 # 0002 — No framework; vanilla ES modules inlined by a tiny build
 
-- **Status**: Accepted
+- **Status**: Accepted — build/test tooling amended by [0011](0011-python-build-and-browser-tests.md)
 - **Date**: 2026-10-12
 
 ## Context

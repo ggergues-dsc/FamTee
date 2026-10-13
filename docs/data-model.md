@@ -40,6 +40,9 @@ A FamTee document is a **compound multi-graph**:
 ## Nodes
 
 Nodes are stored in a map keyed by ID (IDs are ULIDs: sortable, collision-free when merging files).
+Generated IDs carry a type prefix for readability: `g-` graph, `p-` person, `u-` union, `grp-` group,
+`ref-` graphRef, `e-` edge, `l-` link. Any unique non-empty string is accepted when loading; graph IDs
+must not contain `:` since links use `graphId:nodeId`.
 
 ```jsonc
 "p-01J9...": {
