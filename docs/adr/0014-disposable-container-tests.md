@@ -43,3 +43,18 @@ A `devops/` folder with a Docker Compose test service built for **disposable sta
 - − First run downloads about 300 MB of packages for the image; later runs reuse the cached image.
 - Follow-ups: a CI workflow calling `devops/test.sh`; adding Chromium to the image once `tests/run.py` supports
   Chromium's command-line flags.
+
+## Addendum (2026-10-13): Chromium alongside Firefox ESR
+
+The image now also contains Debian's `chromium`, and the container runs every JS suite (modules, bundled
+`file://`, end-to-end) in **both** Firefox ESR and Chromium. Chrome/Edge are the most common browsers, and until
+now downloads, the start screen and the rest of the UI had only been tested in Firefox.
+
+- `tests/run.py` accepts `--browser` more than once and knows Chromium's launch options
+  (`--headless=new --user-data-dir=…`).
+- Chromium runs with `--no-sandbox`: its own sandbox needs kernel privileges that this container deliberately
+  doesn't grant (`cap_drop: ALL`, `no-new-privileges`). The container is the isolation boundary, it has no
+  network, and it runs only this repo's code.
+- Each test page reports the engine that ran it (from its user agent). The runner prints it and fails the run if
+  it doesn't match the browser requested, so a passing result can't silently come from the wrong browser.
+- Cost: the image is about 300 MB larger, and a pipeline run takes about twice as long (both engines).
