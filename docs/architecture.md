@@ -108,6 +108,7 @@ directly; the build produces the `file://`-safe single file. Details in [develop
 2. ~~Media (photos): embed or reference sibling files?~~ **Resolved by [ADR 0013](adr/0013-embedded-photos.md):**
    embedded, shrunk to 256 px JPEGs in a shared media store. Full-resolution originals remain a possible
    later addition.
-3. Privacy: optional "export without living persons" filter before sharing.
+3. ~~Privacy: optional "export without living persons" filter before sharing.~~ **Resolved by
+   [ADR 0018](adr/0018-privacy-filter-for-sharing.md):** shared copies show living people as "Living" without details.
 4. Encryption of the embedded data block (password-protected file) — possible later via WebCrypto.
 5. GEDCOM version priority: 5.5.1 (widest support) vs 7.0.

@@ -58,6 +58,7 @@ must not contain `:` since links use `graphId:nodeId`.
   "attrs": {
     "name": { "given": "Maria", "surname": "Garcia" },   // optional "suffix" (e.g. from GEDCOM "Jr.")
     "sex": "F",
+    "status": "deceased",                // optional: "living" | "deceased"; absent = decided from dates (ADR 0018)
     "birth": { "date": "1950-03-14", "place": "Cairo" },
     "death": null,
     "notes": "",
