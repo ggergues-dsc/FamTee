@@ -150,4 +150,5 @@ export function removePerson(doc, graphId, personId) {
 export function replaceDocument(doc, next) {
   for (const key of Object.keys(doc)) delete doc[key];
   Object.assign(doc, structuredClone(next));
+  doc.media ??= {}; // keep undo snapshots sharing one media object (ADR 0013)
 }

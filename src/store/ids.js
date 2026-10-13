@@ -11,6 +11,7 @@ export const ID_PREFIX = {
   graphRef: 'ref',
   edge: 'e',
   link: 'l',
+  media: 'm',
 };
 
 export function ulid(now = Date.now()) {

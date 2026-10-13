@@ -29,6 +29,7 @@ in a single HTML file that opens in any modern browser on any OS, with no instal
 | [0010](adr/0010-gedcom-interop-as-import-export-only.md) | GEDCOM as import/export adapter, not native format | Accepted |
 | [0011](adr/0011-python-build-and-browser-tests.md) | Python build script and in-browser tests (no Node.js); amends 0002 tooling | Accepted |
 | [0012](adr/0012-hand-written-pointer-events-pan-zoom-drag.md) | Hand-written pan/zoom and drag on Pointer Events; drags stored as offsets | Accepted |
+| [0013](adr/0013-embedded-photos.md) | Embedded photos: shrunk JPEGs in a shared, append-only media store | Accepted |
 
 New decisions: copy [adr/0000-adr-template.md](adr/0000-adr-template.md), take the next number, add a row above.
 A decision is never edited away — supersede it with a new ADR and mark the old one `Superseded by NNNN`.

@@ -2,6 +2,8 @@
 // drafts only protect unsaved edits from a closed tab or a crash. Storage access
 // can throw (private mode, blocked site data), so every call is guarded.
 
+import { withoutUnusedMedia } from '../store/media.js';
+
 const PREFIX = 'famtee:draft:';
 
 export function draftKey(doc) {
@@ -10,7 +12,7 @@ export function draftKey(doc) {
 
 export function saveDraft(storage, doc) {
   try {
-    storage.setItem(draftKey(doc), JSON.stringify({ savedAt: new Date().toISOString(), doc }));
+    storage.setItem(draftKey(doc), JSON.stringify({ savedAt: new Date().toISOString(), doc: withoutUnusedMedia(doc) }));
     return true;
   } catch {
     return false;

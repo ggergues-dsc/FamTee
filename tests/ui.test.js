@@ -13,6 +13,7 @@ function setup({ readOnly = false } = {}) {
   const store = new Store(fam.doc, { readOnly });
   const view = { path: [fam.g], selection: new Set() };
   const errors = [];
+  const notices = [];
   const container = h('div');
   document.body.append(container);
   const ctx = {
@@ -24,13 +25,14 @@ function setup({ readOnly = false } = {}) {
     editAndSelect(label, fn) { const id = ctx.edit(label, fn); if (id) ctx.select(id); },
     select(id) { view.selection = id ? new Set([id]) : new Set(); panel.render(); },
     open(graphId) { view.path.push(graphId); panel.render(); },
+    notify: (message, kind) => notices.push([kind, message]),
     openNode(graphId, nodeId) { if (view.path.at(-1) !== graphId) view.path.push(graphId); ctx.select(nodeId); },
     back() { view.path.pop(); panel.render(); },
   };
   const panel = createPanel(container, ctx);
   store.subscribe(() => panel.render());
   panel.render();
-  return { ...fam, store, view, ctx, panel, container, errors };
+  return { ...fam, store, view, ctx, panel, container, errors, notices };
 }
 
 const field = (c, name) => c.querySelector(`[name="${name}"]`);
@@ -297,6 +299,44 @@ test('menu button opens, runs an item, and closes on Escape or an outside click'
   document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
   assert(menu.menu.hidden, 'outside click closes');
   menu.element.remove();
+});
+
+test('photo: add from a file, change, remove; bad files are reported', async () => {
+  const s = setup();
+  s.ctx.select(s.mum);
+  const input = field(s.container, 'photo-file');
+  const pick = async (file) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    input.dispatchEvent(new Event('change'));
+    await new Promise((r) => setTimeout(r, 150));
+  };
+  const canvas = Object.assign(document.createElement('canvas'), { width: 600, height: 300 });
+  canvas.getContext('2d').fillRect(0, 0, 600, 300);
+  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+  assertEqual(button(s.container, 'Add photo…').textContent, 'Add photo…');
+  await pick(new File([blob], 'me.png', { type: 'image/png' }));
+  const photo = node(s, s.mum).attrs.photo;
+  assert(photo && s.store.doc.media[photo].width === 256);
+  assert(!s.container.querySelector('img.photo').hidden);
+  assert(button(s.container, 'Change…'), 'button relabelled');
+  assert(s.container.querySelector('.photo-section .hint').textContent.startsWith('256×128'));
+  assertEqual(s.store.undoStack.at(-1).label, 'Add photo');
+
+  await pick(new File(['nope'], 'notes.txt', { type: 'text/plain' }));
+  assertEqual(s.notices.at(-1)[0], 'error');
+  assert(s.notices.at(-1)[1].includes("notes.txt isn't"));
+  assertEqual(node(s, s.mum).attrs.photo, photo, 'unchanged after a bad file');
+
+  button(s.container, 'Remove').click();
+  assert(!node(s, s.mum).attrs.photo);
+  assert(s.container.querySelector('img.photo').hidden);
+
+  s.ctx.select(null);
+  s.store.undo();
+  assert(s.container.querySelector('.photo-usage').textContent.startsWith('1 photo embedded'));
+  s.container.remove();
 });
 
 test('h() treats strings as text, never markup', () => {

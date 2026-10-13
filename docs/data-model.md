@@ -33,7 +33,10 @@ A FamTee document is a **compound multi-graph**:
   "graphs": {
     "g-main": { "title": "Main line", "nodes": { }, "edges": [ ] }
   },
-  "links": [ ]
+  "links": [ ],
+  "media": {                             // embedded photos, shared by id (ADR 0013)
+    "m-01JA...": { "mime": "image/jpeg", "data": "data:image/jpeg;base64,...", "width": 256, "height": 192 }
+  }
 }
 ```
 
@@ -53,7 +56,7 @@ must not contain `:` since links use `graphId:nodeId`.
     "birth": { "date": "1950-03-14", "place": "Cairo" },
     "death": null,
     "notes": "",
-    "photo": "data:image/webp;base64,...",
+    "photo": "m-01JA...",                 // optional: id of an image in doc.media (ADR 0013)
     "nudge": { "dx": 40, "dy": 0 }     // optional: offset from the automatic layout, set by dragging (ADR 0012)
   }
 }
@@ -100,7 +103,9 @@ graphs without duplicating edges). The UI shows linked nodes with a marker and l
 3. No person is their own ancestor (cycle check over partner/child edges, `same-as` collapsed).
 4. `graphRef` targets exist; the graphRef hierarchy is acyclic.
 5. IDs are unique document-wide.
-6. A link joins nodes in **two different graphs** (relations inside one graph are edges). The editing helpers
+6. Every `attrs.photo` refers to an entry in `media`, and every media entry is an inline JPEG, PNG, WebP or GIF
+   (`data:image/…;base64,…`); nothing else is accepted.
+7. A link joins nodes in **two different graphs** (relations inside one graph are edges). The editing helpers
    also refuse duplicate links (same type, same two endpoints in either direction).
 
 Editing conventions (enforced by the editing helpers, not by validation): a group whose last member is removed

@@ -17,5 +17,6 @@ import './interaction.test.js';
 import './links-groups.test.js';
 import './gedcom.test.js';
 import './gedcom-merged.test.js';
+import './photo.test.js';
 
 run();

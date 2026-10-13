@@ -3,6 +3,7 @@
 // download a new copy.
 
 import { replaceDataBlock, serialize } from '../store/serialize.js';
+import { withoutUnusedMedia } from '../store/media.js';
 
 // The page's own HTML as it was at startup, before any rendering changed the DOM.
 // Call this before the app touches the document.
@@ -37,8 +38,10 @@ export const FORMATS = {
   gedcom: { ext: '.ged', mime: 'application/x-gedcom', description: 'GEDCOM file' },
 };
 
+// Unreferenced photos (left behind by undo or removal) are dropped on the way out.
 export function documentContents(kind, doc, template) {
-  return kind === 'html' ? buildHtml(template, doc) : serialize(doc);
+  const out = withoutUnusedMedia(doc);
+  return kind === 'html' ? buildHtml(template, out) : serialize(out);
 }
 
 // Writes `contents`. Returns { method: 'fsa' | 'download', handle } or throws.

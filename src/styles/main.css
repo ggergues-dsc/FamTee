@@ -80,6 +80,7 @@ body {
 .famtee-canvas .layer-labels { pointer-events: none; }
 .famtee-canvas text { fill: var(--fg); text-anchor: middle; font-size: 13px; }
 .famtee-canvas .name { font-weight: 600; }
+.famtee-canvas .avatar { stroke: var(--card-stroke); stroke-width: 1; }
 .famtee-canvas .dates { fill: var(--muted); font-size: 11px; }
 .famtee-canvas .group-label { text-anchor: start; fill: var(--accent); font-size: 11px; }
 .famtee-canvas .link-badge { cursor: pointer; }
@@ -183,6 +184,12 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .panel .link-form .row input { flex: 1; }
 .panel .row select { min-width: 0; }
 .panel .hint { font-size: 0.85rem; }
+.panel .photo-section { display: grid; justify-items: start; gap: 0.25rem; margin-bottom: 0.75rem; }
+.panel .photo-frame { border-radius: 50%; outline: 2px dashed transparent; outline-offset: 3px; }
+.panel .photo-frame.drop { outline-color: var(--accent); }
+.panel .photo { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
+  border: 1px solid var(--card-stroke); background: var(--card-u); }
+.panel .photo.placeholder { font-size: 0.75rem; color: var(--muted); }
 
 @media (max-width: 700px) {
   #app { flex-direction: column; }

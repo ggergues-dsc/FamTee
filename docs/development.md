@@ -39,6 +39,7 @@ divorce, adoption and a cousin marriage. Append `#g=<graphId>&sel=<nodeId>` to t
 | Add partner, child, parent | Buttons in the person panel; "+ Child" asks which partnership |
 | Add person / sub-graph, rename | Panel with nothing selected (click empty canvas or press Esc) |
 | Delete | "Delete …" in the panel (click twice), or Delete/Backspace for the selected person or group |
+| Photos | Person panel → **Add photo…** (or drop an image on the circle). Shrunk to 256 px JPEG and embedded; **Change…** / **Remove**. The graph panel shows how much photos add to the file |
 | Link across graphs | Person panel → "In other graphs": **Copy into that graph** (same person, new card there), or link to someone there as the **same person** or **related** (with a label). The **=** / **↔** badge on a card opens the other side |
 | Groups | Person panel → "Add to group" (existing or new). Click a group's outline to rename it, remove members or delete it |
 | Move a card | Drag it (one undoable step). "Reset position" in the panel, or "Reset layout" for the whole graph |
@@ -76,11 +77,13 @@ src/
     serialize.js      JSON load/save, script-safe embedding, data-block replacement in HTML
     store.js          Store: apply() with snapshot undo/redo, validation rollback, change events
     family.js         family-level edits: add partner/child/parent, remove person, replace document
+    media.js          embedded photos: append-only store, safe-image check, pruning on save (ADR 0013)
   layout/
     layout.js         generational layout (ADR 0008): rank → order → place → pin
   render/
     renderer.js       SVG renderer with fixed layers (ADR 0003), connector lanes, link badges
     format.js         card text: names, lifespans, truncation
+  io/photo.js         image file → 256 px JPEG data URI
   io/gedcom/
     lines.js          GEDCOM line parser/writer (levels, CONC/CONT, @@ escaping)
     convert.js        dates and names between GEDCOM and FamTee
@@ -134,5 +137,7 @@ Not supported (the build fails with a clear message): default imports/exports, `
 - Sub-graph tiles can't be edited or deleted in place: clicking a tile opens the graph, and the graph can be
   renamed or deleted from there. Links can be made only from people (the model also allows unions and tiles).
 - Group outlines are bounding boxes, so a group whose members are far apart can enclose other cards.
+- Photos are stored only as 256 px versions; originals aren't kept. With many photos the browser draft backup
+  may not fit (a notice says so).
 - ANSEL-encoded GEDCOM files are read as UTF-8 (a warning says so). FamTee keeps one name per person; extra
   GEDCOM names are reported on import, not stored.

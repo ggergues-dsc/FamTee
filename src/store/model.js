@@ -21,6 +21,7 @@ export function createDocument({ title = 'Untitled family', graphTitle = 'Main' 
     },
     graphs: { [rootId]: emptyGraph(graphTitle) },
     links: [],
+    media: {},
   };
 }
 
