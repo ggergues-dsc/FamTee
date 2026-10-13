@@ -8,8 +8,9 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --uid 10001 tester
-COPY run-tests.sh /usr/local/bin/run-tests
+COPY famtee-ci.sh /usr/local/bin/famtee-ci
 
 USER tester
 WORKDIR /work
-ENTRYPOINT ["run-tests"]
+ENTRYPOINT ["famtee-ci"]
+CMD ["test"]

@@ -71,6 +71,11 @@ devops/test.sh
 Runs the same suite in Docker with Python and Firefox ESR, on a read-only copy of the repo, with no network,
 leaving nothing behind. See [devops/README.md](../devops/README.md) and ADR 0014.
 
+### CI/CD: merge through the gate
+
+Merge PRs with `devops/merge.sh <number>`: it tests the merge result in the container, merges only if green, and
+writes a release to `releases/` (ADR 0015). `devops/ci.sh` runs the same pipeline on any commit.
+
 ## Code layout
 
 ```

@@ -1,30 +1,52 @@
-# Disposable test environment (ADR 0014). Run via devops/test.sh, or:
-#   docker compose -f devops/compose.test.yaml run --rm --build tests
+# Disposable test and build environment (ADR 0014, 0015).
+#   devops/test.sh   tests the working copy
+#   devops/ci.sh     tests and builds an exact commit (the local CI/CD pipeline)
 #
-# Nothing persists and nothing on the host is written:
-#   - the repo is mounted read-only; tests run on a copy in tmpfs
-#   - the container's root filesystem is read-only; all writable places are tmpfs
+# Nothing persists and nothing on the host is written except the build service's /out:
+#   - the source (FAMTEE_SRC_DIR, default: this repo) is mounted read-only; work happens on a tmpfs copy
+#   - the container's root filesystem is read-only; all other writable places are tmpfs
 #   - no volumes, no network (only loopback, which the test runner uses)
 name: famtee-test
 
+x-disposable: &disposable
+  build:
+    context: ./docker
+    dockerfile: Dockerfile.test
+  image: famtee-test:local
+  user: "${FAMTEE_UID:-10001}:${FAMTEE_GID:-10001}"
+  read_only: true
+  tmpfs:
+    - /work:size=512m,mode=1777
+    - /tmp:size=256m,mode=1777
+    - /home/tester:size=256m,mode=1777
+  network_mode: none
+  shm_size: 512m # Firefox needs more shared memory than Docker's 64 MB default
+  init: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
 services:
   tests:
-    build:
-      context: ./docker
-      dockerfile: Dockerfile.test
-    image: famtee-test:local
+    <<: *disposable
+    command: ["test"]
+    environment:
+      HOME: /home/tester
     volumes:
       - type: bind
-        source: ..
+        source: ${FAMTEE_SRC_DIR:-..}
         target: /src
         read_only: true
-    read_only: true
-    tmpfs:
-      - /work:size=512m,mode=1777
-      - /tmp:size=256m,mode=1777
-      - /home/tester:size=256m,mode=1777
-    network_mode: none
-    shm_size: 512m # Firefox needs more shared memory than Docker's 64 MB default
-    init: true
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
+
+  build:
+    <<: *disposable
+    command: ["build"]
+    environment:
+      HOME: /home/tester
+    volumes:
+      - type: bind
+        source: ${FAMTEE_SRC_DIR:-..}
+        target: /src
+        read_only: true
+      - type: bind # the only host path the pipeline writes to
+        source: ${FAMTEE_OUT_DIR:-../dist/ci}
+        target: /out

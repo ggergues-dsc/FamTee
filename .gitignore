@@ -1,3 +1,5 @@
 dist/
 .cache/
 __pycache__/
+.ci/
+releases/

@@ -31,6 +31,7 @@ in a single HTML file that opens in any modern browser on any OS, with no instal
 | [0012](adr/0012-hand-written-pointer-events-pan-zoom-drag.md) | Hand-written pan/zoom and drag on Pointer Events; drags stored as offsets | Accepted |
 | [0013](adr/0013-embedded-photos.md) | Embedded photos: shrunk JPEGs in a shared, append-only media store | Accepted |
 | [0014](adr/0014-disposable-container-tests.md) | Disposable container-based testing with Docker Compose (devops/) | Accepted |
+| [0015](adr/0015-local-cicd-pipeline.md) | Local CI/CD pipeline and merge gate in the container (no GitHub Actions) | Accepted |
 
 New decisions: copy [adr/0000-adr-template.md](adr/0000-adr-template.md), take the next number, add a row above.
 A decision is never edited away — supersede it with a new ADR and mark the old one `Superseded by NNNN`.
