@@ -15,6 +15,7 @@
   --on-accent: #ffffff;
   --tile-bg: #eef3fc; --tile-stroke: #d3e0f7; --tile-ink: #1d4fa8;
   --warn-ink: #8a5400; --error-bg: #fdecea;
+  --pet-bg: #eef6ea; --pet-stroke: #b9d6ad; --pet-ink: #3d7a2a;
   --av-bg: #ffffff; --av-ink: #a3a9b3; --av-hair: #868d99;
   --shadow: 0 1px 2px rgba(20, 30, 50, .06), 0 8px 28px rgba(20, 30, 50, .08);
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -31,6 +32,7 @@
     --on-accent: #0f1624;
     --tile-bg: #1c2433; --tile-stroke: #2c3a55; --tile-ink: #a9c5ff;
     --warn-ink: #f2c46b; --error-bg: #3a1f1d;
+    --pet-bg: #1f2b1d; --pet-stroke: #3b5535; --pet-ink: #9fd18a;
     --av-bg: #2e3239; --av-ink: #737a86; --av-hair: #5d636e;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
   }
@@ -45,6 +47,7 @@
   --on-accent: #0f1624;
   --tile-bg: #1c2433; --tile-stroke: #2c3a55; --tile-ink: #a9c5ff;
     --warn-ink: #f2c46b; --error-bg: #3a1f1d;
+    --pet-bg: #1f2b1d; --pet-stroke: #3b5535; --pet-ink: #9fd18a;
     --av-bg: #2e3239; --av-ink: #737a86; --av-hair: #5d636e;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
 }
@@ -158,7 +161,21 @@ button.with-icon .hi { width: 1.05em; height: 1.05em; }
 .av-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: .78rem; color: var(--muted); }
 .av-legend span { display: grid; justify-items: center; gap: 4px; }
 .av-legend svg { width: 40px; height: 40px; border-radius: 50%; background: var(--av-bg); border: 1px solid var(--card-stroke); }
+.pet-legend svg { padding: 8px; box-sizing: border-box; background: var(--pet-bg); border-color: var(--pet-stroke); }
 .g .sel { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.g .pet-card { fill: var(--pet-bg); stroke: var(--pet-stroke); stroke-width: 1; }
+.g .pet-avatar { fill: var(--av-bg); stroke: var(--pet-stroke); }
+.g .pet-icon, .pet-glyph { fill: none; stroke: var(--pet-ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.g .edge.pet-line { stroke-dasharray: 3 3; }
+.g .job-badge circle { fill: var(--card-bg); stroke: var(--card-stroke); }
+.g .job-badge use, .job-inline, .job-legend svg { fill: none; stroke: var(--tile-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.job-inline { width: 13px; height: 13px; vertical-align: -2px; }
+.job-field { display: flex; align-items: center; gap: .4rem; }
+.job-field svg { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--tile-ink); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.job-field input { flex: 1; min-width: 0; }
+.job-legend svg { width: 28px; height: 28px; padding: 6px; box-sizing: border-box; border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-stroke); stroke-width: 1.75; }
+.g .flag .flag-edge, .flag-inline .flag-edge { fill: none; stroke: var(--card-stroke); stroke-width: 1; }
+.flag-inline { width: 15px; height: 10px; vertical-align: -1px; border-radius: 1.5px; }
 .g .badge circle { fill: var(--accent); }
 .g .badge text { fill: var(--on-accent); font-size: 12px; font-weight: 700; }
 
@@ -273,7 +290,7 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
 <symbol id="av-U" viewBox="0 0 40 40"><g clip-path="url(#av-clip)"><circle cx="20" cy="16" r="7"/><path d="M5 41c0-8.5 6.7-14 15-14s15 5.5 15 14z"/></g></symbol>
 <symbol id="av-M" viewBox="0 0 40 40"><g clip-path="url(#av-clip)"><path d="M13 15.5c0-5 3-8.5 7-8.5s7 3.5 7 8.5c0 4.5-3 8-7 8s-7-3.5-7-8z"/><path d="M12.6 14c.4-5.2 3.3-8.3 7.4-8.3s7 3.1 7.4 8.3c-1.6-1.9-4.2-2.6-7.4-2.6s-5.8.7-7.4 2.6z" class="av-hair"/><path d="M3 41c0-9 7-14.5 17-14.5S37 32 37 41z"/><path d="M16.8 26.8 20 31l3.2-4.2" class="av-cut"/></g></symbol>
 <symbol id="av-F" viewBox="0 0 40 40"><g clip-path="url(#av-clip)"><path d="M11.5 25c-1.2-2.5-1.5-5.5-1.5-8.5C10 10.5 14.3 6 20 6s10 4.5 10 10.5c0 3-.3 6-1.5 8.5z" class="av-hair"/><circle cx="20" cy="16.5" r="6.5"/><path d="M7 41c0-8 5.8-13.5 13-13.5S33 33 33 41z"/></g></symbol>
-<symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol><symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol><symbol id="i-family" viewBox="0 0 24 24"><circle cx="7" cy="6.5" r="2.5"/><circle cx="17" cy="6.5" r="2.5"/><circle cx="12" cy="12.5" r="2"/><path d="M2.5 19v-3.5A3.5 3.5 0 0 1 6 12h2a3.5 3.5 0 0 1 1.8.5M21.5 19v-3.5A3.5 3.5 0 0 0 18 12h-2a3.5 3.5 0 0 0-1.8.5M8.5 20.5v-1A2.5 2.5 0 0 1 11 17h2a2.5 2.5 0 0 1 2.5 2.5v1"/></symbol><symbol id="i-families" viewBox="0 0 24 24"><rect x="2.5" y="3" width="8" height="8" rx="2"/><rect x="13.5" y="3" width="8" height="8" rx="2"/><rect x="8" y="14" width="8" height="7" rx="2"/><path d="M6.5 11v1.5h11V11M12 12.5V14"/></symbol><symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol><symbol id="i-tree" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><rect x="15" y="17" width="6" height="4" rx="1"/><path d="M12 7v5M6 17v-5h12v5"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol><symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol><symbol id="i-add" viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.6-5.5 7-5.5 1.6 0 3 .4 4.2 1.1M18 14v6M15 17h6"/></symbol><symbol id="i-rings" viewBox="0 0 24 24"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/><path d="M10 4.5 12 6l2-1.5"/></symbol><symbol id="i-parents" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.6-3 2.7-4.5 5.5-4.5s4.9 1.5 5.5 4.5M13 15c.9-.3 1.9-.5 3-.5 2.8 0 4.9 1.5 5.5 4.5"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol><symbol id="i-swatch" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol><symbol id="i-edges" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h3M14 12h3"/><circle cx="12" cy="12" r="1" fill="currentColor"/></symbol><symbol id="i-button" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="9" rx="2.5"/><path d="M13 13l4 8 1.3-3.2L21.5 16.5z"/></symbol><symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8" cy="12" r="2.5"/><path d="M13 10.5h5M13 13.5h3"/></symbol></svg>
+<symbol id="j-medical" viewBox="0 0 24 24"><path d="M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z"/></symbol><symbol id="j-teacher" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20l4-4 4 4M7 8.5h6M7 11.5h9"/></symbol><symbol id="j-engineer" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol><symbol id="j-electrician" viewBox="0 0 24 24"><path d="M13 2 5 13.5h6L10 22l8-11.5h-6z"/></symbol><symbol id="j-carpenter" viewBox="0 0 24 24"><path d="M4 20l9-9"/><path d="M11 7l3-3 3 1 3 3-1 1-2-1-3 3z"/></symbol><symbol id="j-mechanic" viewBox="0 0 24 24"><path d="M14.5 4a4.5 4.5 0 0 0-4.2 6.1L4 16.4V20h3.6l6.3-6.3A4.5 4.5 0 0 0 20 9.5l-2.8 2.8-3-.5-.5-3L16.5 6a4.5 4.5 0 0 0-2-2z"/></symbol><symbol id="j-farmer" viewBox="0 0 24 24"><path d="M12 21V7"/><path d="M12 8c-2-1-3-3-3-5 2 1 3 3 3 5zm0 0c2-1 3-3 3-5-2 1-3 3-3 5zM12 13c-2-1-3.5-2.5-3.5-4.5 2 .5 3.5 2.5 3.5 4.5zm0 0c2-1 3.5-2.5 3.5-4.5-2 .5-3.5 2.5-3.5 4.5zM12 18c-2-1-3.5-2.5-3.5-4.5 2 .5 3.5 2.5 3.5 4.5zm0 0c2-1 3.5-2.5 3.5-4.5-2 .5-3.5 2.5-3.5 4.5z"/></symbol><symbol id="j-student" viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5M22 9v6"/></symbol><symbol id="j-other" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2M3 12h18"/></symbol><symbol id="i-dog" viewBox="0 0 24 24"><path d="M7 9c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5v4.5c0 3-2.2 5.5-5 5.5s-5-2.5-5-5.5z"/><path d="M7 9.5 4 8c-.8 2 0 5 2 6M17 9.5 20 8c.8 2 0 5-2 6"/><circle cx="10" cy="11" r=".7" fill="currentColor"/><circle cx="14" cy="11" r=".7" fill="currentColor"/><path d="M11 15h2l-1 1.2z"/></symbol><symbol id="i-cat" viewBox="0 0 24 24"><path d="M6 19c-1-1.5-1.5-3.5-1.5-5.5C4.5 9 7.5 6 12 6s7.5 3 7.5 7.5c0 2-.5 4-1.5 5.5z"/><path d="M5.5 10 5 3.5l4.5 3M18.5 10 19 3.5l-4.5 3"/><circle cx="9.5" cy="12" r=".7" fill="currentColor"/><circle cx="14.5" cy="12" r=".7" fill="currentColor"/><path d="M11.2 14.5h1.6L12 15.5zM2.5 14l4 .5M2.5 16.5l4-.5M21.5 14l-4 .5M21.5 16.5l-4-.5"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><circle cx="6.5" cy="10" r="1.8"/><circle cx="10" cy="6" r="1.8"/><circle cx="14" cy="6" r="1.8"/><circle cx="17.5" cy="10" r="1.8"/><path d="M12 11c-3 0-5.5 3.5-5.5 6 0 1.7 1.3 2.5 2.8 2.5 1 0 1.7-.5 2.7-.5s1.7.5 2.7.5c1.5 0 2.8-.8 2.8-2.5 0-2.5-2.5-6-5.5-6z"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol><symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol><symbol id="i-family" viewBox="0 0 24 24"><circle cx="7" cy="6.5" r="2.5"/><circle cx="17" cy="6.5" r="2.5"/><circle cx="12" cy="12.5" r="2"/><path d="M2.5 19v-3.5A3.5 3.5 0 0 1 6 12h2a3.5 3.5 0 0 1 1.8.5M21.5 19v-3.5A3.5 3.5 0 0 0 18 12h-2a3.5 3.5 0 0 0-1.8.5M8.5 20.5v-1A2.5 2.5 0 0 1 11 17h2a2.5 2.5 0 0 1 2.5 2.5v1"/></symbol><symbol id="i-families" viewBox="0 0 24 24"><rect x="2.5" y="3" width="8" height="8" rx="2"/><rect x="13.5" y="3" width="8" height="8" rx="2"/><rect x="8" y="14" width="8" height="7" rx="2"/><path d="M6.5 11v1.5h11V11M12 12.5V14"/></symbol><symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol><symbol id="i-tree" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><rect x="15" y="17" width="6" height="4" rx="1"/><path d="M12 7v5M6 17v-5h12v5"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol><symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol><symbol id="i-add" viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.6-5.5 7-5.5 1.6 0 3 .4 4.2 1.1M18 14v6M15 17h6"/></symbol><symbol id="i-rings" viewBox="0 0 24 24"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/><path d="M10 4.5 12 6l2-1.5"/></symbol><symbol id="i-parents" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.6-3 2.7-4.5 5.5-4.5s4.9 1.5 5.5 4.5M13 15c.9-.3 1.9-.5 3-.5 2.8 0 4.9 1.5 5.5 4.5"/></symbol><symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol><symbol id="i-swatch" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol><symbol id="i-edges" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h3M14 12h3"/><circle cx="12" cy="12" r="1" fill="currentColor"/></symbol><symbol id="i-button" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="9" rx="2.5"/><path d="M13 13l4 8 1.3-3.2L21.5 16.5z"/></symbol><symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8" cy="12" r="2.5"/><path d="M13 10.5h5M13 13.5h3"/></symbol></svg>
 <div class="wrap">
   <header class="board-head">
     <h1>FamTee screens</h1>
@@ -347,11 +364,14 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
               <label for="p-sex"><span>Sex</span><select id="p-sex"><option>Female</option><option>Male</option><option>Unknown</option></select></label>
               <label for="p-status"><span>Living or deceased</span><select id="p-status"><option>Automatic (from dates)</option><option>Living</option><option>Deceased</option></select></label>
               <label for="p-born"><span>Born</span><input id="p-born" value="1978"></label>
-              <label for="p-bplace"><span>Birthplace</span><input id="p-bplace"></label>
+              <label for="p-bplace"><span>Birthplace</span><input id="p-bplace" value="Leeds, England"></label>
+              <label for="p-job"><span>Job or profession</span><span class="job-field"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#j-medical"/></svg><input id="p-job" value="Nurse" placeholder="e.g. Teacher"></span></label>
+              <label for="p-employer"><span>Employer</span><input id="p-employer" value="Leeds General Infirmary" placeholder="e.g. Leeds City Council"></label>
             </div>
             <h3><svg class="hi" aria-hidden="true"><use href="#i-add"/></svg>Add relative</h3>
             <div class="row"><button type="button" id="r-partner">+ Partner</button><button type="button" id="r-parent" disabled>+ Parent</button></div>
             <div class="row"><button type="button" id="r-child">+ Child</button><select id="r-union" aria-label="Other parent"><option>with Mark Lee</option><option>alone (new)</option></select></div>
+            <div class="row"><button type="button" class="with-icon" id="r-pet"><svg class="hi" aria-hidden="true"><use href="#i-paw"/></svg>+ Pet</button><select id="r-species" aria-label="Kind of animal"><option>Dog</option><option>Cat</option><option>Other animal</option></select></div>
             <h3><svg class="hi" aria-hidden="true"><use href="#i-rings"/></svg>Partners</h3>
             <ul class="people"><li><button type="button" class="link" id="l-mark">Mark Lee</button></li></ul>
             <h3><svg class="hi" aria-hidden="true"><use href="#i-parents"/></svg>Parents</h3>
@@ -366,7 +386,7 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
 
   <section class="artboard">
     <div class="ab-label"><h2><svg class="hi" aria-hidden="true"><use href="#i-edges"/></svg>Connection points · top-down and left to right</h2><span>renderer.js drawEdges · TB / LR</span></div>
-    <p class="ab-note">Every line starts and ends on a fixed point on the card, marked with a dot. Top-down: children enter at the top centre and partners join at the left or right middle. Left to right: children enter at the left middle and partners join at the top or bottom centre. Lines bend at right angles into these points, so a card that has been dragged a little off its row still connects cleanly instead of being joined at an angle.</p>
+    <p class="ab-note">Every line starts and ends on a fixed point on the card, marked with a dot. Top-down: children enter at the top centre and partners join at the left or right middle. Left to right: children enter at the left middle and partners join at the top or bottom centre. Lines bend at right angles into these points, so a card that has been dragged a little off its row still connects cleanly instead of being joined at an angle. Pets (Biscuit and Miso) are their own kind of node: a rounder green card with an animal icon, hung from their owners’ partnership with a dotted line.</p>
     <div class="ports-pair">
       <figure class="app ports-fig"><figcaption>Top-down (TB)</figcaption><div class="canvas"><svg class="g" id="ports-tb" role="img" aria-label="Smith family tree, top-down"></svg></div></figure>
       <figure class="app ports-fig"><figcaption>Left to right (LR)</figcaption><div class="canvas"><svg class="g" id="ports-lr" role="img" aria-label="Smith family tree, left to right"></svg></div></figure>
@@ -411,9 +431,13 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
                 <label for="m-surname"><span>Surname</span><input id="m-surname" value="Smith"></label>
               </div>
               <label for="m-born"><span>Born</span><input id="m-born" value="1978"></label>
+              <div class="two">
+                <label for="m-job"><span>Job or profession</span><input id="m-job" value="Nurse"></label>
+                <label for="m-employer"><span>Employer</span><input id="m-employer" value="Leeds General Infirmary"></label>
+              </div>
             </div>
             <h3><svg class="hi" aria-hidden="true"><use href="#i-add"/></svg>Add relative</h3>
-            <div class="row"><button type="button" id="m-partner">+ Partner</button><button type="button" id="m-child">+ Child</button></div>
+            <div class="row"><button type="button" id="m-partner">+ Partner</button><button type="button" id="m-child">+ Child</button><button type="button" class="with-icon" id="m-pet"><svg class="hi" aria-hidden="true"><use href="#i-paw"/></svg>+ Pet</button></div>
           </aside>
         </div>
       </div>
@@ -439,6 +463,7 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
             <svg width="64" height="12"><line class="edge dashed" x1="2" y1="6" x2="62" y2="6"/></svg><span>Adopted, foster, step</span>
             <svg width="64" height="12"><line class="edge divorced" x1="2" y1="6" x2="62" y2="6"/></svg><span>Divorced partner</span>
             <svg width="64" height="12"><line class="edge custom" x1="2" y1="6" x2="62" y2="6"/></svg><span>Custom link, e.g. godparent</span>
+            <svg width="64" height="12"><line class="edge pet-line" x1="2" y1="6" x2="62" y2="6"/></svg><span>Pet of a partnership or person</span>
             <svg width="64" height="12"><circle class="union" cx="32" cy="6" r="5"/></svg><span>Union node (ADR 0005)</span>
           </div>
         </div>
@@ -455,6 +480,8 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
           <h3><svg class="hi" aria-hidden="true"><use href="#i-card"/></svg>Nodes</h3>
           <svg class="g" viewBox="0 0 340 150" width="100%" style="max-width:340px"><g id="sheet-nodes"></g></svg>
           <div class="av-legend" aria-label="Placeholder portraits"><span><svg class="av av-M" viewBox="0 0 40 40"><use href="#av-M"/></svg>Male</span><span><svg class="av av-F" viewBox="0 0 40 40"><use href="#av-F"/></svg>Female</span><span><svg class="av av-U" viewBox="0 0 40 40"><use href="#av-U"/></svg>Unknown</span></div>
+          <div class="av-legend pet-legend" aria-label="Pet icons"><span><svg class="pet-glyph" viewBox="0 0 24 24"><use href="#i-dog"/></svg>Dog</span><span><svg class="pet-glyph" viewBox="0 0 24 24"><use href="#i-cat"/></svg>Cat</span><span><svg class="pet-glyph" viewBox="0 0 24 24"><use href="#i-paw"/></svg>Other animal</span></div>
+          <div class="av-legend job-legend" aria-label="Job icons"><span><svg viewBox="0 0 24 24"><use href="#j-mechanic"/></svg>Mechanic</span><span><svg viewBox="0 0 24 24"><use href="#j-farmer"/></svg>Farmer</span><span><svg viewBox="0 0 24 24"><use href="#j-medical"/></svg>Doctor or nurse</span><span><svg viewBox="0 0 24 24"><use href="#j-teacher"/></svg>Teacher</span><span><svg viewBox="0 0 24 24"><use href="#j-engineer"/></svg>Engineer</span><span><svg viewBox="0 0 24 24"><use href="#j-electrician"/></svg>Electrician</span><span><svg viewBox="0 0 24 24"><use href="#j-carpenter"/></svg>Carpenter</span><span><svg viewBox="0 0 24 24"><use href="#j-student"/></svg>Student</span><span><svg viewBox="0 0 24 24"><use href="#j-other"/></svg>Any other job</span></div>
         </div>
       </div>
     </div>
@@ -478,8 +505,68 @@ function person(g, cx, cy, p) {
   el('use', { class: `av av-${p.sex}`, href: `#av-${p.sex}`, x: cx - W / 2 + 7, y: cy - 19, width: 38, height: 38 }, g);
   text(g, { class: 'name', x: cx + 20, y: cy - 2 }, `${p.given} ${p.surname}`.trim());
   text(g, { class: 'dates', x: cx + 20, y: cy + 15 }, p.dates);
+  // Job and country of birth sit together in the card's top-right corner, clear of the
+  // portrait (left of the cross-graph link badge when there is one).
+  let right = cx + W / 2 - (p.badge ? 26 : 8);
+  const top = cy - H / 2 + 4;
+  if (p.job) {
+    const jb = el('g', { class: 'job-badge', transform: `translate(${right - 7} ${top + 7})` }, g);
+    el('circle', { r: 7 }, jb);
+    el('use', { href: `#${jobIcon(p.job.title)}`, x: -5, y: -5, width: 10, height: 10 }, jb);
+    el('title', {}, jb).textContent = p.job.title;
+    right -= 18;
+  }
+  const country = countryOf(p.place);
+  if (country) {
+    const f = el('g', { class: 'flag', transform: `translate(${right - 13} ${top + 2.5}) scale(${13 / 15})` }, g);
+    f.innerHTML = flagMarkup(country);
+    el('title', {}, f).textContent = `Born in ${country}`;
+  }
   if (p.selected) el('rect', { class: 'sel', x: cx - W / 2 - 4, y: cy - H / 2 - 4, width: W + 8, height: H + 8, rx: 10 }, g);
 }
+
+// Job icon from the job title (a small set of common trades; anything else gets a briefcase).
+const JOB_ICONS = [
+  [/student|pupil|school/i, 'j-student', 'Student'],
+  [/doctor|nurse|surgeon|physician|midwife|paramedic|dentist/i, 'j-medical', 'Doctor or nurse'],
+  [/teacher|lecturer|professor|tutor/i, 'j-teacher', 'Teacher'],
+  [/mechanic/i, 'j-mechanic', 'Mechanic'],
+  [/farm/i, 'j-farmer', 'Farmer'],
+  [/electric/i, 'j-electrician', 'Electrician'],
+  [/carpent|joiner|builder/i, 'j-carpenter', 'Carpenter or builder'],
+  [/engineer/i, 'j-engineer', 'Engineer'],
+];
+const jobIcon = (title) => (JOB_ICONS.find(([re]) => re.test(title ?? '')) ?? [null, 'j-other'])[1];
+const jobSvg = (title) => `<svg class="job-inline" viewBox="0 0 24 24" aria-hidden="true"><use href="#${jobIcon(title)}"/></svg>`;
+
+// Pet card: smaller and rounder than a person's, with an animal icon instead of a portrait.
+const PW = 124, PH = 44;
+const SPECIES = { dog: 'i-dog', cat: 'i-cat', other: 'i-paw' };
+function pet(g, cx, cy, p) {
+  const pg = el('g', { class: 'pet', 'aria-label': `${p.name}, ${p.species}` }, g);
+  el('rect', { class: 'pet-card', x: cx - PW / 2, y: cy - PH / 2, width: PW, height: PH, rx: PH / 2 }, pg);
+  el('circle', { class: 'pet-avatar', cx: cx - PW / 2 + 22, cy, r: 15 }, pg);
+  el('use', { class: 'pet-icon', href: `#${SPECIES[p.species] ?? 'i-paw'}`, x: cx - PW / 2 + 12, y: cy - 10, width: 20, height: 20 }, pg);
+  text(pg, { class: 'name', x: cx + 16, y: cy - 2 }, p.name);
+  text(pg, { class: 'dates', x: cx + 16, y: cy + 13 }, p.dates);
+  el('title', {}, pg).textContent = `${p.name} (${p.dates})`;
+}
+
+// Tiny 15×10 flags, drawn as plain shapes. The country is the last part of the birthplace.
+const FLAGS = {
+  England: '<rect width="15" height="10" fill="#ffffff"/><rect x="6.3" width="2.4" height="10" fill="#ce1124"/><rect y="3.8" width="15" height="2.4" fill="#ce1124"/>',
+  Ireland: '<rect width="5" height="10" fill="#169b62"/><rect x="5" width="5" height="10" fill="#ffffff"/><rect x="10" width="5" height="10" fill="#ff883e"/>',
+  Scotland: '<rect width="15" height="10" fill="#005eb8"/><path d="M0 0 15 10M15 0 0 10" stroke="#ffffff" stroke-width="1.8"/>',
+  Spain: '<rect width="15" height="10" fill="#aa151b"/><rect y="2.5" width="15" height="5" fill="#f1bf00"/>',
+};
+function countryOf(place) {
+  const country = String(place ?? '').split(',').pop().trim();
+  return FLAGS[country] ? country : null;
+}
+function flagMarkup(country) {
+  return `${FLAGS[country]}<rect class="flag-edge" width="15" height="10" rx="1.5"/>`;
+}
+const flagSvg = (country) => `<svg class="flag-inline" viewBox="0 0 15 10" aria-label="${country}" role="img">${flagMarkup(country)}</svg>`;
 // Connection points ("ports"). Every edge starts and ends on one of these, so lines
 // meet cards at the same spot in both orientations:
 //   TB  child in: top centre    partner: left / right middle    bus: below the union
@@ -495,18 +582,23 @@ function dot(g, pt) { el('circle', { class: 'port', cx: pt.x, cy: pt.y, r: 3.5 }
 const FAMILY = {
   // along: position within a generation (units), rank: generation
   people: {
-    john:  { along: 13, rank: 0, given: 'John', surname: 'Smith', sex: 'M', dates: 'b. 1948', born: '1948', place: 'Leeds, England' },
-    anne:  { along: 23, rank: 0, given: 'Anne', surname: 'Smith', sex: 'F', dates: '1950 – 2021', born: '1950', place: 'Cork, Ireland', died: '2021' },
-    david: { along: 10, rank: 1, given: 'David', surname: 'Smith', sex: 'M', dates: 'b. 1975', born: '1975', place: 'Leeds, England' },
-    sarah: { along: 24, rank: 1, given: 'Sarah', surname: 'Smith', sex: 'F', dates: 'b. 1978', born: '1978', place: 'Leeds, England' },
-    mark:  { along: 34, rank: 1, given: 'Mark', surname: 'Lee', sex: 'M', dates: 'b. 1976', born: '1976', place: 'York, England', badge: 2, groups: ['Household'] },
-    emma:  { along: 24, rank: 2, given: 'Emma', surname: 'Lee', sex: 'F', dates: 'b. 2006', born: '2006', place: 'Leeds, England' },
-    sam:   { along: 34, rank: 2, given: 'Sam', surname: 'Lee', sex: 'U', dates: 'b. 2010 · adopted', born: '2010', place: 'Bradford, England' },
+    john:  { along: 13, rank: 0, given: 'John', surname: 'Smith', sex: 'M', dates: 'b. 1948', job: { title: 'Civil engineer (retired)', employer: 'Yorkshire Water' }, born: '1948', place: 'Leeds, England' },
+    anne:  { along: 23, rank: 0, given: 'Anne', surname: 'Smith', sex: 'F', dates: '1950 – 2021', job: { title: 'Teacher', employer: 'St Mary’s School, Cork' }, born: '1950', place: 'Cork, Ireland', died: '2021' },
+    david: { along: 10, rank: 1, given: 'David', surname: 'Smith', sex: 'M', dates: 'b. 1975', job: { title: 'Electrician', employer: 'Self-employed' }, born: '1975', place: 'Leeds, England' },
+    sarah: { along: 24, rank: 1, given: 'Sarah', surname: 'Smith', sex: 'F', dates: 'b. 1978', job: { title: 'Nurse', employer: 'Leeds General Infirmary' }, born: '1978', place: 'Leeds, England' },
+    mark:  { along: 34, rank: 1, given: 'Mark', surname: 'Lee', sex: 'M', dates: 'b. 1976', job: { title: 'Carpenter', employer: 'Lee Joinery' }, born: '1976', place: 'Glasgow, Scotland', badge: 2, groups: ['Household'] },
+    emma:  { along: 24, rank: 2, given: 'Emma', surname: 'Lee', sex: 'F', dates: 'b. 2006', job: { title: 'Biology student', employer: 'University of York' }, born: '2006', place: 'Leeds, England' },
+    sam:   { along: 34, rank: 2, given: 'Sam', surname: 'Lee', sex: 'U', dates: 'b. 2010 · adopted', job: { title: 'School pupil', employer: 'Leeds Grammar School' }, born: '2010', place: 'Bradford, England' },
   },
   unions: [
     { partners: ['john', 'anne'], kind: 'married', start: '1972', children: [['david'], ['sarah']] },
-    { partners: ['sarah', 'mark'], kind: 'married', start: '2003', children: [['emma'], ['sam', 'dashed']] },
+    { partners: ['sarah', 'mark'], kind: 'married', start: '2003', children: [['emma'], ['sam', 'dashed']], pets: ['biscuit', 'miso'] },
   ],
+  // pets: their own node type, hung from their owners' partnership like children, with a dotted line
+  pets: {
+    biscuit: { along: 42, rank: 2, name: 'Biscuit', species: 'dog', dates: 'Dog · 2019' },
+    miso:    { along: 49, rank: 2, name: 'Miso', species: 'cat', dates: 'Cat · 2021' },
+  },
   group: { label: 'Household', members: ['sarah', 'mark'] },
   links: { mark: ['Same person as Mark Lee in “Lee family”', 'Related to Ana Garcia (godparent)'] },
 };
@@ -520,6 +612,11 @@ function place(lr) {
     pos[id] = lr
       ? { x: 100 + p.rank * (W + GAP), y: 40 + p.along * ALONG_LR }
       : { x: p.along * ALONG_TB, y: 100 + p.rank * (H + GAP) };
+  }
+  for (const [id, p] of Object.entries(FAMILY.pets)) {
+    pos[id] = lr
+      ? { x: 100 + p.rank * (W + GAP), y: 40 + p.along * ALONG_LR, pet: true }
+      : { x: p.along * ALONG_TB, y: 100 + p.rank * (H + GAP), pet: true };
   }
   return pos;
 }
@@ -555,8 +652,17 @@ function tree(svg, { lr = false, selected = 'sarah' } = {}) {
       used.push(pt);
       el('path', { class: kind ? `edge ${kind}` : 'edge', d: lr ? `M ${bus} ${uy} V ${pt.y} H ${pt.x}` : `M ${ux} ${bus} H ${pt.x} V ${pt.y}` }, edges);
     }
+    // pets: from the same bus into the top (TB) or left (LR) of the pet card, dotted
+    for (const id of u.pets ?? []) {
+      const c = pos[id];
+      const pt = lr ? { x: c.x - PW / 2, y: c.y } : { x: c.x, y: c.y - PH / 2 };
+      used.push(pt);
+      el('path', { class: 'edge pet-line', d: lr ? `M ${bus} ${uy} V ${pt.y} H ${pt.x}` : `M ${ux} ${bus} H ${pt.x} V ${pt.y}` }, edges);
+    }
     el('circle', { class: 'union', cx: ux, cy: uy, r: 5 }, ports);
   }
+
+  for (const [id, p] of Object.entries(FAMILY.pets)) pet(nodes, pos[id].x, pos[id].y, p);
 
   for (const [id, p] of Object.entries(FAMILY.people)) {
     const c = pos[id];
@@ -602,8 +708,10 @@ function snapshot(id) {
   const p = FAMILY.people[id];
   const r = relationsOf(id);
   const rows = [
-    ['Born', `${p.born}${p.place ? ` · ${p.place}` : ''}`],
+    ['Born', `${p.born}${p.place ? ` · ${countryOf(p.place) ? flagSvg(countryOf(p.place)) + ' ' : ''}${p.place}` : ''}`],
     p.died && ['Died', p.died],
+    p.job && ['Job', `${jobSvg(p.job.title)} ${p.job.title}`],
+    p.job?.employer && ['Employer', p.job.employer],
     r.parents.length && ['Parents', r.parents.join(', ')],
     r.partners.length && ['Partner', r.partners.join('; ')],
     r.children.length && ['Children', r.children.join(', ')],
@@ -669,10 +777,10 @@ attachSnapshots(document.getElementById('ports-lr'));
   function initial() {
     return {
       people: {
-        john: { x: 200, y: 90, given: 'John', surname: 'Smith', sex: 'M', dates: 'b. 1948' },
-        anne: { x: 420, y: 90, given: 'Anne', surname: 'Smith', sex: 'F', dates: '1950 – 2021' },
-        david: { x: 310, y: 250, given: 'David', surname: 'Smith', sex: 'M', dates: 'b. 1975' },
-        rosa: { x: TRAY.x + TRAY.w / 2, y: SLOTS[0], given: 'Rosa', surname: 'Garcia', sex: 'F', dates: 'b. 1977', loose: true, inTray: true },
+        john: { x: 200, y: 90, given: 'John', surname: 'Smith', sex: 'M', dates: 'b. 1948', place: 'Leeds, England' },
+        anne: { x: 420, y: 90, given: 'Anne', surname: 'Smith', sex: 'F', dates: '1950 – 2021', place: 'Cork, Ireland' },
+        david: { x: 310, y: 250, given: 'David', surname: 'Smith', sex: 'M', dates: 'b. 1975', place: 'Leeds, England' },
+        rosa: { x: TRAY.x + TRAY.w / 2, y: SLOTS[0], given: 'Rosa', surname: 'Garcia', sex: 'F', dates: 'b. 1977', place: 'Seville, Spain', loose: true, inTray: true },
       },
       unions: [{ partners: ['john', 'anne'], children: ['david'], kind: 'married', start: '1972' }],
       custom: [],
