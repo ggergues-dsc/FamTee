@@ -44,6 +44,7 @@ read -r state base head head_ref cross < <(gh pr view "$pr" \
 
 echo "== PR #$pr: $head_ref @ ${head:0:7}"
 git fetch -q origin main "+refs/pull/$pr/head:refs/famtee-ci/pr/$pr"
+trap 'git update-ref -d "refs/famtee-ci/pr/$pr" 2>/dev/null || true' EXIT
 [[ $(git rev-parse "refs/famtee-ci/pr/$pr") == "$head" ]] || { echo "PR head moved while fetching; try again" >&2; exit 1; }
 
 if ! merged_tree=$(git merge-tree --write-tree origin/main "$head"); then
@@ -81,4 +82,3 @@ if ((delete_branch)); then
     git push -q origin --delete "$head_ref" && echo "== deleted branch $head_ref on GitHub"
   fi
 fi
-git update-ref -d "refs/famtee-ci/pr/$pr"
