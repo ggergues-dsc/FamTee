@@ -1,6 +1,10 @@
 import { test, assert, assertEqual, assertThrows } from './harness.js';
-import { saveDraft, findNewerDraft, clearDraft, draftKey, debounce } from '../src/persist/autosave.js';
-import { captureTemplate, isSelfContained, buildHtml, fileName, writeFile, documentContents } from '../src/persist/save.js';
+import {
+  saveDraft, loadDraft, draftRelation, lastSessionDraft, clearDraft, draftKey, recordDownload, lastDownload, debounce,
+} from '../src/persist/autosave.js';
+import { captureTemplate, isSelfContained, buildHtml, downloadFile, documentContents } from '../src/persist/save.js';
+import { stampRevision } from '../src/persist/revision.js';
+import { createDocument } from '../src/store/model.js';
 import { parseImport } from '../src/persist/import.js';
 import { readEmbedded, loadDocument, serialize } from '../src/store/serialize.js';
 import { updateNodeAttrs } from '../src/store/model.js';
@@ -12,6 +16,8 @@ function memoryStorage() {
     getItem: (k) => (data.has(k) ? data.get(k) : null),
     setItem: (k, v) => data.set(k, String(v)),
     removeItem: (k) => data.delete(k),
+    key: (i) => [...data.keys()][i] ?? null,
+    get length() { return data.size; },
     data,
   };
 }
@@ -22,29 +28,53 @@ const brokenStorage = {
   removeItem() { throw new Error('denied'); },
 };
 
-test('drafts are found only when newer than the document', () => {
+test('drafts remember the version they started from', () => {
   const storage = memoryStorage();
-  const { doc } = smallFamily();
-  doc.meta.modified = '2026-01-01T00:00:00.000Z';
-  assertEqual(findNewerDraft(storage, doc), null);
-  const edited = structuredClone(doc);
-  edited.meta.modified = '2026-01-02T00:00:00.000Z';
-  assert(saveDraft(storage, edited));
-  assert(storage.data.has(draftKey(doc)));
-  assertEqual(findNewerDraft(storage, doc).doc, edited);
-  assertEqual(findNewerDraft(storage, edited), null, 'not newer than itself');
-  clearDraft(storage, doc);
-  assertEqual(findNewerDraft(storage, doc), null);
+  const file = stampRevision(smallFamily().doc);
+  assertEqual(draftRelation(storage, file).relation, 'none');
+
+  const work = structuredClone(file);
+  work.meta.title = 'edited';
+  assert(saveDraft(storage, work, { baseHash: file.meta.revision.hash, now: new Date(Date.UTC(2026, 9, 13)) }));
+  const { relation, draft } = draftRelation(storage, file);
+  assertEqual(relation, 'continues');
+  assertEqual(draft.doc.meta.title, 'edited');
+  assertEqual(draft.savedAt, '2026-10-13T00:00:00.000Z');
+  assertEqual(lastSessionDraft(storage).doc.meta.id, file.meta.id, 'remembered as the last session');
+
+  const otherVersion = stampRevision({ ...file, meta: { ...file.meta, title: 'someone else saved this' } });
+  assertEqual(draftRelation(storage, otherVersion).relation, 'diverged', 'file is a different version than the draft’s base');
+  clearDraft(storage, file);
+  assertEqual(loadDraft(storage, file.meta.id), null);
 });
 
-test('autosave tolerates unavailable storage', () => {
+test('only the 5 most recent drafts are kept', () => {
+  const storage = memoryStorage();
+  const docs = Array.from({ length: 7 }, () => createDocument());
+  docs.forEach((d, i) => saveDraft(storage, d, { now: new Date(Date.UTC(2026, 0, 1 + i)) }));
+  assertEqual(docs.map((d) => loadDraft(storage, d.meta.id) !== null), [false, false, true, true, true, true, true]);
+  assertEqual(lastSessionDraft(storage).doc.meta.id, docs[6].meta.id);
+});
+
+test('downloads are recorded per family', () => {
+  const storage = memoryStorage();
+  const stamped = stampRevision(smallFamily().doc, { now: new Date(Date.UTC(2026, 9, 13, 15, 30)) });
+  recordDownload(storage, stamped, 'family-x.html');
+  assertEqual(lastDownload(storage, stamped.meta.id), { hash: stamped.meta.revision.hash, savedAt: '2026-10-13T15:30:00.000Z', filename: 'family-x.html' });
+  assertEqual(lastDownload(storage, 'other'), null);
+});
+
+test('browser storage problems never throw', () => {
   const { doc } = smallFamily();
   assertEqual(saveDraft(brokenStorage, doc), false);
-  assertEqual(findNewerDraft(brokenStorage, doc), null);
+  assertEqual(loadDraft(brokenStorage, doc.meta.id), null);
+  assertEqual(lastSessionDraft(brokenStorage), null);
+  assertEqual(draftRelation(brokenStorage, doc).relation, 'none');
   clearDraft(brokenStorage, doc);
+  recordDownload(brokenStorage, stampRevision(doc), 'x');
   const storage = memoryStorage();
   storage.setItem(draftKey(doc), '{not json');
-  assertEqual(findNewerDraft(storage, doc), null);
+  assertEqual(loadDraft(storage, doc.meta.id), null);
 });
 
 test('debounce runs once after quiet, flush runs now', async () => {
@@ -77,40 +107,18 @@ test('only single-file pages can save themselves', () => {
   assert(!isSelfContained(parse('<link rel="stylesheet" href="a.css">')));
 });
 
-test('file names are safe', () => {
-  const doc = { meta: { title: 'Hanna / Saleh: Família 2026!' } };
-  assertEqual(fileName(doc, '.html'), 'hanna-saleh-familia-2026.html');
-  assertEqual(fileName({ meta: { title: '***' } }, '.famtee.json'), 'family.famtee.json');
-});
-
-test('writeFile uses the File System Access API and reuses the handle', async () => {
-  const written = [];
-  let pickerCalls = 0;
-  const handle = {
-    async createWritable() {
-      return { write: async (c) => written.push(c), close: async () => written.push('closed') };
-    },
-  };
-  const env = { showSaveFilePicker: async (opts) => { pickerCalls++; assertEqual(opts.suggestedName, 'a.html'); return handle; } };
-  const first = await writeFile({ contents: 'one', kind: 'html', suggestedName: 'a.html' }, env);
-  assertEqual(first, { method: 'fsa', handle });
-  await writeFile({ contents: 'two', kind: 'html', suggestedName: 'a.html', handle: first.handle }, env);
-  assertEqual(pickerCalls, 1);
-  assertEqual(written, ['one', 'closed', 'two', 'closed']);
-});
-
-test('writeFile falls back to a download', async () => {
+test('downloadFile always downloads (never writes in place)', () => {
   const clicks = [];
   const env = {
+    showSaveFilePicker: () => { throw new Error('must not be used'); },
     URL: { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} },
     document: {
       body: { append: () => {} },
       createElement: () => ({ style: {}, click() { clicks.push([this.href, this.download]); }, remove() {} }),
     },
   };
-  const result = await writeFile({ contents: 'x', kind: 'json', suggestedName: 'f.famtee.json' }, env);
-  assertEqual(result.method, 'download');
-  assertEqual(clicks, [['blob:x', 'f.famtee.json']]);
+  downloadFile({ contents: 'x', kind: 'html', filename: 'family-2026-10-13-153012-ab12cd.html' }, env);
+  assertEqual(clicks, [['blob:x', 'family-2026-10-13-153012-ab12cd.html']]);
 });
 
 test('documentContents produces HTML or JSON', () => {

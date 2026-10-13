@@ -1,6 +1,6 @@
 # 0006 — Save via File System Access API, download fallback, local autosave
 
-- **Status**: Accepted
+- **Status**: Superseded by [0017](0017-browser-first-sessions-and-simple-mode.md) for saving (download-only, no in-place overwrite); browser drafts continue there
 - **Date**: 2026-10-12
 
 ## Context

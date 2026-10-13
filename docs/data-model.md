@@ -28,7 +28,12 @@ A FamTee document is a **compound multi-graph**:
     "modified": "2026-10-12T20:00:00Z",
     "rootGraph": "g-main",
     "theme": "default",
-    "overlay": { "layers": [] }          // future graphic design, see ADR 0009
+    "overlay": { "layers": [] },         // future graphic design, see ADR 0009
+    "revision": {                        // set on each download (ADR 0017)
+      "hash": "3f2a…",                   // SHA-256 of the document without meta.revision
+      "savedAt": "2026-10-13T15:30:12.000Z",
+      "parent": "9c41…"                  // hash of the version this one was based on, or null
+    }
   },
   "graphs": {
     "g-main": { "title": "Main line", "nodes": { }, "edges": [ ] }
