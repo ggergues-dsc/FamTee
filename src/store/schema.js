@@ -5,7 +5,7 @@ export const CURRENT_SCHEMA_VERSION = 2;
 
 export const NODE_TYPES = ['person', 'union', 'group', 'graphRef', 'pet'];
 export const EDGE_TYPES = ['partner', 'child', 'custom', 'pet'];
-export const PET_SPECIES = ['dog', 'cat', 'other'];
+export const PET_SPECIES = ['dog', 'cat', 'bird', 'rabbit', 'fish', 'horse', 'reptile', 'other'];
 export const LINK_TYPES = ['same-as', 'custom'];
 
 // Cross-graph endpoints are written "graphId:nodeId".

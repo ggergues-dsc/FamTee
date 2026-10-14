@@ -41,6 +41,11 @@ const ICONS = {
   cat: '<path d="M5.5 11.5 5 3.8l4.6 3.1c1.5-.5 3.3-.5 4.8 0L19 3.8l-.5 7.7c.9 1.2 1.5 2.7 1.5 4.3C20 19 16.4 21 12 21s-8-2-8-5.2c0-1.6.6-3.1 1.5-4.3z"/>' +
     '<path d="M8.6 12.6c.5-.4 1.3-.4 1.8 0M13.6 12.6c.5-.4 1.3-.4 1.8 0"/><path d="M11.2 15h1.6l-.8 1z" fill="currentColor"/>' +
     '<path d="M12 16v.7M10.8 17.3c.6.4 1.8.4 2.4 0M2.5 15.2l4.3.4M2.8 17.6l4-.6M21.5 15.2l-4.3.4M21.2 17.6l-4-.6"/>',
+  bird: '<path d="M16 6.5a3 3 0 0 0-5.7 1.2v1.8C7.4 10.2 5 12.8 5 16v1.5h6.5c3.6 0 6.5-2.9 6.5-6.5V8.8"/><path d="M16 6.5l3.5 1.2-3.3 1.6"/><circle cx="14.6" cy="7.4" r=".8" fill="currentColor"/><path d="M9 12.5c1.6 0 3 1.1 3.4 2.6M5 17.5l-2 2.5M9 17.5v3M12 17.5v3"/>',
+  rabbit: '<path d="M9.6 9.6C8.5 7.3 8.2 3.6 9.6 3.1c1.5-.5 2.5 2.9 2.4 6.3M14.4 9.6c1.1-2.3 1.4-6 0-6.5-1.5-.5-2.5 2.9-2.4 6.3"/><path d="M12 9.2c3.4 0 6 2.3 6 5.6 0 3.2-2.6 5.7-6 5.7s-6-2.5-6-5.7c0-3.3 2.6-5.6 6-5.6z"/><circle cx="9.8" cy="13.6" r=".8" fill="currentColor"/><circle cx="14.2" cy="13.6" r=".8" fill="currentColor"/><path d="M11.3 16h1.4l-.7.8z" fill="currentColor"/><path d="M12 16.8v.8M7 16.3l-3 .4M17 16.3l3 .4"/>',
+  fish: '<path d="M3 12c2.5-4 6-6 9.5-6 3.6 0 6.3 2.4 7.5 6-1.2 3.6-3.9 6-7.5 6C9 18 5.5 16 3 12z"/><path d="M20 12l2-3v6zM8 9.5c.9 1.6.9 3.4 0 5"/><circle cx="15.5" cy="10.8" r=".9" fill="currentColor"/><path d="M12 17.5l1 2.5M12 6.5l1-2.5"/>',
+  horse: '<path d="M7 21v-4.5c-1.6-.7-3-2.4-3-4.6 0-1.4.6-2.6 1.6-3.4L10 4.5l1.4-2 .6 2.4c3.2.7 5.5 3 6.5 6.1l1.9 5.8c.3 1-.4 2-1.4 2h-1.3c-.7 0-1.3-.4-1.6-1l-1.6-3.3-2.2.9V21"/><circle cx="14.4" cy="8.9" r=".85" fill="currentColor"/><path d="M10 4.5c-1.4.6-2.6 1.8-3.2 3.3M18.6 15.6h-.9"/>',
+  reptile: '<path d="M12 2.6c1.3 0 2.2 1.1 2.2 2.4S13.3 7.5 12 7.5 9.8 6.3 9.8 5s.9-2.4 2.2-2.4z"/><path d="M12 7.5c1.6 0 2.5 1.9 2.5 4.3S13.6 16 12 16s-2.5-1.9-2.5-4.2.9-4.3 2.5-4.3z"/><path d="M12 16c0 2.3-.8 3.8-2.4 4.6-1.3.6-2.8.4-3.7-.4"/><path d="M10 9.4 7.3 8.2 6.6 6.4M14 9.4l2.7-1.2.7-1.8M10 14l-2.6 1.6-.5 2M14 14l2.6 1.6.5 2"/><circle cx="11.1" cy="4.4" r=".6" fill="currentColor"/><circle cx="12.9" cy="4.4" r=".6" fill="currentColor"/>',
   paw: '<circle cx="6.5" cy="10" r="1.8"/><circle cx="10" cy="6" r="1.8"/><circle cx="14" cy="6" r="1.8"/><circle cx="17.5" cy="10" r="1.8"/>' +
     '<path d="M12 11c-3 0-5.5 3.5-5.5 6 0 1.7 1.3 2.5 2.8 2.5 1 0 1.7-.5 2.7-.5s1.7.5 2.7.5c1.5 0 2.8-.8 2.8-2.5 0-2.5-2.5-6-5.5-6z"/>',
   // jobs
@@ -68,7 +73,13 @@ const JOB_ICONS = [
   [/engineer/i, 'jobEngineer'],
 ];
 export const jobIconName = (title) => (JOB_ICONS.find(([re]) => re.test(title ?? ''))?.[1]) ?? 'jobOther';
-export const petIconName = (species) => ({ dog: 'dog', cat: 'cat' })[species] ?? 'paw';
+// The kinds of pet, as [value, label], each with its own icon (anything else gets a paw).
+export const PET_KINDS = [['dog', 'Dog'], ['cat', 'Cat'], ['bird', 'Bird'], ['rabbit', 'Rabbit'], ['fish', 'Fish'],
+  ['horse', 'Horse'], ['reptile', 'Reptile'], ['other', 'Other animal']];
+const PET_LABELS = Object.fromEntries(PET_KINDS);
+export const petKind = (species) => (PET_LABELS[species] && species !== 'other' ? species : 'other');
+export const petKindLabel = (species) => PET_LABELS[petKind(species)];
+export const petIconName = (species) => (petKind(species) === 'other' ? 'paw' : species);
 
 // An icon's shapes as markup (24×24), for drawing inside another SVG.
 export function iconMarkup(name) {

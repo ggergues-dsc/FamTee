@@ -7,10 +7,10 @@ import { parseEndpoint } from '../store/schema.js';
 import { displayName, lifespan, fitText } from './format.js';
 import { transformAttr } from '../ui/viewport.js';
 import { mediaData } from '../store/media.js';
-import { portraitMarkup, iconMarkup, jobIconName, petIconName } from '../ui/icons.js';
+import { portraitMarkup, iconMarkup, jobIconName, petIconName, petKind, petKindLabel } from '../ui/icons.js';
 import { countryOf, flagMarkup } from './flags.js';
 import { svgEl } from './svg.js';
-import { drawTree } from './tree.js';
+import { drawTree, TREE_LAYOUT } from './tree.js';
 
 export const LAYERS = ['background', 'edges', 'nodes', 'labels', 'annotations', 'overlay', 'ui'];
 const MARGIN = 40;
@@ -57,7 +57,7 @@ export function createRenderer(svg) {
     const graph = doc.graphs[graphId];
     if (!graph) throw new Error(`Unknown graph: ${graphId}`);
     if (mode === 'tree') {
-      const layout = layoutGraph(graph, { ...layoutOptions, orientation: 'TB' });
+      const layout = layoutGraph(graph, { ...layoutOptions, ...TREE_LAYOUT });
       for (const layer of Object.values(layers)) layer.replaceChildren();
       const tree = drawTree({ doc, graph, layout, layers, selection, hidden, photoFill, clips });
       // the same = / ↔ badges as on cards, on the portraits' top-right
@@ -201,7 +201,6 @@ function busLanes(graph, layout) {
 }
 
 const PET_AVATAR_RADIUS = 15;
-const cap = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 // Links from each node of this graph to other graphs (each draws a badge in the
 // card's top-right corner, see drawLinkBadges).
@@ -288,8 +287,8 @@ function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clip
       extra['data-ref-graph'] = node.attrs.graph;
     } else if (isPet) {
       title = node.attrs.name?.trim() || 'Unnamed pet';
-      const species = ['dog', 'cat'].includes(node.attrs.species) ? node.attrs.species : 'other';
-      subtitle = [species === 'other' ? 'Pet' : cap(species), lifespan(node.attrs).replace(/^b\. /, '')].filter(Boolean).join(' · ');
+      const species = petKind(node.attrs.species);
+      subtitle = [species === 'other' ? 'Pet' : petKindLabel(species), lifespan(node.attrs).replace(/^b\. /, '')].filter(Boolean).join(' · ');
       cls = `card pet species-${species}${connected.has(id) ? '' : ' unconnected'}`;
     } else {
       title = displayName(node.attrs);

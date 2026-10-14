@@ -5,7 +5,7 @@
 // snapshot itself only places that summary next to the card.
 
 import { h } from './dom.js';
-import { portrait, icon, jobIconName, petIconName } from './icons.js';
+import { portrait, icon, jobIconName, petIconName, petKind, petKindLabel } from './icons.js';
 import { displayName, lifespan } from '../render/format.js';
 import { isLiving } from '../privacy/living.js';
 import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion, ownersOfPet } from '../store/family.js';
@@ -31,7 +31,7 @@ export function personSummary(doc, graphId, personId, now = new Date()) {
   const children = unions.flatMap((u) => u.children);
   const pets = unions.flatMap((u) => petsOfUnion(graph, u.unionId)).map((id) => {
     const pet = graph.nodes[id].attrs;
-    return `${pet.name?.trim() || 'Unnamed pet'}${pet.species === 'dog' || pet.species === 'cat' ? ` (${pet.species})` : ''}`;
+    return `${pet.name?.trim() || 'Unnamed pet'}${petKind(pet.species) !== 'other' ? ` (${petKindLabel(pet.species).toLowerCase()})` : ''}`;
   });
   const groups = groupsOf(graph, personId).map((id) => graph.nodes[id].attrs.label || 'Group');
   const elsewhere = linksOf(doc, graphId, personId).map(({ link, other }) => {
@@ -76,7 +76,6 @@ function mark(label, text, s) {
   return null;
 }
 
-const SPECIES = { dog: 'Dog', cat: 'Cat', other: 'Other animal' };
 const SEX = { M: 'Male', F: 'Female' };
 
 // { name, dates, species, alive, rows } for a pet: what it is and its own dates, and who
@@ -84,9 +83,9 @@ const SEX = { M: 'Male', F: 'Female' };
 export function petSummary(doc, graphId, petId) {
   const graph = doc.graphs[graphId];
   const attrs = graph.nodes[petId].attrs;
-  const species = SPECIES[attrs.species] ? attrs.species : 'other';
+  const species = petKind(attrs.species);
   const rows = [
-    ['Type', SPECIES[species]],
+    ['Type', petKindLabel(species)],
     ['Sex', SEX[attrs.sex] ?? 'Unknown'],
     ['Breed', attrs.breed?.trim() ?? ''],
     ['Born', attrs.birth?.date ?? ''],

@@ -381,7 +381,7 @@
           "type": "pet",
           "attrs": {
             "name": "Rio",
-            "species": "other",
+            "species": "bird",
             "birth": {
               "date": "2018"
             },
