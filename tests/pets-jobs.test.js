@@ -10,6 +10,7 @@ import { exportGedcom } from '../src/io/gedcom/export.js';
 import { importGedcom } from '../src/io/gedcom/import.js';
 import { privatize } from '../src/privacy/living.js';
 import { personSummary } from '../src/ui/snapshot.js';
+import { loadViewPrefs, saveViewPrefs } from '../src/ui/prefs.js';
 import { smallFamily } from './fixtures.js';
 
 test('pets belong to a partnership, or to one person through a single-owner union', () => {
@@ -136,4 +137,42 @@ test('privacy: a living person’s job and employer are hidden in a shared copy'
   assertEqual(shared.graphs[g].nodes[mum].attrs.occupation, undefined);
   assertEqual(shared.graphs[g].nodes[mum].attrs.employer, undefined);
   assert(unionsOfPerson(shared.graphs[g], mum).length === 1);
+});
+
+test('the Country and Job switches hide those badges, and the text takes the room', () => {
+  const { doc, g, mum } = smallFamily();
+  updateNodeAttrs(doc, g, mum, { occupation: 'Nurse', birth: { place: 'Cork, Ireland' } });
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.append(svg);
+  try {
+    const renderer = createRenderer(svg);
+    const nameX = () => Number([...svg.querySelectorAll('.name')].find((t) => t.textContent === 'Ann').getAttribute('x'));
+    const count = () => [svg.querySelectorAll('.job-badge').length, svg.querySelectorAll('.flag').length];
+    renderer.render(doc, g);
+    const withBoth = nameX();
+    assertEqual(count(), [1, 1]);
+    renderer.render(doc, g, { badges: { flags: false } });
+    assertEqual(count(), [1, 0], 'flags hidden');
+    renderer.render(doc, g, { badges: { jobs: false } });
+    assertEqual(count(), [0, 1], 'jobs hidden');
+    renderer.render(doc, g, { badges: { flags: false, jobs: false } });
+    assertEqual(count(), [0, 0]);
+    assert(nameX() > withBoth, 'with no badges the name centres in the whole card');
+  } finally {
+    svg.remove();
+  }
+});
+
+test('view preferences: badges shown by default; choices are remembered', () => {
+  const store = new Map();
+  const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  assertEqual(loadViewPrefs(storage), { panelCollapsed: false, panelMode: 'edit', showFlags: true, showJobs: true });
+  saveViewPrefs(storage, { panelCollapsed: true, panelMode: 'view', showFlags: false, showJobs: true });
+  assertEqual(loadViewPrefs(storage), { panelCollapsed: true, panelMode: 'view', showFlags: false, showJobs: true });
+  store.set('famtee:panel', '{"collapsed":true,"mode":"view"}'); // saved before the switches existed
+  assertEqual(loadViewPrefs(storage).showFlags, true);
+  store.set('famtee:panel', 'not json');
+  assertEqual(loadViewPrefs(storage).panelMode, 'edit', 'unreadable: defaults');
+  assertEqual(loadViewPrefs(null).showJobs, true, 'no storage: defaults');
+  saveViewPrefs({ setItem() { throw new Error('quota'); } }, {}); // never throws
 });
