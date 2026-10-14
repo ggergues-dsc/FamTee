@@ -188,17 +188,18 @@ button.with-icon .hi { width: 1.05em; height: 1.05em; }
 /* hover snapshot */
 .g .pnode { cursor: pointer; outline: none; }
 .g .pnode:hover .card, .g .pnode:focus-visible .card { stroke: var(--accent); stroke-width: 1.5; }
-.snap { position: absolute; z-index: 5; width: 250px; padding: .65rem .75rem .55rem; border: 1px solid var(--card-stroke); border-radius: 10px;
+.snap { position: absolute; z-index: 5; width: 280px; padding: .65rem .75rem .55rem; border: 1px solid var(--card-stroke); border-radius: 10px;
   background: var(--card-bg); color: var(--fg); box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: .8rem; line-height: 1.4; pointer-events: none; }
 .snap::before { content: ""; position: absolute; top: calc(var(--arrow-y, 22px) - 6px); width: 10px; height: 10px; background: var(--card-bg);
   border: 1px solid var(--card-stroke); transform: rotate(45deg); }
 .snap.on-right::before { left: -6px; border-top-color: transparent; border-right-color: transparent; }
 .snap.on-left::before { right: -6px; border-bottom-color: transparent; border-left-color: transparent; }
-.snap-head { display: flex; align-items: center; gap: .55rem; padding-bottom: .5rem; margin-bottom: .45rem; border-bottom: 1px solid var(--card-stroke); }
-.snap-head > div { display: grid; flex: 1; min-width: 0; }
-.snap-head b { font-size: .9rem; }
+.snap-head { display: flex; align-items: center; gap: .75rem; padding-bottom: .5rem; margin-bottom: .45rem; border-bottom: 1px solid var(--card-stroke); }
+.snap-head > div { display: grid; justify-items: start; gap: .15rem; flex: 1; min-width: 0; }
+.snap-head b { font-size: .95rem; }
 .snap-head span { color: var(--muted); font-size: .75rem; }
-.snap-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 650;
+/* a larger look at the photo or portrait than the card has room for */
+.snap-av { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 650;
   color: var(--fg) !important; border: 1px solid var(--card-stroke); flex-shrink: 0; }
 .snap-av { overflow: hidden; background: var(--av-bg); }
 .snap-av svg { width: 100%; height: 100%; display: block; }
@@ -722,8 +723,8 @@ function snapshot(id) {
   card.className = 'snap';
   card.setAttribute('role', 'tooltip');
   card.innerHTML = `<div class="snap-head"><span class="snap-av"><svg class="av av-${p.sex}" viewBox="0 0 40 40"><use href="#av-${p.sex}"/></svg></span>
-    <div><b>${fullName(id)}</b><span>${p.dates}</span></div>
-    <span class="chip ${living(p) ? 'live' : 'dead'}">${living(p) ? 'Living' : 'Deceased'}</span></div>
+    <div><b>${fullName(id)}</b><span>${p.dates}</span>
+    <span class="chip ${living(p) ? 'live' : 'dead'}">${living(p) ? 'Living' : 'Deceased'}</span></div></div>
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
     <p class="snap-foot">Click to edit</p>`;
   return card;
