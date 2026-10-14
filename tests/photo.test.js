@@ -1,7 +1,7 @@
 import { test, assert, assertEqual, assertThrows } from './harness.js';
-import { photoFromFile, PHOTO_MAX } from '../src/io/photo.js';
+import { photoFromFile, PHOTO_MAX, THUMB_MAX } from '../src/io/photo.js';
 import {
-  addMedia, setPhoto, withoutUnusedMedia, mediaUsage, usedMediaIds, isSafeImageData, imageBytes, formatSize,
+  addMedia, setPhoto, withoutUnusedMedia, mediaUsage, usedMediaIds, isSafeImageData, imageBytes, formatSize, mediaData,
 } from '../src/store/media.js';
 import { addGraph } from '../src/store/model.js';
 import { copyPersonTo } from '../src/store/family.js';
@@ -38,12 +38,34 @@ async function assertRejects(promise, pattern) {
   throw new Error(`expected rejection matching ${pattern}`);
 }
 
-test('photos are shrunk to fit 256 px and re-encoded as JPEG', async () => {
+test('photos are stored in two sizes, medium and miniature, re-encoded as JPEG', async () => {
   const photo = await photoFromFile(await imageFile(1000, 500));
-  assertEqual([photo.width, photo.height, photo.mime], [PHOTO_MAX, 128, 'image/jpeg']);
+  assertEqual([photo.width, photo.height, photo.mime], [PHOTO_MAX, 256, 'image/jpeg']);
   assert(photo.data.startsWith('data:image/jpeg;base64,') && isSafeImageData(photo.data));
+  assertEqual([photo.thumb.width, photo.thumb.height], [THUMB_MAX, 48], 'miniature');
+  assert(isSafeImageData(photo.thumb.data) && photo.thumb.data.length < photo.data.length, 'the miniature is smaller');
   const small = await photoFromFile(await imageFile(40, 30, 'image/jpeg', 'small.jpg'));
-  assertEqual([small.width, small.height], [40, 30], 'never enlarged');
+  assertEqual([small.width, small.height, small.thumb.width, small.thumb.height], [40, 30, 40, 30], 'never enlarged');
+});
+
+test('cards use the miniature; the medium size is kept for the panel and snapshot', () => {
+  const { doc, g, mum } = smallFamily();
+  const THUMB = 'data:image/jpeg;base64,/9j/THUMB';
+  const id = addMedia(doc, { ...PHOTO, thumb: { data: THUMB, width: 96, height: 96 } });
+  assertEqual(doc.media[id].thumb, { data: THUMB, width: 96, height: 96 });
+  assertEqual([mediaData(doc.media[id], 'thumb'), mediaData(doc.media[id], 'medium')], [THUMB, JPEG]);
+  assertEqual(mediaData(PHOTO, 'thumb'), JPEG, 'older photos without a miniature use the one size they have');
+  setPhoto(doc, g, mum, id);
+  assertEqual(validate(doc), []);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.append(svg);
+  createRenderer(svg).render(doc, g);
+  assertEqual(svg.querySelector('defs pattern image').getAttribute('href'), THUMB);
+  svg.remove();
+  assertEqual(mediaUsage(doc).bytes, imageBytes(JPEG) + imageBytes(THUMB), 'both sizes count towards the file size');
+  doc.media[id].thumb.data = 'javascript:alert(1)'; // bypassing addMedia
+  assertEqual(validate(doc).map((e) => e.code), ['media-data']);
+  assertThrows(() => addMedia(doc, { ...PHOTO, data: 'data:image/png;base64,iVBO', thumb: { data: 'nope' } }), /Not a supported image/);
 });
 
 test('non-images and damaged images are refused with a readable message', async () => {

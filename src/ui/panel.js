@@ -268,7 +268,8 @@ export function createPanel(container, ctx) {
       if (ok && img.src !== media.data) img.src = media.data;
       choose.textContent = ok ? 'Change…' : 'Add photo…';
       remove.hidden = !ok;
-      size.textContent = ok ? `${media.width}×${media.height}, ${formatSize(imageBytes(media.data))}` : '';
+      size.textContent = ok ? `${media.width}×${media.height}, ${formatSize(imageBytes(media.data))}` +
+        (media.thumb ? ` · miniature ${media.thumb.width}×${media.thumb.height}, ${formatSize(imageBytes(media.thumb.data))}` : '') : '';
     });
     return h('section', { class: 'photo-section' }, frame, h('div', { class: 'row' }, choose, remove, input), size);
   }

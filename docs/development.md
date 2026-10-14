@@ -46,7 +46,7 @@ in this browser, start a new tree, or open another file. `#start=file|new|contin
 | Pets | Person panel → **+ Pet** (dog, cat or other animal), owned with the partner chosen for + Child or alone. Click a pet to edit or delete it |
 | Job, employer, country of birth | Person panel fields. The job's icon and the birth country's flag (from the birthplace's last part, e.g. "Cork, Ireland") show in the card's top-right corner |
 | Quick look at a person | Point at a card: a read-only summary (dates, parents, partners, children, groups, other graphs) appears beside it |
-| Photos | Person panel → **Add photo…** (or drop an image on the circle). Shrunk to 256 px JPEG and embedded |
+| Photos | Person panel → **Add photo…** (or drop an image on the circle). Embedded as two JPEGs: 512 px for the panel and hover snapshot, a 96 px miniature for cards |
 | Advanced (collapsed) | Groups, links to other graphs, sub-graphs, adding GEDCOM as a sub-graph, position/layout reset |
 | Move a card | Drag it (one undoable step); cards in the way move aside. Advanced → "Reset position" / "Reset layout" |
 | Layout direction | Family panel → **Layout**: generations top to bottom or left to right (saved per graph) |
@@ -106,7 +106,7 @@ src/
   render/
     renderer.js       SVG renderer with fixed layers (ADR 0003), connector lanes, link badges
     format.js         card text: names, lifespans, truncation
-  io/photo.js         image file → 256 px JPEG data URI
+  io/photo.js         image file → 512 px JPEG + 96 px miniature (data URIs)
   io/gedcom/
     lines.js          GEDCOM line parser/writer (levels, CONC/CONT, @@ escaping)
     convert.js        dates and names between GEDCOM and FamTee
@@ -159,7 +159,7 @@ Not supported (the build fails with a clear message): default imports/exports, `
 - Sub-graph tiles can't be edited or deleted in place: clicking a tile opens the graph, and the graph can be
   renamed or deleted from there. Links can be made only from people (the model also allows unions and tiles).
 - Group outlines are bounding boxes, so a group whose members are far apart can enclose other cards.
-- Photos are stored only as 256 px versions; originals aren't kept. With many photos the browser draft backup
+- Photos are stored only as 512 px and 96 px versions; originals aren't kept. With many photos the browser draft backup
   may not fit (a notice says so).
 - ANSEL-encoded GEDCOM files are read as UTF-8 (a warning says so). FamTee keeps one name per person; extra
   GEDCOM names are reported on import, not stored.

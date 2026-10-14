@@ -335,10 +335,12 @@ test('photo: add from a file, change, remove; bad files are reported', async () 
   assertEqual(button(s.container, 'Add photo…').textContent, 'Add photo…');
   await pick(new File([blob], 'me.png', { type: 'image/png' }));
   const photo = node(s, s.mum).attrs.photo;
-  assert(photo && s.store.doc.media[photo].width === 256);
+  assert(photo && s.store.doc.media[photo].width === 512, 'medium size stored');
+  assertEqual([s.store.doc.media[photo].thumb?.width, s.store.doc.media[photo].thumb?.height], [96, 48], 'miniature stored too');
   assert(!s.container.querySelector('img.photo').hidden);
   assert(button(s.container, 'Change…'), 'button relabelled');
-  assert(s.container.querySelector('.photo-section .hint').textContent.startsWith('256×128'));
+  const hint = s.container.querySelector('.photo-section .hint').textContent;
+  assert(hint.startsWith('512×256') && hint.includes('miniature 96×48'), hint);
   assertEqual(s.store.undoStack.at(-1).label, 'Add photo');
 
   await pick(new File(['nope'], 'notes.txt', { type: 'text/plain' }));
