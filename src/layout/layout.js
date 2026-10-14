@@ -22,6 +22,8 @@ export const LAYOUT_DEFAULTS = {
 };
 
 export const ORIENTATIONS = ['TB', 'LR'];
+// Pets are drawn smaller than people; they take a person's slot in the row.
+export const PET_SIZE = { width: 124, height: 44 };
 
 export function layoutGraph(graph, options = {}) {
   const o = { ...LAYOUT_DEFAULTS, ...options };
@@ -47,8 +49,8 @@ export function layoutGraph(graph, options = {}) {
           rank: item.rank,
           x: lr ? across : along,
           y: lr ? along : across,
-          width: item.kind === 'union' ? 0 : o.cardWidth,
-          height: item.kind === 'union' ? 0 : o.cardHeight,
+          width: item.kind === 'union' ? 0 : graph.nodes[item.id].type === 'pet' ? PET_SIZE.width : o.cardWidth,
+          height: item.kind === 'union' ? 0 : graph.nodes[item.id].type === 'pet' ? PET_SIZE.height : o.cardHeight,
         };
       }
     }
@@ -73,7 +75,9 @@ function relations(graph) {
     if (e.type === 'partner' && type(e.from) === 'person' && type(e.to) === 'union') {
       add(partnersOf, e.to, e.from);
       add(unionsOf, e.from, e.to);
-    } else if (e.type === 'child' && type(e.from) === 'union' && type(e.to) === 'person') {
+    } else if ((e.type === 'child' && type(e.from) === 'union' && type(e.to) === 'person') ||
+      (e.type === 'pet' && type(e.from) === 'union' && type(e.to) === 'pet')) {
+      // Pets sit below their owners like children.
       add(childrenOf, e.from, e.to);
       add(parentUnionsOf, e.to, e.from);
     }
@@ -91,7 +95,7 @@ function relations(graph) {
 
 function assignRanks(graph, rel) {
   const ids = Object.keys(graph.nodes);
-  const persons = ids.filter((id) => graph.nodes[id].type === 'person');
+  const persons = ids.filter((id) => ['person', 'pet'].includes(graph.nodes[id].type));
   const unions = ids.filter((id) => graph.nodes[id].type === 'union');
   const rank = new Map(persons.map((p) => [p, 0]));
 

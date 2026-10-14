@@ -133,6 +133,7 @@ function mergePerson(key, list, conflicts) {
     for (const a of list) mergeFields(merged, a[key] ?? {}, ['date', 'place'], () => `${label()}: ${key}`, conflicts);
     if (Object.keys(merged).length) attrs[key] = merged;
   }
+  for (const a of list) mergeFields(attrs, a, ['occupation', 'employer'], label, conflicts);
   const notes = [...new Set(list.map((a) => a.notes?.trim()).filter(Boolean))];
   if (notes.length) attrs.notes = notes.join('\n\n');
   return { key, attrs, names };
@@ -185,6 +186,7 @@ function lostIn(graphs) {
     [count((n) => n.attrs?.nudge), 'manual card position(s)'],
     [count((n) => n.type === 'union' && n.attrs.kind === 'widowed'), '"widowed" status(es) (exported as married)'],
     [count((n) => n.type === 'person' && n.attrs.photo), 'photo(s)'],
+    [count((n) => n.type === 'pet'), 'pet(s)'],
   ];
 }
 
@@ -247,6 +249,10 @@ function writeModel({ people, families }, lost, now) {
       tag(1, name);
       if (ev.date) tag(2, 'DATE', text(dateToGedcom(ev.date)));
       if (ev.place) tag(2, 'PLAC', text(ev.place));
+    }
+    if (a.occupation || a.employer) {
+      tag(1, 'OCCU', text(a.occupation ?? ''));
+      if (a.employer) tag(2, 'AGNC', text(a.employer));
     }
     if (a.notes) tag(1, 'NOTE', text(a.notes));
     for (const fam of families) {

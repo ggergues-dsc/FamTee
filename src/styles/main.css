@@ -339,3 +339,20 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .connect-actions { display: flex; align-items: center; gap: 0.4rem; }
 .connect-actions .muted { margin-left: auto; font-size: 0.75rem; }
 .notice.hint { background: var(--tile-bg); border-color: var(--tile-stroke); color: var(--tile-ink); }
+
+/* --- pets, job and birth-country badges --- */
+:root { --pet-bg: #eef6ea; --pet-stroke: #b9d6ad; --pet-ink: #3d7a2a; }
+@media (prefers-color-scheme: dark) { :root { --pet-bg: #1f2b1d; --pet-stroke: #3b5535; --pet-ink: #9fd18a; } }
+.famtee-canvas .card.pet { fill: var(--pet-bg); stroke: var(--pet-stroke); }
+.famtee-canvas .card.pet.unconnected { stroke-dasharray: 5 4; stroke-width: 1.5; }
+.famtee-canvas .pet-avatar { fill: var(--av-bg); stroke: var(--pet-stroke); }
+.famtee-canvas .pet-icon, .famtee-canvas .job-icon { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.famtee-canvas .pet-icon { stroke: var(--pet-ink); stroke-width: 1.6; }
+.famtee-canvas .edge-pet { stroke-dasharray: 3 3; }
+.famtee-canvas .job-badge circle { fill: var(--card-bg); stroke: var(--card-stroke); }
+.famtee-canvas .job-icon { stroke: var(--tile-ink); stroke-width: 2.2; }
+.famtee-canvas .flag .flag-edge { fill: none; stroke: var(--card-stroke); stroke-width: 1; }
+.icon-svg.pet-glyph { color: var(--pet-ink); }
+.snapshot dd .icon-svg { width: 13px; height: 13px; margin-right: 0.3em; vertical-align: -2px; color: var(--tile-ink); }
+.snapshot-flag { width: 15px; height: 10px; margin-right: 0.3em; vertical-align: -1px; border-radius: 1px; overflow: hidden; }
+.snapshot-flag .flag-edge { fill: none; stroke: var(--card-stroke); stroke-width: 1; }

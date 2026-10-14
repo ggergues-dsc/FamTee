@@ -9,6 +9,7 @@ export const ID_PREFIX = {
   union: 'u',
   group: 'grp',
   graphRef: 'ref',
+  pet: 'pet',
   edge: 'e',
   link: 'l',
   media: 'm',

@@ -24,5 +24,6 @@ import './session.test.js';
 import './privacy.test.js';
 import './snapshot.test.js';
 import './connect.test.js';
+import './pets-jobs.test.js';
 
 run();

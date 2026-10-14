@@ -1,7 +1,7 @@
 // Family-level editing operations built on the model helpers. These are what the
 // editing UI calls (inside Store.apply), so it never manipulates unions directly.
 
-import { getGraph, getNode, addPerson, addUnion, addChild, addEdge, addLink, removeNode } from './model.js';
+import { getGraph, getNode, addPerson, addPet, addUnion, addChild, addEdge, addLink, removeNode } from './model.js';
 import { endpoint, parseEndpoint } from './schema.js';
 
 // --- queries --------------------------------------------------------------
@@ -12,6 +12,15 @@ export function partnersOfUnion(graph, unionId) {
 
 export function childrenOfUnion(graph, unionId) {
   return graph.edges.filter((e) => e.type === 'child' && e.from === unionId).map((e) => e.to);
+}
+
+export function petsOfUnion(graph, unionId) {
+  return graph.edges.filter((e) => e.type === 'pet' && e.from === unionId).map((e) => e.to);
+}
+
+// The partnerships a pet belongs to, and their partners (its owners).
+export function ownersOfPet(graph, petId) {
+  return graph.edges.filter((e) => e.type === 'pet' && e.to === petId).flatMap((e) => partnersOfUnion(graph, e.from));
 }
 
 // Unions the person is a partner in, each with the other partners and the children.
@@ -134,13 +143,44 @@ export function addParentTo(doc, graphId, childId, attrs = {}) {
   return { personId: parentId, unionId };
 }
 
-// Removes a person, then any union left with no children and at most one partner.
+// Adds a pet of `personId`: of the partnership `unionId`, or (null) of the person
+// alone, through a single-owner union. Returns { petId, unionId }.
+export function addPetTo(doc, graphId, personId, unionId = null, attrs = {}) {
+  const graph = getGraph(doc, graphId);
+  if (getNode(doc, graphId, personId).type !== 'person') throw new Error('Only people can have pets');
+  let union = unionId;
+  if (union === null) {
+    // Reuse the person's own single-owner union (from an earlier pet or child alone).
+    union = unionsOfPerson(graph, personId).find((u) => !u.partners.length && graph.nodes[u.unionId].attrs.kind === 'single')?.unionId
+      ?? addUnion(doc, graphId, [personId], { kind: 'single' });
+  } else if (!partnersOfUnion(graph, union).includes(personId)) {
+    throw new Error(`${personId} is not a partner in ${union}`);
+  }
+  const petId = addPet(doc, graphId, attrs);
+  addEdge(doc, graphId, { type: 'pet', from: union, to: petId });
+  return { petId, unionId: union };
+}
+
+// Removes a pet, and the owner's single-owner union if nothing else uses it.
+export function removePet(doc, graphId, petId) {
+  const graph = getGraph(doc, graphId);
+  if (getNode(doc, graphId, petId).type !== 'pet') throw new Error('Not a pet');
+  const unions = graph.edges.filter((e) => e.type === 'pet' && e.to === petId).map((e) => e.from);
+  removeNode(doc, graphId, petId);
+  for (const u of unions) {
+    if (graph.nodes[u] && !childrenOfUnion(graph, u).length && !petsOfUnion(graph, u).length && partnersOfUnion(graph, u).length <= 1) {
+      removeNode(doc, graphId, u);
+    }
+  }
+}
+
+// Removes a person, then any union left with no children or pets and at most one partner.
 export function removePerson(doc, graphId, personId) {
   const graph = getGraph(doc, graphId);
   const unions = [...unionsOfPerson(graph, personId).map((u) => u.unionId), ...parentUnionsOf(graph, personId)];
   removeNode(doc, graphId, personId);
   for (const u of new Set(unions)) {
-    if (graph.nodes[u] && !childrenOfUnion(graph, u).length && partnersOfUnion(graph, u).length <= 1) {
+    if (graph.nodes[u] && !childrenOfUnion(graph, u).length && !petsOfUnion(graph, u).length && partnersOfUnion(graph, u).length <= 1) {
       removeNode(doc, graphId, u);
     }
   }

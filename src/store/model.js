@@ -82,6 +82,11 @@ export function addPerson(doc, graphId, attrs = {}) {
   return addNode(doc, graphId, 'person', attrs);
 }
 
+// A pet: attrs { name, species: 'dog' | 'cat' | 'other', birth, death, notes }.
+export function addPet(doc, graphId, attrs = {}) {
+  return addNode(doc, graphId, 'pet', attrs);
+}
+
 // Creates a union between the given partners (zero, one or more) and returns its id.
 export function addUnion(doc, graphId, partnerIds = [], attrs = {}) {
   for (const pid of partnerIds) expectType(doc, graphId, pid, 'person');

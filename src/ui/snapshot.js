@@ -5,10 +5,11 @@
 // snapshot itself only places that summary next to the card.
 
 import { h } from './dom.js';
-import { portrait } from './icons.js';
+import { portrait, icon, jobIconName } from './icons.js';
 import { displayName, lifespan } from '../render/format.js';
 import { isLiving } from '../privacy/living.js';
-import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf } from '../store/family.js';
+import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion } from '../store/family.js';
+import { countryOf, flagMarkup } from '../render/flags.js';
 
 const GAP = 12; // px between the card and the snapshot
 
@@ -27,6 +28,10 @@ export function personSummary(doc, graphId, personId, now = new Date()) {
     return `${displayName(graph.nodes[id].attrs)}${how ? ` (${how})` : ''}`;
   }));
   const children = unions.flatMap((u) => u.children);
+  const pets = unions.flatMap((u) => petsOfUnion(graph, u.unionId)).map((id) => {
+    const pet = graph.nodes[id].attrs;
+    return `${pet.name?.trim() || 'Unnamed pet'}${pet.species === 'dog' || pet.species === 'cat' ? ` (${pet.species})` : ''}`;
+  });
   const groups = groupsOf(graph, personId).map((id) => graph.nodes[id].attrs.label || 'Group');
   const elsewhere = linksOf(doc, graphId, personId).map(({ link, other }) => {
     const where = doc.graphs[other.graphId]?.title ?? other.graphId;
@@ -35,9 +40,12 @@ export function personSummary(doc, graphId, personId, now = new Date()) {
   const rows = [
     ['Born', place(attrs.birth)],
     ['Died', place(attrs.death)],
+    ['Job', attrs.occupation?.trim() ?? ''],
+    ['Employer', attrs.employer?.trim() ?? ''],
     ['Parents', names(graph, parents)],
     [partners.length > 1 ? 'Partners' : 'Partner', partners.join('; ')],
     ['Children', names(graph, children)],
+    ['Pets', pets.join(', ')],
     ['Groups', groups.join(', ')],
     ['Elsewhere', elsewhere.join('; ')],
   ].filter(([, text]) => text);
@@ -46,8 +54,24 @@ export function personSummary(doc, graphId, personId, now = new Date()) {
     dates: lifespan(attrs),
     sex: attrs.sex,
     living: isLiving(attrs, now),
+    country: countryOf(attrs.birth?.place),
     rows,
   };
+}
+
+// A small flag before the birthplace, and the trade icon before the job.
+function mark(label, text, s) {
+  if (label === 'Born' && s.country) {
+    const flag = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    flag.setAttribute('class', 'snapshot-flag');
+    flag.setAttribute('viewBox', '0 0 15 10');
+    flag.setAttribute('role', 'img');
+    flag.setAttribute('aria-label', s.country);
+    flag.innerHTML = flagMarkup(s.country);
+    return flag;
+  }
+  if (label === 'Job') return icon(jobIconName(text));
+  return null;
 }
 
 // host: a positioned element the snapshot is placed in; area: the element it must stay
@@ -71,7 +95,7 @@ export function createSnapshot(host, area = host) {
         h('span', { class: 'snapshot-portrait' }, portrait(s.sex)),
         h('div', { class: 'snapshot-title' }, h('b', {}, s.name), s.dates ? h('span', {}, s.dates) : null),
         h('span', { class: `chip ${s.living ? 'living' : 'deceased'}` }, s.living ? 'Living' : 'Deceased')),
-      s.rows.length ? h('dl', {}, s.rows.flatMap(([label, text]) => [h('dt', {}, label), h('dd', {}, text)])) : null,
+      s.rows.length ? h('dl', {}, s.rows.flatMap(([label, text]) => [h('dt', {}, label), h('dd', {}, mark(label, text, s), text)])) : null,
       h('p', { class: 'snapshot-foot' }, 'Click to edit'));
     host.append(el);
     current = { el, key };

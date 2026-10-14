@@ -27,7 +27,44 @@ const ICONS = {
   resume: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v4h4"/><path d="M12 7.5V12l3 2"/>',
   sprout: '<path d="M12 21v-9"/><path d="M12 12c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 15.5c0-3-2.5-5.5-6.5-5.5 0 3 2.5 5.5 6.5 5.5z"/>',
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5v5M9.5 13l2.5 2.5 2.5-2.5"/>',
+  // pets
+  dog: '<path d="M7 9c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5v4.5c0 3-2.2 5.5-5 5.5s-5-2.5-5-5.5z"/><path d="M7 9.5 4 8c-.8 2 0 5 2 6M17 9.5 20 8c.8 2 0 5-2 6"/>' +
+    '<circle cx="10" cy="11" r=".7" fill="currentColor"/><circle cx="14" cy="11" r=".7" fill="currentColor"/><path d="M11 15h2l-1 1.2z"/>',
+  cat: '<path d="M6 19c-1-1.5-1.5-3.5-1.5-5.5C4.5 9 7.5 6 12 6s7.5 3 7.5 7.5c0 2-.5 4-1.5 5.5z"/><path d="M5.5 10 5 3.5l4.5 3M18.5 10 19 3.5l-4.5 3"/>' +
+    '<circle cx="9.5" cy="12" r=".7" fill="currentColor"/><circle cx="14.5" cy="12" r=".7" fill="currentColor"/><path d="M11.2 14.5h1.6L12 15.5zM2.5 14l4 .5M2.5 16.5l4-.5M21.5 14l-4 .5M21.5 16.5l-4-.5"/>',
+  paw: '<circle cx="6.5" cy="10" r="1.8"/><circle cx="10" cy="6" r="1.8"/><circle cx="14" cy="6" r="1.8"/><circle cx="17.5" cy="10" r="1.8"/>' +
+    '<path d="M12 11c-3 0-5.5 3.5-5.5 6 0 1.7 1.3 2.5 2.8 2.5 1 0 1.7-.5 2.7-.5s1.7.5 2.7.5c1.5 0 2.8-.8 2.8-2.5 0-2.5-2.5-6-5.5-6z"/>',
+  // jobs
+  jobMedical: '<path d="M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z"/>',
+  jobTeacher: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20l4-4 4 4M7 8.5h6M7 11.5h9"/>',
+  jobEngineer: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+  jobElectrician: '<path d="M13 2 5 13.5h6L10 22l8-11.5h-6z"/>',
+  jobCarpenter: '<path d="M4 20l9-9"/><path d="M11 7l3-3 3 1 3 3-1 1-2-1-3 3z"/>',
+  jobMechanic: '<path d="M14.5 4a4.5 4.5 0 0 0-4.2 6.1L4 16.4V20h3.6l6.3-6.3A4.5 4.5 0 0 0 20 9.5l-2.8 2.8-3-.5-.5-3L16.5 6a4.5 4.5 0 0 0-2-2z"/>',
+  jobFarmer: '<path d="M12 21V7"/><path d="M12 8c-2-1-3-3-3-5 2 1 3 3 3 5zm0 0c2-1 3-3 3-5-2 1-3 3-3 5zM12 13c-2-1-3.5-2.5-3.5-4.5 2 .5 3.5 2.5 3.5 4.5zm0 0c2-1 3.5-2.5 3.5-4.5-2 .5-3.5 2.5-3.5 4.5zM12 18c-2-1-3.5-2.5-3.5-4.5 2 .5 3.5 2.5 3.5 4.5zm0 0c2-1 3.5-2.5 3.5-4.5-2 .5-3.5 2.5-3.5 4.5z"/>',
+  jobStudent: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5M22 9v6"/>',
+  jobOther: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2M3 12h18"/>',
 };
+
+// The icon for a job title: a few common trades, matched on words in the title;
+// anything else gets a briefcase.
+const JOB_ICONS = [
+  [/student|pupil|school/i, 'jobStudent'],
+  [/doctor|nurse|surgeon|physician|midwife|paramedic|dentist|\bgp\b/i, 'jobMedical'],
+  [/teacher|lecturer|professor|tutor/i, 'jobTeacher'],
+  [/mechanic/i, 'jobMechanic'],
+  [/farm/i, 'jobFarmer'],
+  [/electric/i, 'jobElectrician'],
+  [/carpent|joiner|builder/i, 'jobCarpenter'],
+  [/engineer/i, 'jobEngineer'],
+];
+export const jobIconName = (title) => (JOB_ICONS.find(([re]) => re.test(title ?? ''))?.[1]) ?? 'jobOther';
+export const petIconName = (species) => ({ dog: 'dog', cat: 'cat' })[species] ?? 'paw';
+
+// An icon's shapes as markup (24×24), for drawing inside another SVG.
+export function iconMarkup(name) {
+  return ICONS[name] ?? '';
+}
 
 export function icon(name) {
   const el = document.createElementNS(SVG_NS, 'svg');
