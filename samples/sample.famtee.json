@@ -1,6 +1,6 @@
 {
   "format": "famtee",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "meta": {
     "id": "01JA0000000000000000000000",
     "title": "Sample family",
@@ -22,32 +22,36 @@
     "g-smith": {
       "title": "Smith family",
       "nodes": {
-        "p-john": { "type": "person", "attrs": { "name": { "given": "John", "surname": "Smith" }, "sex": "M", "birth": { "date": "1948" } } },
-        "p-anne": { "type": "person", "attrs": { "name": { "given": "Anne", "surname": "Smith" }, "sex": "F", "birth": { "date": "1950" } } },
+        "p-john": { "type": "person", "attrs": { "name": { "given": "John", "surname": "Smith" }, "sex": "M", "birth": { "date": "1948", "place": "Leeds, England" }, "occupation": "Civil engineer (retired)", "employer": "Yorkshire Water" } },
+        "p-anne": { "type": "person", "attrs": { "name": { "given": "Anne", "surname": "Smith" }, "sex": "F", "birth": { "date": "1950", "place": "Cork, Ireland" }, "occupation": "Teacher", "employer": "St Mary’s School" } },
         "u-john-anne": { "type": "union", "attrs": { "kind": "married", "start": "1972" } },
-        "p-david": { "type": "person", "attrs": { "name": { "given": "David", "surname": "Smith" }, "sex": "M", "birth": { "date": "1975" } } },
-        "p-sarah": { "type": "person", "attrs": { "name": { "given": "Sarah", "surname": "Smith" }, "sex": "F", "birth": { "date": "1978" } } }
+        "p-david": { "type": "person", "attrs": { "name": { "given": "David", "surname": "Smith" }, "sex": "M", "birth": { "date": "1975", "place": "Leeds, England" }, "occupation": "Electrician", "employer": "Self-employed" } },
+        "p-sarah": { "type": "person", "attrs": { "name": { "given": "Sarah", "surname": "Smith" }, "sex": "F", "birth": { "date": "1978", "place": "Leeds, England" }, "occupation": "Nurse", "employer": "Leeds General Infirmary" } },
+        "pet-biscuit": { "type": "pet", "attrs": { "name": "Biscuit", "species": "dog", "birth": { "date": "2015" } } }
       },
       "edges": [
         { "id": "e-1", "type": "partner", "from": "p-john", "to": "u-john-anne", "attrs": {} },
         { "id": "e-2", "type": "partner", "from": "p-anne", "to": "u-john-anne", "attrs": {} },
         { "id": "e-3", "type": "child", "from": "u-john-anne", "to": "p-david", "attrs": { "kind": "biological" } },
-        { "id": "e-4", "type": "child", "from": "u-john-anne", "to": "p-sarah", "attrs": { "kind": "biological" } }
+        { "id": "e-4", "type": "child", "from": "u-john-anne", "to": "p-sarah", "attrs": { "kind": "biological" } },
+        { "id": "e-pet-biscuit", "type": "pet", "from": "u-john-anne", "to": "pet-biscuit", "attrs": {} }
       ]
     },
     "g-garcia": {
       "title": "Garcia family",
       "nodes": {
-        "p-luis": { "type": "person", "attrs": { "name": { "given": "Luis", "surname": "Garcia" }, "sex": "M", "birth": { "date": "1976" } } },
-        "p-sarah-g": { "type": "person", "attrs": { "name": { "given": "Sarah", "surname": "Garcia" }, "sex": "F", "birth": { "date": "1978" } } },
+        "p-luis": { "type": "person", "attrs": { "name": { "given": "Luis", "surname": "Garcia" }, "sex": "M", "birth": { "date": "1976", "place": "Seville, Spain" }, "occupation": "Chef", "employer": "Casa Luis" } },
+        "p-sarah-g": { "type": "person", "attrs": { "name": { "given": "Sarah", "surname": "Garcia" }, "sex": "F", "birth": { "date": "1978", "place": "Leeds, England" }, "occupation": "Nurse", "employer": "Hospital Virgen del Rocío" } },
         "u-luis-sarah": { "type": "union", "attrs": { "kind": "married", "start": "2003" } },
-        "p-mia": { "type": "person", "attrs": { "name": { "given": "Mia", "surname": "Garcia" }, "sex": "F", "birth": { "date": "2006" } } },
-        "grp-household": { "type": "group", "attrs": { "label": "Household", "members": ["p-luis", "p-sarah-g", "p-mia"] } }
+        "p-mia": { "type": "person", "attrs": { "name": { "given": "Mia", "surname": "Garcia" }, "sex": "F", "birth": { "date": "2006", "place": "Seville, Spain" }, "occupation": "Student", "employer": "University of Seville" } },
+        "grp-household": { "type": "group", "attrs": { "label": "Household", "members": ["p-luis", "p-sarah-g", "p-mia"] } },
+        "pet-miso": { "type": "pet", "attrs": { "name": "Miso", "species": "cat", "birth": { "date": "2020" } } }
       },
       "edges": [
         { "id": "e-5", "type": "partner", "from": "p-luis", "to": "u-luis-sarah", "attrs": {} },
         { "id": "e-6", "type": "partner", "from": "p-sarah-g", "to": "u-luis-sarah", "attrs": {} },
-        { "id": "e-7", "type": "child", "from": "u-luis-sarah", "to": "p-mia", "attrs": { "kind": "biological" } }
+        { "id": "e-7", "type": "child", "from": "u-luis-sarah", "to": "p-mia", "attrs": { "kind": "biological" } },
+        { "id": "e-pet-miso", "type": "pet", "from": "u-luis-sarah", "to": "pet-miso", "attrs": {} }
       ]
     }
   },
