@@ -5,11 +5,11 @@ import { validate } from '../src/store/validate.js';
 import { layoutGraph, PET_SIZE } from '../src/layout/layout.js';
 import { createRenderer } from '../src/render/renderer.js';
 import { countryOf, flagMarkup, FLAG_COUNTRIES } from '../src/render/flags.js';
-import { jobIconName, petIconName } from '../src/ui/icons.js';
+import { jobIconName, petIconName, iconMarkup } from '../src/ui/icons.js';
 import { exportGedcom } from '../src/io/gedcom/export.js';
 import { importGedcom } from '../src/io/gedcom/import.js';
 import { privatize } from '../src/privacy/living.js';
-import { personSummary } from '../src/ui/snapshot.js';
+import { personSummary, petSummary, createSnapshot } from '../src/ui/snapshot.js';
 import { loadViewPrefs, saveViewPrefs } from '../src/ui/prefs.js';
 import { smallFamily } from './fixtures.js';
 
@@ -175,4 +175,36 @@ test('view preferences: badges shown by default; choices are remembered', () => 
   assertEqual(loadViewPrefs(storage).panelMode, 'edit', 'unreadable: defaults');
   assertEqual(loadViewPrefs(null).showJobs, true, 'no storage: defaults');
   saveViewPrefs({ setItem() { throw new Error('quota'); } }, {}); // never throws
+});
+
+test('pet snapshot: name, type, sex, breed and dates, with owners but no lineage', () => {
+  const { doc, g, mum, union } = smallFamily();
+  const { petId } = addPetTo(doc, g, mum, union, { name: 'Biscuit', species: 'dog', sex: 'M', breed: 'Labrador', birth: { date: '2015' }, death: { date: '2024' } });
+  const s = petSummary(doc, g, petId);
+  assertEqual([s.name, s.dates, s.species, s.alive], ['Biscuit', '2015 – 2024', 'dog', false]);
+  assertEqual(s.rows, [['Type', 'Dog'], ['Sex', 'Male'], ['Breed', 'Labrador'], ['Born', '2015'], ['Died', '2024'], ['Owners', 'Ann, Bob']]);
+  assert(!s.rows.some(([label]) => ['Parents', 'Partner', 'Children'].includes(label)), 'no lineage');
+  const { petId: rio } = addPetTo(doc, g, mum, null, { name: 'Rio' });
+  assertEqual(petSummary(doc, g, rio).rows, [['Type', 'Other animal'], ['Sex', 'Unknown'], ['Owners', 'Ann']]);
+
+  const host = document.createElement('div');
+  host.style.cssText = 'position: fixed; left: 0; top: 0; width: 900px; height: 500px;';
+  const card = document.createElement('div');
+  card.style.cssText = 'position: absolute; left: 40px; top: 100px; width: 124px; height: 44px;';
+  host.append(card);
+  document.body.append(host);
+  try {
+    createSnapshot(host).show(doc, g, petId, card);
+    const el = host.querySelector('.snapshot-pet');
+    assert(el, 'a pet card');
+    assertEqual([...el.querySelectorAll('dt')].map((dt) => dt.textContent), ['Type', 'Sex', 'Breed', 'Born', 'Died', 'Owners']);
+    assertEqual(el.querySelector('.chip').textContent, 'Died');
+    assert(el.querySelector('.snapshot-pet-portrait .icon-svg'), 'the animal icon');
+  } finally {
+    host.remove();
+  }
+});
+
+test('dog and cat icons are different drawings', () => {
+  assert(iconMarkup('dog') && iconMarkup('cat') && iconMarkup('dog') !== iconMarkup('cat'));
 });

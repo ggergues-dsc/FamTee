@@ -360,7 +360,9 @@
             "species": "dog",
             "birth": {
               "date": "2019"
-            }
+            },
+            "sex": "M",
+            "breed": "Labrador"
           }
         },
         "pet-miso": {
@@ -370,7 +372,9 @@
             "species": "cat",
             "birth": {
               "date": "2021"
-            }
+            },
+            "sex": "F",
+            "breed": "Siamese"
           }
         },
         "pet-rio": {
@@ -381,7 +385,9 @@
             "birth": {
               "date": "2018"
             },
-            "notes": "African grey parrot"
+            "notes": "African grey parrot",
+            "sex": "M",
+            "breed": "African grey parrot"
           }
         },
         "p-richard": {

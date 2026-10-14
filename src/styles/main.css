@@ -425,3 +425,5 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .view-switch[aria-disabled="true"] .switch-track { opacity: 0.55; }
 .famtee-canvas .tree-group { fill: var(--group-bg); stroke: var(--group-stroke); stroke-dasharray: 5 4; }
 .famtee-canvas .tree-relation-label { paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
+.snapshot-pet-portrait { display: grid; place-items: center; background: var(--pet-bg); border-color: var(--pet-stroke); color: var(--pet-ink); }
+.snapshot .snapshot-pet-portrait .icon-svg { width: 46px; height: 46px; }

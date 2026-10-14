@@ -518,11 +518,11 @@ async function boot() {
   // Snapshot on hover (mouse and pen; touch has no hover, a tap opens the editor).
   svg.addEventListener('pointerover', (event) => {
     if (event.pointerType === 'touch' || event.buttons || interaction.dragging || interaction.linking) return;
-    const card = event.target.closest?.('rect.card.person[data-id], .tree-person[data-id]');
+    const card = event.target.closest?.('rect.card.person[data-id], rect.card.pet[data-id], .tree-person[data-id], .tree-pet[data-id]');
     if (card) snapshot.show(store.doc, currentGraph(), card.dataset.id, card);
   });
   svg.addEventListener('pointerout', (event) => {
-    if (event.target.closest?.('rect.card.person, .tree-person')) snapshot.hide();
+    if (event.target.closest?.('rect.card.person, rect.card.pet, .tree-person, .tree-pet')) snapshot.hide();
   });
   svg.addEventListener('pointerdown', () => snapshot.hide());
 
