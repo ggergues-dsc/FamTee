@@ -47,6 +47,7 @@ in this browser, start a new tree, or open another file. `#start=file|new|contin
 | Job, employer, country of birth | Person panel fields. The job's icon and the birth country's flag (from the birthplace's last part, e.g. "Cork, Ireland") show in the card's top-right corner |
 | Detail panel | The **›** button at its top collapses it to a thin strip (‹ brings it back); **View / Edit** switches between read-only details and the editing form. Both are remembered in this browser |
 | Show or hide badges | **Country** and **Job** switches next to the zoom buttons show or hide the flags and job badges on cards (remembered in this browser) |
+| Tree view | Panel **View** shows the family as a tree (founding couples as trunks, people with children at the forks, people without as leaves, grafts where two families marry); click someone for their details. With two or more founding couples, switches next to the zoom buttons show or hide each family (at least one stays shown). **Edit** brings back the cards |
 | Quick look at a person | Point at a card: a read-only summary (dates, parents, partners, children, groups, other graphs) appears beside it |
 | Photos | Person panel → **Add photo…** (or drop an image on the circle). Embedded as two JPEGs: 512 px for the panel and hover snapshot, a 96 px miniature for cards |
 | Advanced (collapsed) | Groups, links to other graphs, sub-graphs, adding GEDCOM as a sub-graph, position/layout reset |

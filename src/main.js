@@ -27,7 +27,7 @@ import { icon } from './ui/icons.js';
 import { createSnapshot } from './ui/snapshot.js';
 import { loadViewPrefs, saveViewPrefs } from './ui/prefs.js';
 import { createConnectDialog, applyConnection, CONNECT_LABELS } from './ui/connect.js';
-import { svgEl } from './render/renderer.js';
+import { svgEl } from './render/svg.js';
 import { createInteraction } from './ui/interaction.js';
 import { IDENTITY, fitTransform, zoomAt } from './ui/viewport.js';
 
@@ -147,7 +147,7 @@ async function boot() {
 
   document.getElementById('title-icon')?.replaceChildren(icon('family'));
   const renderer = createRenderer(document.getElementById('canvas'));
-  const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false, ...loadViewPrefs(storage) };
+  const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false, ...loadViewPrefs(storage), hiddenFamilies: new Map() };
   const start = hash.get('g');
   if (start && start !== view.path[0] && store.doc.graphs[start]) view.path.push(start);
   if (hash.get('sel')) view.selection = new Set([hash.get('sel')]);
@@ -373,20 +373,37 @@ async function boot() {
     });
   }
 
+  // View mode (or a read-only family) shows the family as a tree; Edit shows the cards.
+  const treeMode = () => store.readOnly || view.panelMode === 'view';
+  const hiddenFamilies = () => {
+    const graphId = currentGraph();
+    if (!view.hiddenFamilies.has(graphId)) view.hiddenFamilies.set(graphId, new Set());
+    return view.hiddenFamilies.get(graphId);
+  };
+
   function renderCanvas() {
     snapshot.hide(); // cards are redrawn (and may move)
     const graphId = currentGraph();
+    const tree = treeMode();
     layout = renderer.render(store.doc, graphId, {
       selection: view.selection,
       preview: drag ? { [drag.id]: { dx: drag.dx, dy: drag.dy } } : null,
       connectHandle: !store.readOnly && !drag && !pair,
       badges: { flags: view.showFlags, jobs: view.showJobs },
+      mode: tree ? 'tree' : 'cards',
+      hidden: hiddenFamilies(),
     });
-    drawConnectState();
-    // A new graph, or a changed orientation, starts fitted to the window.
-    if (!transforms.has(graphId) || fittedOrientation.get(graphId) !== layout.options.orientation) {
+    if (tree && layout.families.length && layout.families.every((f) => hiddenFamilies().has(f.id))) {
+      hiddenFamilies().clear(); // at least one family is always shown
+      return renderCanvas();
+    }
+    if (!tree) drawConnectState();
+    renderViewControls(tree ? layout.families : null);
+    // A new graph, a changed orientation, or switching between tree and cards starts fitted to the window.
+    const fitKey = `${layout.options.orientation}|${tree ? 'tree' : 'cards'}`;
+    if (!transforms.has(graphId) || fittedOrientation.get(graphId) !== fitKey) {
       transforms.set(graphId, fitTransform(layout.bounds, svg.clientWidth, svg.clientHeight));
-      fittedOrientation.set(graphId, layout.options.orientation);
+      fittedOrientation.set(graphId, fitKey);
     }
     renderer.setTransform(transforms.get(graphId));
   }
@@ -448,9 +465,10 @@ async function boot() {
     setTransform,
     describe,
     onTap,
-    draggableId: (target) => (store.readOnly ? null : target.closest?.('rect.card[data-id]')?.dataset.id ?? null),
+    // The tree (View mode) is for looking: no moving or connecting there.
+    draggableId: (target) => (treeMode() ? null : target.closest?.('rect.card[data-id]')?.dataset.id ?? null),
     linkFrom(target, event) {
-      if (store.readOnly) return null;
+      if (treeMode()) return null;
       const handle = target.closest?.('[data-connect-from]');
       if (handle) return handle.dataset.connectFrom;
       if (!(event.ctrlKey || event.metaKey)) return null;
@@ -500,11 +518,11 @@ async function boot() {
   // Snapshot on hover (mouse and pen; touch has no hover, a tap opens the editor).
   svg.addEventListener('pointerover', (event) => {
     if (event.pointerType === 'touch' || event.buttons || interaction.dragging || interaction.linking) return;
-    const card = event.target.closest?.('rect.card.person[data-id]');
+    const card = event.target.closest?.('rect.card.person[data-id], .tree-person[data-id]');
     if (card) snapshot.show(store.doc, currentGraph(), card.dataset.id, card);
   });
   svg.addEventListener('pointerout', (event) => {
-    if (event.target.closest?.('rect.card.person')) snapshot.hide();
+    if (event.target.closest?.('rect.card.person, .tree-person')) snapshot.hide();
   });
   svg.addEventListener('pointerdown', () => snapshot.hide());
 
@@ -523,13 +541,42 @@ async function boot() {
     sync();
     return button;
   };
+  const badgeSwitches = h('div', { class: 'view-switches', role: 'group', 'aria-label': 'Show on cards' },
+    badgeSwitch('showFlags', 'flag', 'Country', 'the country-of-birth flags'),
+    badgeSwitch('showJobs', 'jobOther', 'Job', 'the job badges'));
+  // In the tree: one switch per family (trunk); at least one family stays shown.
+  const familySwitches = h('div', { class: 'view-switches family-switches', role: 'group', 'aria-label': 'Families shown', hidden: true });
+  let familyKey = '';
+  function renderViewControls(families) {
+    badgeSwitches.hidden = !!families;
+    familySwitches.hidden = !families || families.length < 2;
+    if (familySwitches.hidden) return;
+    const hidden = hiddenFamilies();
+    const shownCount = families.filter((f) => !hidden.has(f.id)).length;
+    const key = JSON.stringify([families, [...hidden]]);
+    if (key === familyKey) return;
+    familyKey = key;
+    familySwitches.replaceChildren(...families.map((f) => {
+      const on = !hidden.has(f.id);
+      const last = on && shownCount === 1;
+      return h('button', {
+        type: 'button', role: 'switch', class: 'view-switch', 'aria-checked': String(on), 'aria-disabled': String(last),
+        title: last ? `At least one family stays shown: show another before hiding ${f.name}` : `${on ? 'Hide' : 'Show'} the ${f.name} family`,
+        onclick: () => {
+          if (last) return;
+          if (on) hidden.add(f.id);
+          else hidden.delete(f.id);
+          renderCanvas();
+        },
+      }, h('span', { class: 'switch-track', 'aria-hidden': 'true' }, h('span', { class: 'switch-thumb' })), f.name);
+    }));
+  }
+  ctx.refreshCanvas = () => renderCanvas();
   svg.after(h('div', { class: 'zoom-controls' },
     zoomButton('+', 'Zoom in (+)', () => zoomBy(1.25)),
     zoomButton('−', 'Zoom out (−)', () => zoomBy(0.8)),
     zoomButton('Fit', 'Fit to window (0)', fit),
-    h('div', { class: 'view-switches', role: 'group', 'aria-label': 'Show on cards' },
-      badgeSwitch('showFlags', 'flag', 'Country', 'the country-of-birth flags'),
-      badgeSwitch('showJobs', 'jobOther', 'Job', 'the job badges'))));
+    badgeSwitches, familySwitches));
 
   function update() {
     const { doc } = store;
@@ -582,7 +629,7 @@ async function boot() {
       zoomBy(0.8);
     } else if (event.key === '0') {
       fit();
-    } else if ((event.key === 'c' || event.key === 'C') && !store.readOnly && onlySelectedPerson()) {
+    } else if ((event.key === 'c' || event.key === 'C') && !treeMode() && onlySelectedPerson()) {
       // Connect the selected person to someone: the next click picks who.
       pickFrom = onlySelectedPerson();
       svg.classList.add('picking');
