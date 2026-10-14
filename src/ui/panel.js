@@ -119,6 +119,7 @@ export function createPanel(container, ctx) {
     Object.assign(ctx.view, patch);
     ctx.savePanelPrefs?.();
     render();
+    if ('panelMode' in patch) ctx.refreshCanvas?.(); // View shows the tree, Edit the cards
   }
 
   const viewOnly = () => ctx.store.readOnly || ctx.view.panelMode === 'view';

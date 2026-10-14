@@ -9,8 +9,9 @@ import { transformAttr } from '../ui/viewport.js';
 import { mediaData } from '../store/media.js';
 import { portraitMarkup, iconMarkup, jobIconName, petIconName } from '../ui/icons.js';
 import { countryOf, flagMarkup } from './flags.js';
+import { svgEl } from './svg.js';
+import { drawTree } from './tree.js';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 export const LAYERS = ['background', 'edges', 'nodes', 'labels', 'annotations', 'overlay', 'ui'];
 const MARGIN = 40;
 const UNION_RADIUS = 5;
@@ -18,14 +19,6 @@ const BADGE_RADIUS = 9;
 const AVATAR_RADIUS = 19;
 let rendererCount = 0;
 
-export function svgEl(tag, attrs = {}, parent = null) {
-  const el = document.createElementNS(SVG_NS, tag);
-  for (const [key, value] of Object.entries(attrs)) {
-    if (value !== undefined && value !== null) el.setAttribute(key, String(value));
-  }
-  if (parent) parent.append(el);
-  return el;
-}
 
 export function createRenderer(svg) {
   svg.classList.add('famtee-canvas');
@@ -58,9 +51,17 @@ export function createRenderer(svg) {
   const layers = Object.fromEntries(LAYERS.map((name) => [name, svgEl('g', { class: `layer layer-${name}` }, viewport)]));
 
   // `preview` holds extra { dx, dy } offsets for nodes being dragged (not stored).
-  function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions, connectHandle = false, badges = {} } = {}) {
+  // mode 'tree' draws View mode's tree (src/render/tree.js) instead of cards; `hidden`
+  // then lists the families (trunk ids) not to show.
+  function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions, connectHandle = false, badges = {}, mode = 'cards', hidden } = {}) {
     const graph = doc.graphs[graphId];
     if (!graph) throw new Error(`Unknown graph: ${graphId}`);
+    if (mode === 'tree') {
+      const layout = layoutGraph(graph, { ...layoutOptions, orientation: 'TB' });
+      for (const layer of Object.values(layers)) layer.replaceChildren();
+      const tree = drawTree({ doc, graph, layout, layers, selection, hidden, photoFill, clips });
+      return { ...tree, options: layout.options, mode: 'tree' };
+    }
     const orientation = layoutOptions?.orientation ?? graph.layout?.orientation;
     const layout = layoutGraph(graph, { ...layoutOptions, orientation, preview });
     for (const layer of Object.values(layers)) layer.replaceChildren();

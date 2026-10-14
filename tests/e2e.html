@@ -517,6 +517,47 @@ test('view switches hide and show the country and job badges', async () => {
   assert(count('.flag') > 0 && count('.job-badge') > 0, 'both back');
 });
 
+test('View mode shows the family as a tree; family switches show or hide each tree', async () => {
+  const { win, doc, app } = await load({ srcdoc: savedHtml });
+  byText(doc, 'View').click();
+  const people = () => [...doc.querySelectorAll('#canvas .tree-person')].map((n) => n.dataset.id);
+  assert(people().length > 10 && !doc.querySelector('#canvas rect.card.person'), 'a tree instead of cards');
+  assert(doc.querySelector('#canvas .tree-graft'), 'Youssef and Dina join two lineages');
+  tap(win, doc.querySelector('#canvas .tree-person[data-id="p-leo"] .tree-ring'));
+  assertEqual([...app.view.selection], ['p-leo'], 'clicking someone opens their details');
+  assert(doc.querySelector('[name="given"]').disabled, 'read-only details');
+  assert(doc.querySelector('.family-switches').hidden, 'one family: no family switches');
+
+  // Add a second founding couple whose son marries Zoe: two trees with a graft.
+  const g = 'g-hanna';
+  app.store.apply('Add the Lees', (d) => {
+    const nodes = d.graphs[g].nodes;
+    nodes['p-tom'] = { type: 'person', attrs: { name: { given: 'Tom', surname: 'Lee' }, sex: 'M' } };
+    nodes['p-amy'] = { type: 'person', attrs: { name: { given: 'Amy', surname: 'Lee' }, sex: 'F' } };
+    nodes['p-ben'] = { type: 'person', attrs: { name: { given: 'Ben', surname: 'Lee' }, sex: 'M' } };
+    nodes['u-lee'] = { type: 'union', attrs: { kind: 'married' } };
+    nodes['u-ben-zoe'] = { type: 'union', attrs: { kind: 'married' } };
+    d.graphs[g].edges.push(
+      { id: 'e-l1', type: 'partner', from: 'p-tom', to: 'u-lee', attrs: {} },
+      { id: 'e-l2', type: 'partner', from: 'p-amy', to: 'u-lee', attrs: {} },
+      { id: 'e-l3', type: 'child', from: 'u-lee', to: 'p-ben', attrs: { kind: 'biological' } },
+      { id: 'e-l4', type: 'partner', from: 'p-ben', to: 'u-ben-zoe', attrs: {} },
+      { id: 'e-l5', type: 'partner', from: 'p-zoe', to: 'u-ben-zoe', attrs: {} });
+  });
+  const switches = () => [...doc.querySelectorAll('.family-switches .view-switch')];
+  assertEqual(switches().map((b) => b.textContent), ['Hanna', 'Lee']);
+  switches()[1].click(); // hide the Lees
+  assert(!people().includes('p-ben') && people().includes('p-zoe'));
+  assertEqual(switches()[0].getAttribute('aria-disabled'), 'true', 'the last family shown can’t be hidden');
+  switches()[0].click();
+  assert(people().includes('p-george'), 'still shown');
+  switches()[1].click();
+  assert(people().includes('p-ben'));
+  byText(doc, 'Edit').click();
+  assert(doc.querySelector('#canvas rect.card.person') && !doc.querySelector('#canvas .tree-person'), 'Edit brings the cards back');
+  assert(doc.querySelector('.family-switches').hidden);
+});
+
 run();
 </script>
 </body>

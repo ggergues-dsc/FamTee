@@ -399,3 +399,27 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .view-switch[aria-checked="true"] .switch-track { background: var(--accent); }
 .view-switch[aria-checked="true"] .switch-thumb { transform: translateX(0.7rem); }
 @media (prefers-reduced-motion: reduce) { .switch-track, .switch-thumb { transition: none; } }
+
+/* --- tree view (View mode, src/render/tree.js) --- */
+:root { --bark: #7a5a3f; --tree-ground: #e7dfd2; --tone-0: #7fb069; --tone-1: #b7b25a; --tone-2: #5fa39a; --tone-3: #c48a5a; }
+@media (prefers-color-scheme: dark) {
+  :root { --bark: #a88466; --tree-ground: #2a2620; --tone-0: #5d8a4a; --tone-1: #8e8a3f; --tone-2: #3f7f77; --tone-3: #9a6a42; }
+}
+.famtee-canvas .tree-ground { fill: var(--tree-ground); }
+.famtee-canvas .tree-foliage { opacity: 0.16; }
+.famtee-canvas .tree-tone-0 { --tone: var(--tone-0); } .famtee-canvas .tree-tone-1 { --tone: var(--tone-1); }
+.famtee-canvas .tree-tone-2 { --tone: var(--tone-2); } .famtee-canvas .tree-tone-3 { --tone: var(--tone-3); }
+.famtee-canvas .tree-foliage { fill: var(--tone); }
+.famtee-canvas .tree-node { cursor: pointer; }
+.famtee-canvas .tree-ring { fill: var(--av-bg); stroke: var(--bark); stroke-width: 2.5; }
+.famtee-canvas .tree-leaf .tree-ring { stroke: var(--tone); stroke-width: 4; }
+.famtee-canvas .tree-leaf .tree-halo { fill: var(--tone); opacity: 0.35; }
+.famtee-canvas .tree-node:hover .tree-ring { stroke: var(--accent); }
+.famtee-canvas .tree-pet .tree-ring { stroke: var(--pet-stroke); stroke-width: 2; fill: var(--pet-bg); }
+.famtee-canvas .tree-graft { fill: var(--bg); stroke: var(--bark); stroke-width: 2.5; stroke-dasharray: 3 2.5; }
+.famtee-canvas .tree-name { font-size: 12px; font-weight: 650; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
+.famtee-canvas .tree-dates { font-size: 10px; fill: var(--muted); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
+.famtee-canvas .tree-family { font-size: 13px; font-weight: 650; fill: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.famtee-canvas .selection { fill: none; }
+.view-switch[aria-disabled="true"] { cursor: not-allowed; }
+.view-switch[aria-disabled="true"] .switch-track { opacity: 0.55; }
