@@ -77,9 +77,12 @@ test('job and birth-country badges on person cards', () => {
     assertEqual(svg.querySelectorAll('.flag').length, 1);
     const title = svg.querySelector(`rect.card[data-id="${mum}"] title`).textContent;
     assert(title.includes('Nurse') && title.includes('Born in Ireland'), title);
-    const nameY = (id) => Number([...svg.querySelectorAll('.name')].find((t) => t.textContent === doc.graphs[g].nodes[id].attrs.name.given).getAttribute('y'));
-    const cardY = (id) => Number(svg.querySelector(`rect.card[data-id="${id}"]`).getAttribute('y'));
-    assert(nameY(mum) - cardY(mum) > nameY(kid) - cardY(kid), 'name moves down to clear the badges');
+    const nameX = (id) => Number([...svg.querySelectorAll('.name')].find((t) => t.textContent === doc.graphs[g].nodes[id].attrs.name.given).getAttribute('x'));
+    const cardX = (id) => Number(svg.querySelector(`rect.card[data-id="${id}"]`).getAttribute('x'));
+    assert(nameX(mum) - cardX(mum) < nameX(kid) - cardX(kid), 'the text moves left to make room for the badges');
+    const job = svg.querySelector('.job-badge circle');
+    assertEqual(Number(job.getAttribute('r')), 14, 'a 28 px job badge');
+    assert(svg.querySelector('.flag').getAttribute('transform').includes(`scale(${26 / 15})`), 'a 26 px wide flag');
   } finally {
     svg.remove();
   }

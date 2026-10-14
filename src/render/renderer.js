@@ -220,28 +220,32 @@ function drawIcon(parent, name, x, y, size, cls) {
   return g;
 }
 
-// Job and country of birth: small badges in the card's top-right corner, left of any
-// cross-graph link badges. Returns whether any were drawn.
+// Job and country of birth: a column of badges on the card's right edge (a 28 px job
+// badge above a 26×17 flag), left of any cross-graph link badges. Returns how much of
+// the card's width the column takes (0 when there is none), so the text can make room.
+const JOB_BADGE_RADIUS = 14;
+const FLAG_WIDTH = 26;
 function drawPersonBadges(node, pos, linkCount, layer, clips) {
-  const top = pos.y - pos.height / 2;
-  let right = pos.x + pos.width / 2 - (linkCount ? 17 + (linkCount - 1) * (2 * BADGE_RADIUS + 4) : 6);
-  let drawn = false;
   const job = node.attrs.occupation?.trim();
-  if (job) {
-    const badge = svgEl('g', { class: 'job-badge' }, layer);
-    svgEl('circle', { cx: right - 7, cy: top + 11, r: 7 }, badge);
-    drawIcon(badge, jobIconName(job), right - 12, top + 6, 10, 'job-icon');
-    right -= 18;
-    drawn = true;
-  }
   const country = countryOf(node.attrs.birth?.place);
+  if (!job && !country) return 0;
+  const right = pos.x + pos.width / 2;
+  const top = pos.y - pos.height / 2;
+  const cx = right - 4 - (linkCount ? 10 + (linkCount - 1) * (2 * BADGE_RADIUS + 4) : 0) - JOB_BADGE_RADIUS;
+  const flagHeight = (FLAG_WIDTH * 10) / 15;
+  if (job) {
+    const cy = country ? top + 4 + JOB_BADGE_RADIUS : pos.y;
+    const badge = svgEl('g', { class: 'job-badge' }, layer);
+    svgEl('circle', { cx, cy, r: JOB_BADGE_RADIUS }, badge);
+    drawIcon(badge, jobIconName(job), cx - 10, cy - 10, 20, 'job-icon');
+  }
   if (country) {
-    const flag = svgEl('g', { class: 'flag', transform: `translate(${right - 13} ${top + 6.6}) scale(${13 / 15})` }, layer);
+    const y = job ? top + 4 + 2 * JOB_BADGE_RADIUS + 3 : pos.y - flagHeight / 2;
+    const flag = svgEl('g', { class: 'flag', transform: `translate(${cx - FLAG_WIDTH / 2} ${y}) scale(${FLAG_WIDTH / 15})` }, layer);
     const art = svgEl('g', { 'clip-path': `url(#${clips.flag})` }, flag);
     art.innerHTML = flagMarkup(country);
-    drawn = true;
   }
-  return drawn;
+  return right - (cx - JOB_BADGE_RADIUS) + 4;
 }
 
 function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clips) {
@@ -264,8 +268,11 @@ function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clip
     const isPet = node.type === 'pet';
     const photo = isPerson && node.attrs.photo ? photoFill(doc, node.attrs.photo) : null;
     const textLeft = isPerson ? left + 8 + 2 * AVATAR_RADIUS : isPet ? left + 6 + 2 * PET_AVATAR_RADIUS : left;
-    const textX = (textLeft + left + pos.width) / 2;
-    const textWidth = left + pos.width - textLeft - 20;
+    // Job and country badges take a column on the right; the text centres in what's left.
+    const badgeWidth = isPerson ? drawPersonBadges(node, pos, linkCounts.get(id) ?? 0, layers.labels, clips) : 0;
+    const textRight = left + pos.width - badgeWidth;
+    const textX = (textLeft + textRight) / 2;
+    const textWidth = textRight - textLeft - (badgeWidth ? 6 : 20);
     let title;
     let subtitle;
     let cls;
@@ -296,7 +303,6 @@ function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clip
     const country = isPerson ? countryOf(node.attrs.birth?.place) : null;
     svgEl('title', {}, card).textContent = [title, subtitle, isPerson && node.attrs.occupation?.trim(),
       country && `Born in ${country}`].filter(Boolean).join('\n');
-    let badges = false;
     if (isPerson) {
       const cx = left + 6 + AVATAR_RADIUS;
       svgEl('circle', {
@@ -310,19 +316,16 @@ function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clip
         }, layers.labels);
         g.innerHTML = portraitMarkup(node.attrs.sex);
       }
-      badges = drawPersonBadges(node, pos, linkCounts.get(id) ?? 0, layers.labels, clips);
     } else if (isPet) {
       const cx = left + 5 + PET_AVATAR_RADIUS;
       svgEl('circle', { class: 'pet-avatar', cx, cy: pos.y, r: PET_AVATAR_RADIUS }, layers.labels);
       drawIcon(layers.labels, petIconName(node.attrs.species), cx - 10, pos.y - 10, 20, 'pet-icon');
     }
 
-    // With badges along the top, the name and dates move down a little to clear them.
-    const shift = badges ? 5 : 0;
-    const name = svgEl('text', { class: 'name', x: textX, y: (subtitle ? pos.y - 4 : pos.y + 5) + shift }, layers.labels);
+    const name = svgEl('text', { class: 'name', x: textX, y: subtitle ? pos.y - 4 : pos.y + 5 }, layers.labels);
     name.textContent = fitText(title, textWidth);
     if (subtitle) {
-      const sub = svgEl('text', { class: 'dates', x: textX, y: pos.y + (isPet ? 12 : 15) + shift }, layers.labels);
+      const sub = svgEl('text', { class: 'dates', x: textX, y: pos.y + (isPet ? 12 : 15) }, layers.labels);
       sub.textContent = fitText(subtitle, textWidth, 6.5);
     }
   }
