@@ -58,7 +58,7 @@ export function createRenderer(svg) {
   const layers = Object.fromEntries(LAYERS.map((name) => [name, svgEl('g', { class: `layer layer-${name}` }, viewport)]));
 
   // `preview` holds extra { dx, dy } offsets for nodes being dragged (not stored).
-  function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions, connectHandle = false } = {}) {
+  function render(doc, graphId, { selection = new Set(), preview = null, layoutOptions, connectHandle = false, badges = {} } = {}) {
     const graph = doc.graphs[graphId];
     if (!graph) throw new Error(`Unknown graph: ${graphId}`);
     const orientation = layoutOptions?.orientation ?? graph.layout?.orientation;
@@ -74,7 +74,8 @@ export function createRenderer(svg) {
 
     const groupBoxes = drawGroups(graph, layout, layers);
     drawEdges(graph, layout, layers.edges);
-    drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clips);
+    const show = { flags: badges.flags !== false, jobs: badges.jobs !== false };
+    drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clips, show);
     drawLinkBadges(doc, graphId, layout, layers.annotations);
     drawSelection(selection, layout, groupBoxes, layers.ui);
     if (connectHandle) drawConnectHandles(graph, selection, layout, layers.ui);
@@ -225,9 +226,9 @@ function drawIcon(parent, name, x, y, size, cls) {
 // the card's width the column takes (0 when there is none), so the text can make room.
 const JOB_BADGE_RADIUS = 14;
 const FLAG_WIDTH = 26;
-function drawPersonBadges(node, pos, linkCount, layer, clips) {
-  const job = node.attrs.occupation?.trim();
-  const country = countryOf(node.attrs.birth?.place);
+function drawPersonBadges(node, pos, linkCount, layer, clips, show) {
+  const job = show.jobs ? node.attrs.occupation?.trim() : '';
+  const country = show.flags ? countryOf(node.attrs.birth?.place) : null;
   if (!job && !country) return 0;
   const right = pos.x + pos.width / 2;
   const top = pos.y - pos.height / 2;
@@ -248,7 +249,7 @@ function drawPersonBadges(node, pos, linkCount, layer, clips) {
   return right - (cx - JOB_BADGE_RADIUS) + 4;
 }
 
-function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clips) {
+function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clips, show) {
   // People with no partner, parent, child or other line yet are drawn with a dashed outline.
   const connected = new Set(graph.edges.flatMap((e) => [e.from, e.to]));
   const linkCounts = linkBadgeCounts(doc, graphId);
@@ -269,7 +270,7 @@ function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clip
     const photo = isPerson && node.attrs.photo ? photoFill(doc, node.attrs.photo) : null;
     const textLeft = isPerson ? left + 8 + 2 * AVATAR_RADIUS : isPet ? left + 6 + 2 * PET_AVATAR_RADIUS : left;
     // Job and country badges take a column on the right; the text centres in what's left.
-    const badgeWidth = isPerson ? drawPersonBadges(node, pos, linkCounts.get(id) ?? 0, layers.labels, clips) : 0;
+    const badgeWidth = isPerson ? drawPersonBadges(node, pos, linkCounts.get(id) ?? 0, layers.labels, clips, show) : 0;
     const textRight = left + pos.width - badgeWidth;
     const textX = (textLeft + textRight) / 2;
     const textWidth = textRight - textLeft - (badgeWidth ? 6 : 20);

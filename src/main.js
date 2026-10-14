@@ -25,6 +25,7 @@ import { startScreen } from './ui/start.js';
 import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
 import { createSnapshot } from './ui/snapshot.js';
+import { loadViewPrefs, saveViewPrefs } from './ui/prefs.js';
 import { createConnectDialog, applyConnection, CONNECT_LABELS } from './ui/connect.js';
 import { svgEl } from './render/renderer.js';
 import { createInteraction } from './ui/interaction.js';
@@ -146,7 +147,7 @@ async function boot() {
 
   document.getElementById('title-icon')?.replaceChildren(icon('family'));
   const renderer = createRenderer(document.getElementById('canvas'));
-  const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false, ...loadPanelPrefs(storage) };
+  const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false, ...loadViewPrefs(storage) };
   const start = hash.get('g');
   if (start && start !== view.path[0] && store.doc.graphs[start]) view.path.push(start);
   if (hash.get('sel')) view.selection = new Set([hash.get('sel')]);
@@ -161,7 +162,7 @@ async function boot() {
     store,
     view,
     currentGraph,
-    savePanelPrefs: () => savePanelPrefs(storage, view),
+    savePanelPrefs: () => saveViewPrefs(storage, view),
     // Runs an undoable change; shows the reason and returns undefined if it is rejected.
     edit(label, fn) {
       try {
@@ -379,6 +380,7 @@ async function boot() {
       selection: view.selection,
       preview: drag ? { [drag.id]: { dx: drag.dx, dy: drag.dy } } : null,
       connectHandle: !store.readOnly && !drag && !pair,
+      badges: { flags: view.showFlags, jobs: view.showJobs },
     });
     drawConnectState();
     // A new graph, or a changed orientation, starts fitted to the window.
@@ -507,10 +509,27 @@ async function boot() {
   svg.addEventListener('pointerdown', () => snapshot.hide());
 
   const zoomButton = (label, title, onclick) => h('button', { type: 'button', title, 'aria-label': title, onclick }, label);
+  // On/off switches for the badges on cards: country of birth (flag) and job.
+  const badgeSwitch = (key, glyph, label, what) => {
+    const button = h('button', { type: 'button', role: 'switch', class: 'view-switch', title: `Show or hide ${what} on the cards` },
+      h('span', { class: 'switch-track', 'aria-hidden': 'true' }, h('span', { class: 'switch-thumb' })), icon(glyph), label);
+    const sync = () => button.setAttribute('aria-checked', String(view[key]));
+    button.addEventListener('click', () => {
+      view[key] = !view[key];
+      sync();
+      saveViewPrefs(storage, view);
+      renderCanvas();
+    });
+    sync();
+    return button;
+  };
   svg.after(h('div', { class: 'zoom-controls' },
     zoomButton('+', 'Zoom in (+)', () => zoomBy(1.25)),
     zoomButton('−', 'Zoom out (−)', () => zoomBy(0.8)),
-    zoomButton('Fit', 'Fit to window (0)', fit)));
+    zoomButton('Fit', 'Fit to window (0)', fit),
+    h('div', { class: 'view-switches', role: 'group', 'aria-label': 'Show on cards' },
+      badgeSwitch('showFlags', 'flag', 'Country', 'the country-of-birth flags'),
+      badgeSwitch('showJobs', 'jobOther', 'Job', 'the job badges'))));
 
   function update() {
     const { doc } = store;
@@ -612,27 +631,6 @@ async function boot() {
 
   window.famtee = { store, view, ctx, session, download, interaction, getTransform, setTransform, fit };
   update();
-}
-
-// The detail panel's collapsed state and View/Edit mode are remembered per browser.
-const PANEL_PREFS_KEY = 'famtee:panel';
-function loadPanelPrefs(storage) {
-  try {
-    const prefs = JSON.parse(storage?.getItem(PANEL_PREFS_KEY) ?? '{}');
-    return {
-      panelCollapsed: prefs.collapsed === true,
-      panelMode: prefs.mode === 'view' ? 'view' : 'edit',
-    };
-  } catch {
-    return {};
-  }
-}
-function savePanelPrefs(storage, view) {
-  try {
-    storage?.setItem(PANEL_PREFS_KEY, JSON.stringify({ collapsed: view.panelCollapsed, mode: view.panelMode }));
-  } catch {
-    // storage full or blocked: the choice just isn't remembered
-  }
 }
 
 function renderBreadcrumb(doc, view, update) {

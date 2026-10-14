@@ -384,3 +384,18 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .panel-body.view-mode .form > label textarea:disabled {
   opacity: 1; border-color: transparent; background: transparent; color: var(--fg); padding-inline: 0;
   appearance: none; -webkit-appearance: none; resize: none; cursor: default; }
+
+/* --- view switches next to the zoom buttons: show or hide card badges --- */
+.zoom-controls { flex-wrap: wrap; align-items: center; }
+.view-switches { display: flex; gap: 0.25rem; margin-left: 0.4rem; padding: 0.2rem; border: 1px solid var(--card-stroke);
+  border-radius: 8px; background: var(--card-bg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.zoom-controls .view-switch { display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; border: 0; box-shadow: none;
+  padding: 0.2rem 0.45rem; font-size: 0.78rem; color: var(--muted); }
+.view-switch .icon-svg { width: 0.95rem; height: 0.95rem; }
+.switch-track { position: relative; width: 1.6rem; height: 0.9rem; border-radius: 999px; background: var(--card-stroke); transition: background 0.15s; }
+.switch-thumb { position: absolute; top: 0.1rem; left: 0.1rem; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform 0.15s; }
+.view-switch[aria-checked="true"] { color: var(--fg); }
+.view-switch[aria-checked="true"] .switch-track { background: var(--accent); }
+.view-switch[aria-checked="true"] .switch-thumb { transform: translateX(0.7rem); }
+@media (prefers-reduced-motion: reduce) { .switch-track, .switch-thumb { transition: none; } }

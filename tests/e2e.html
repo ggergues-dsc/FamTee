@@ -500,6 +500,23 @@ test('connect people: add someone on their own, then Ctrl+drag or C to connect t
   assert(!doc.querySelector('.connect'), 'Esc closes the popover');
 });
 
+test('view switches hide and show the country and job badges', async () => {
+  const { doc } = await load({ srcdoc: savedHtml });
+  const count = (sel) => doc.querySelectorAll(`#canvas ${sel}`).length;
+  assert(count('.flag') > 0 && count('.job-badge') > 0, 'the sample shows both');
+  const country = byText(doc, 'Country');
+  const job = byText(doc, 'Job');
+  assertEqual([country.getAttribute('role'), country.getAttribute('aria-checked')], ['switch', 'true']);
+  country.click();
+  assertEqual([count('.flag'), country.getAttribute('aria-checked')], [0, 'false']);
+  assert(count('.job-badge') > 0, 'jobs still shown');
+  job.click();
+  assertEqual(count('.job-badge'), 0);
+  country.click();
+  job.click();
+  assert(count('.flag') > 0 && count('.job-badge') > 0, 'both back');
+});
+
 run();
 </script>
 </body>
