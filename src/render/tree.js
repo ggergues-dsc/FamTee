@@ -22,6 +22,12 @@ import { portraitMarkup, iconMarkup, petIconName } from '../ui/icons.js';
 
 const NODE_RADIUS = 20;
 const TRUNK_HEIGHT = 84;
+// A couple's branches meet at a fork point this far above them, so partners' limbs rise
+// to it instead of running sideways, and children grow up from it.
+const FORK_RISE = 58;
+// The tree's own layout: narrower slots and taller generations than the cards, so
+// branches climb steeply instead of spreading sideways.
+export const TREE_LAYOUT = { orientation: 'TB', cardWidth: 124, unionWidth: 12, rankGap: 190 };
 const CANOPY_RADIUS = 92;
 const TONES = 4; // family colours, cycled (.tree-tone-0 … 3 in main.css)
 
@@ -153,6 +159,7 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     const n = layout.nodes[id];
     return n ? { x: n.x, y: -n.y } : null;
   };
+  const fork = (u) => ({ x: P(u).x, y: P(u).y - FORK_RISE });
   const shown = (p) => [...s.familiesOf(p)].some((t) => !hidden.has(t));
   const tone = (p) => toneOf.get([...s.familiesOf(p)].find((t) => !hidden.has(t)) ?? [...s.familiesOf(p)][0]) ?? 0;
 
@@ -196,18 +203,22 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
   const vary = (rand, v, amount = 0.05) => v * (1 + (rand() * 2 - 1) * amount);
   const width = (n) => Math.min(30, 5 + 4 * Math.sqrt(n));
   // A branch from a to b, leaving a upward and arriving at b; `key` seeds its variation.
+  // The control points are spaced evenly in height, so the branch climbs the whole way
+  // (it never flattens into a sideways run); it leaves and arrives close to upright and
+  // does its sideways travel in between, as real branches do.
   function branch(key, a, b, w, caps = 'both') {
     const rand = randomFor(docKey + key);
+    const dx = b.x - a.x;
     const dy = a.y - b.y;
     const base = vary(rand, w);
-    limb(rand, [a.x, a.y], [vary(rand, a.x, 0.01), a.y - dy * vary(rand, 0.55)], [vary(rand, b.x, 0.01), b.y + dy * vary(rand, 0.45)],
-      [b.x, b.y], base, vary(rand, base * 0.72), caps);
+    limb(rand, [a.x, a.y], [a.x + dx * vary(rand, 0.15, 0.3), a.y - dy * vary(rand, 0.34)],
+      [b.x - dx * vary(rand, 0.12, 0.3), b.y + dy * vary(rand, 0.32)], [b.x, b.y], base, vary(rand, base * 0.72), caps);
   }
 
   // Trunks, with a short root flare, up to each founding partnership (or lone founder).
   for (const t of s.trunks) {
     if (hidden.has(t) || !P(t)) continue;
-    const top = P(t);
+    const top = graph.nodes[t].type === 'person' ? P(t) : fork(t);
     const n = graph.nodes[t].type === 'person' ? s.grows(t) : s.partners(t).reduce((sum, p) => sum + s.grows(p), 0);
     const w = Math.min(34, width(n) * 1.15);
     const rand = randomFor(`${docKey}${t}:roots`);
@@ -223,7 +234,7 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
 
   // Partnerships: partners join the union point; children and pets grow up from it.
   for (const u of unions) {
-    const at = P(u);
+    const at = fork(u);
     const ps = s.partners(u).filter((p) => visible.has(p));
     const lineages = ps.filter((p) => s.hasParents(p));
     const kids = s.children(u).filter((c) => visible.has(c) && P(c));
@@ -335,7 +346,8 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
   const xs = points.map(([x]) => x);
   svgEl('path', {
     class: 'tree-ground',
-    d: `M ${Math.min(...xs) - 400} ${ground + 6} Q ${(Math.min(...xs) + Math.max(...xs)) / 2} ${ground - 24} ${Math.max(...xs) + 400} ${ground + 6} V ${ground + 4000} H ${Math.min(...xs) - 400} Z`,
+    // a thin strip of ground under the trunks, gently domed
+    d: `M ${Math.min(...xs) - 120} ${ground + 4} Q ${(Math.min(...xs) + Math.max(...xs)) / 2} ${ground - 14} ${Math.max(...xs) + 120} ${ground + 4} V ${ground + 18} Q ${(Math.min(...xs) + Math.max(...xs)) / 2} ${ground + 8} ${Math.min(...xs) - 120} ${ground + 18} Z`,
   }, layers.background);
   for (const f of families) {
     if (hidden.has(f.id) || !P(f.id)) continue;

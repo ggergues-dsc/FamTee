@@ -5,7 +5,7 @@ import { validate } from '../src/store/validate.js';
 import { layoutGraph, PET_SIZE } from '../src/layout/layout.js';
 import { createRenderer } from '../src/render/renderer.js';
 import { countryOf, flagMarkup, FLAG_COUNTRIES } from '../src/render/flags.js';
-import { jobIconName, petIconName, iconMarkup } from '../src/ui/icons.js';
+import { jobIconName, petIconName, iconMarkup, PET_KINDS } from '../src/ui/icons.js';
 import { exportGedcom } from '../src/io/gedcom/export.js';
 import { importGedcom } from '../src/io/gedcom/import.js';
 import { privatize } from '../src/privacy/living.js';
@@ -207,4 +207,15 @@ test('pet snapshot: name, type, sex, breed and dates, with owners but no lineage
 
 test('dog and cat icons are different drawings', () => {
   assert(iconMarkup('dog') && iconMarkup('cat') && iconMarkup('dog') !== iconMarkup('cat'));
+});
+
+test('eight kinds of pet, each with its own icon', () => {
+  assertEqual(PET_KINDS.map(([v]) => v), ['dog', 'cat', 'bird', 'rabbit', 'fish', 'horse', 'reptile', 'other']);
+  const icons = PET_KINDS.map(([v]) => iconMarkup(petIconName(v)));
+  assertEqual(new Set(icons).size, 8, 'all different');
+  assertEqual([petIconName('bird'), petIconName('parrot'), petIconName(undefined)], ['bird', 'paw', 'paw']);
+  const { doc, g, mum } = smallFamily();
+  const { petId } = addPetTo(doc, g, mum, null, { name: 'Rio', species: 'bird' });
+  assertEqual(petSummary(doc, g, petId).rows[0], ['Type', 'Bird']);
+  assertEqual(validate(doc), []);
 });

@@ -116,3 +116,27 @@ test('tree: groups, other relations and links to other graphs', () => {
     svg.remove();
   }
 });
+
+test('tree: couples’ branches meet above them, and every branch climbs', () => {
+  const f = twoFamilies();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.append(svg);
+  try {
+    const result = createRenderer(svg).render(f.doc, f.g, { mode: 'tree' });
+    const graft = svg.querySelector('.tree-graft');
+    const forkY = Number(graft.getAttribute('cy'));
+    assert(forkY < result.nodes[f.sarah].y && forkY < result.nodes[f.luis].y, 'the fork is above the couple');
+    assert(forkY > result.nodes[f.mia].y, 'and below their child');
+    // No sideways runs: along each branch's outline, the top edge never stays level for long.
+    for (const path of svg.querySelectorAll('path.tree-limb')) {
+      const pts = path.getAttribute('d').match(/-?[\d.]+ -?[\d.]+/g).map((p) => p.split(' ').map(Number));
+      const half = pts.slice(0, Math.floor(pts.length / 2));
+      const span = Math.abs(half.at(-1)[1] - half[0][1]);
+      if (span < 20) continue; // root flares are short and low by design
+      const flat = half.slice(1).filter(([x, y], i) => Math.abs(y - half[i][1]) < 0.5 && Math.abs(x - half[i][0]) > 8).length;
+      assert(flat === 0, `a branch runs sideways: ${path.getAttribute('d').slice(0, 60)}…`);
+    }
+  } finally {
+    svg.remove();
+  }
+});

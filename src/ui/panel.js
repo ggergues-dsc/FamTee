@@ -23,7 +23,7 @@ import {
 import { endpoint } from '../store/schema.js';
 import { addMedia, setPhoto, isSafeImageData, mediaUsage, imageBytes, formatSize } from '../store/media.js';
 import { photoFromFile, ACCEPTED_TYPES } from '../io/photo.js';
-import { icon, portrait } from './icons.js';
+import { icon, portrait, PET_KINDS } from './icons.js';
 
 // Section headings with their icon.
 const HEADING_ICONS = {
@@ -69,7 +69,7 @@ const PERSON_FIELDS = [
 
 const PET_FIELDS = [
   { name: 'pet-name', label: 'Name', ...nested(null, 'name') },
-  { name: 'species', label: 'Animal', options: [['dog', 'Dog'], ['cat', 'Cat'], ['other', 'Other animal']], ...nested(null, 'species') },
+  { name: 'species', label: 'Animal', options: PET_KINDS, ...nested(null, 'species') },
   { name: 'pet-sex', label: 'Sex', options: SEXES, ...nested(null, 'sex') },
   { name: 'breed', label: 'Breed', placeholder: 'e.g. Labrador', ...nested(null, 'breed') },
   { name: 'pet-born', label: 'Born', placeholder: 'e.g. 2019', ...nested('birth', 'date') },
@@ -456,7 +456,7 @@ export function createPanel(container, ctx) {
     });
 
     const speciesChoice = h('select', { name: 'pet-species', 'aria-label': 'Kind of animal' },
-      h('option', { value: 'dog' }, 'Dog'), h('option', { value: 'cat' }, 'Cat'), h('option', { value: 'other' }, 'Other animal'));
+      PET_KINDS.map(([value, label]) => h('option', { value }, label)));
 
     const resetPosition = h('button', { type: 'button', onclick: () =>
       ctx.edit('Reset position', (doc) => updateNodeAttrs(doc, graphId, personId, { nudge: undefined })) }, 'Reset position');
