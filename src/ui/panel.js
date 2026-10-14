@@ -100,27 +100,74 @@ export function createPanel(container, ctx) {
   let key = null;
   let refreshers = [];
 
+  // A slim bar above the details: collapse the panel to a thin strip (the tree gets the
+  // room), and switch between View (everything read-only, as text) and Edit. Both choices
+  // live in ctx.view and are saved by ctx.savePanelPrefs (per browser).
+  ctx.view.panelMode ??= 'edit';
+  ctx.view.panelCollapsed ??= false;
+  const body = h('div', { class: 'panel-body' });
+  const collapse = h('button', { type: 'button', class: 'panel-collapse', onclick: () => setPrefs({ panelCollapsed: !ctx.view.panelCollapsed }) });
+  const modeButton = (mode, glyph, label, title) => h('button', {
+    type: 'button', class: 'with-icon', dataset: { mode }, title, onclick: () => setPrefs({ panelMode: mode }),
+  }, icon(glyph), label);
+  const viewButton = modeButton('view', 'eye', 'View', 'Show the details read-only');
+  const editButton = modeButton('edit', 'pencil', 'Edit', 'Edit the details');
+  const modes = h('div', { class: 'panel-mode', role: 'group', 'aria-label': 'Details mode' }, viewButton, editButton);
+  container.replaceChildren(h('div', { class: 'panel-bar' }, collapse, modes), body);
+
+  function setPrefs(patch) {
+    Object.assign(ctx.view, patch);
+    ctx.savePanelPrefs?.();
+    render();
+  }
+
+  const viewOnly = () => ctx.store.readOnly || ctx.view.panelMode === 'view';
+
+  function renderBar() {
+    const collapsed = ctx.view.panelCollapsed;
+    container.classList.toggle('collapsed', collapsed);
+    collapse.replaceChildren(icon(collapsed ? 'chevronLeft' : 'chevronRight'));
+    collapse.title = collapsed ? 'Show details' : 'Hide details';
+    collapse.setAttribute('aria-label', collapse.title);
+    collapse.setAttribute('aria-expanded', String(!collapsed));
+    modes.hidden = collapsed || ctx.store.readOnly; // a read-only family is always View
+    for (const b of [viewButton, editButton]) b.setAttribute('aria-pressed', String(b.dataset.mode === (viewOnly() ? 'view' : 'edit')));
+    body.hidden = collapsed;
+  }
+
   function render() {
+    renderBar();
+    if (ctx.view.panelCollapsed) return;
+    const container = body;
     const { doc } = ctx.store;
     const graphId = ctx.currentGraph();
     const graph = doc.graphs[graphId];
     const [selected] = ctx.view.selection;
     const node = selected ? graph.nodes[selected] : null;
-    const nextKey = node ? `${graphId}:${selected}:${node.type}` : `graph:${graphId}`;
-    const readOnly = ctx.store.readOnly;
+    const readOnly = viewOnly();
+    const nextKey = `${node ? `${graphId}:${selected}:${node.type}` : `graph:${graphId}`}:${readOnly ? 'view' : 'edit'}`;
 
     if (nextKey !== key) {
       key = nextKey;
       refreshers = [];
-      const body = node?.type === 'person' ? personPanel(graphId, selected)
+      const content = node?.type === 'person' ? personPanel(graphId, selected)
         : node?.type === 'union' ? unionPanel(graphId, selected)
         : node?.type === 'group' ? groupPanel(graphId, selected)
         : node?.type === 'pet' ? petPanel(graphId, selected)
         : graphPanel(graphId);
-      container.replaceChildren(...body.filter(Boolean));
-      if (readOnly) for (const el of container.querySelectorAll('input, select, textarea, button')) el.disabled = true;
+      container.replaceChildren(...content.filter(Boolean));
+      container.classList.toggle('view-mode', readOnly);
+      // Read-only: fields can't change (they read as plain text); links to people still work.
+      if (readOnly) for (const el of container.querySelectorAll('input, select, textarea, button:not(.link)')) el.disabled = true;
     }
     for (const refresh of refreshers) refresh();
+    // In View, empty fields are left out.
+    if (readOnly) {
+      for (const label of container.querySelectorAll('.form > label')) {
+        const control = label.querySelector('input, select, textarea');
+        label.classList.toggle('empty', !control || control.value === '');
+      }
+    }
   }
 
   // --- building blocks -----------------------------------------------------
@@ -199,7 +246,7 @@ export function createPanel(container, ctx) {
       section.hidden = current.length === 0;
       // Rebuild only when the list changed: a commit-on-blur refresh mustn't replace
       // the link the user is pressing at that moment.
-      const signature = JSON.stringify([ctx.store.readOnly, ...current.map((id) => [id, nodeLabel(doc, graphId, id)])]);
+      const signature = JSON.stringify([viewOnly(), ...current.map((id) => [id, nodeLabel(doc, graphId, id)])]);
       if (signature === shown) return;
       shown = signature;
       list.replaceChildren(...current.map((id) => {
@@ -208,7 +255,7 @@ export function createPanel(container, ctx) {
           h('button', { type: 'button', class: 'link', onclick: () => ctx.select(id) }, text),
           remove && h('button', {
             type: 'button', class: 'icon', title: `${remove.label} ${text}`, 'aria-label': `${remove.label} ${text}`,
-            disabled: ctx.store.readOnly, onclick: () => remove.run(id),
+            disabled: viewOnly(), onclick: () => remove.run(id),
           }, '×'));
       }));
     });
@@ -227,7 +274,7 @@ export function createPanel(container, ctx) {
     const remove = h('button', { type: 'button', onclick: () => ctx.edit('Remove photo', (d) => setPhoto(d, graphId, personId, null)) }, 'Remove');
 
     async function use(file) {
-      if (!file || ctx.store.readOnly) return;
+      if (!file || viewOnly()) return;
       try {
         const photo = await photoFromFile(file);
         ctx.edit(attrs().photo ? 'Change photo' : 'Add photo', (d) => setPhoto(d, graphId, personId, addMedia(d, photo)));
@@ -286,7 +333,7 @@ export function createPanel(container, ctx) {
     refreshers.push(() => {
       const items = linksOf(doc(), graphId, personId);
       none.hidden = items.length > 0;
-      const signature = JSON.stringify([ctx.store.readOnly, ...items.map(({ link, other }) =>
+      const signature = JSON.stringify([viewOnly(), ...items.map(({ link, other }) =>
         [link.id, link.attrs?.label ?? '', nodeLabel(doc(), other.graphId, other.nodeId), doc().graphs[other.graphId]?.title])]);
       if (signature === shown) return;
       shown = signature;
@@ -298,7 +345,7 @@ export function createPanel(container, ctx) {
           h('button', { type: 'button', class: 'link', onclick: () => ctx.openNode(other.graphId, other.nodeId) }, text),
           h('button', {
             type: 'button', class: 'icon', title: 'Remove link', 'aria-label': `Remove link: ${text}`,
-            disabled: ctx.store.readOnly, onclick: () => ctx.edit('Remove link', (d) => removeLink(d, link.id)),
+            disabled: viewOnly(), onclick: () => ctx.edit('Remove link', (d) => removeLink(d, link.id)),
           }, '×'));
       }));
     });
@@ -334,7 +381,7 @@ export function createPanel(container, ctx) {
       const ids = candidates(graphSelect.value);
       personSelect.replaceChildren(...ids.map((id) => h('option', { value: id }, nodeLabel(doc(), graphSelect.value, id))));
       if (ids.includes(previous)) personSelect.value = previous;
-      const ro = ctx.store.readOnly;
+      const ro = viewOnly();
       linkButton.disabled = ro || ids.length === 0;
       personSelect.disabled = ro || ids.length === 0;
       copyButton.disabled = ro || !target || graphsContaining(doc(), graphId, personId).has(graphSelect.value);
@@ -401,7 +448,7 @@ export function createPanel(container, ctx) {
       ctx.editAndSelect('Add parent', (doc) => addParentTo(doc, graphId, personId).personId) }, '+ Parent');
     refreshers.push(() => {
       const unions = parentUnionsOf(graph(), personId);
-      addParentButton.disabled = ctx.store.readOnly ||
+      addParentButton.disabled = viewOnly() ||
         (unions.length > 0 && unions.every((u) => partnersOfUnion(graph(), u).length >= 2));
     });
 

@@ -168,10 +168,58 @@ test('read-only documents disable every control', () => {
   const s = setup({ readOnly: true });
   s.ctx.select(s.mum);
   // Name links in the relatives lists only change the selection, so they stay enabled.
-  const controls = [...s.container.querySelectorAll('input, select, textarea, button:not(.link)')];
+  const controls = [...s.container.querySelectorAll('.panel-body :is(input, select, textarea, button:not(.link))')];
   assert(controls.length > 5);
   assert(controls.every((c) => c.disabled), controls.filter((c) => !c.disabled).map((c) => c.outerHTML).join());
   assert(s.container.querySelectorAll('button.link:not(:disabled)').length > 0);
+  s.container.remove();
+});
+
+test('detail panel collapses to a strip, and remembers it', () => {
+  const s = setup();
+  let saved = 0;
+  s.ctx.savePanelPrefs = () => { saved++; };
+  const collapse = s.container.querySelector('.panel-collapse');
+  assertEqual(collapse.getAttribute('aria-expanded'), 'true');
+  collapse.click();
+  assert(s.view.panelCollapsed && s.container.classList.contains('collapsed'));
+  assert(s.container.querySelector('.panel-body').hidden, 'details hidden');
+  assertEqual([collapse.getAttribute('aria-expanded'), collapse.title], ['false', 'Show details']);
+  assert(s.container.querySelector('.panel-mode').hidden, 'only the expand control shows');
+  s.ctx.select(s.mum); // selecting while collapsed doesn't reopen it
+  assert(s.container.querySelector('.panel-body').hidden);
+  collapse.click();
+  assert(!s.view.panelCollapsed && field(s.container, 'given'), 'reopens on the selected person');
+  assertEqual(saved, 2);
+  s.container.remove();
+});
+
+test('View mode shows the details read-only; Edit brings the form back', () => {
+  const s = setup();
+  s.ctx.savePanelPrefs = () => {};
+  s.ctx.select(s.mum);
+  button(s.container, 'View').click();
+  assertEqual(s.view.panelMode, 'view');
+  const body = s.container.querySelector('.panel-body');
+  assert(body.classList.contains('view-mode'));
+  assert(field(s.container, 'given').disabled && field(s.container, 'given').value === 'Ann', 'fields read as text');
+  assert(body.querySelector('[name="given"]').closest('label').classList.contains('empty') === false);
+  assert(body.querySelector('[name="notes"]').closest('label').classList.contains('empty'), 'empty fields are left out');
+  assert([...body.querySelectorAll('button:not(.link)')].every((b) => b.disabled), 'no editing buttons');
+  const link = [...body.querySelectorAll('button.link')].find((b) => b.textContent === 'Cid');
+  assert(link && !link.disabled, 'relatives can still be opened');
+  link.click();
+  assertEqual([...s.view.selection], [s.kid]);
+  assert(field(s.container, 'given').disabled, 'still View on the next person');
+  assertEqual(button(s.container, 'View').getAttribute('aria-pressed'), 'true');
+  button(s.container, 'Edit').click();
+  assert(!field(s.container, 'given').disabled && !body.classList.contains('view-mode'));
+  s.container.remove();
+});
+
+test('a read-only family has no Edit switch', () => {
+  const s = setup({ readOnly: true });
+  assert(s.container.querySelector('.panel-mode').hidden);
   s.container.remove();
 });
 

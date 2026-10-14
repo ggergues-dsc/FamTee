@@ -45,6 +45,7 @@ in this browser, start a new tree, or open another file. `#start=file|new|contin
 | Connect people already in the tree | Ctrl/⌘+drag from one person to another, drag the **+** handle on the selected person, or select a person, press `C` and click the other one. Choose partner, child, parent, brother or sister, or another relation (e.g. godparent) in the popover; Esc cancels. People with no lines yet have a dashed outline |
 | Pets | Person panel → **+ Pet** (dog, cat or other animal), owned with the partner chosen for + Child or alone. Click a pet to edit or delete it |
 | Job, employer, country of birth | Person panel fields. The job's icon and the birth country's flag (from the birthplace's last part, e.g. "Cork, Ireland") show in the card's top-right corner |
+| Detail panel | The **›** button at its top collapses it to a thin strip (‹ brings it back); **View / Edit** switches between read-only details and the editing form. Both are remembered in this browser |
 | Quick look at a person | Point at a card: a read-only summary (dates, parents, partners, children, groups, other graphs) appears beside it |
 | Photos | Person panel → **Add photo…** (or drop an image on the circle). Embedded as two JPEGs: 512 px for the panel and hover snapshot, a 96 px miniature for cards |
 | Advanced (collapsed) | Groups, links to other graphs, sub-graphs, adding GEDCOM as a sub-graph, position/layout reset |

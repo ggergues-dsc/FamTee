@@ -146,7 +146,7 @@ async function boot() {
 
   document.getElementById('title-icon')?.replaceChildren(icon('family'));
   const renderer = createRenderer(document.getElementById('canvas'));
-  const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false };
+  const view = { path: [store.doc.meta.rootGraph], selection: new Set(), advancedOpen: false, ...loadPanelPrefs(storage) };
   const start = hash.get('g');
   if (start && start !== view.path[0] && store.doc.graphs[start]) view.path.push(start);
   if (hash.get('sel')) view.selection = new Set([hash.get('sel')]);
@@ -161,6 +161,7 @@ async function boot() {
     store,
     view,
     currentGraph,
+    savePanelPrefs: () => savePanelPrefs(storage, view),
     // Runs an undoable change; shows the reason and returns undefined if it is rejected.
     edit(label, fn) {
       try {
@@ -611,6 +612,27 @@ async function boot() {
 
   window.famtee = { store, view, ctx, session, download, interaction, getTransform, setTransform, fit };
   update();
+}
+
+// The detail panel's collapsed state and View/Edit mode are remembered per browser.
+const PANEL_PREFS_KEY = 'famtee:panel';
+function loadPanelPrefs(storage) {
+  try {
+    const prefs = JSON.parse(storage?.getItem(PANEL_PREFS_KEY) ?? '{}');
+    return {
+      panelCollapsed: prefs.collapsed === true,
+      panelMode: prefs.mode === 'view' ? 'view' : 'edit',
+    };
+  } catch {
+    return {};
+  }
+}
+function savePanelPrefs(storage, view) {
+  try {
+    storage?.setItem(PANEL_PREFS_KEY, JSON.stringify({ collapsed: view.panelCollapsed, mode: view.panelMode }));
+  } catch {
+    // storage full or blocked: the choice just isn't remembered
+  }
 }
 
 function renderBreadcrumb(doc, view, update) {

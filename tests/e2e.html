@@ -305,18 +305,23 @@ test('photos: add and replace in the built app; saved file holds only the curren
     input.dispatchEvent(new win.Event('change'));
     await sleep(300);
   };
+  // Mary has a sample photo; replace it twice.
+  const before = app.store.doc.graphs['g-hanna'].nodes['p-mary'].attrs.photo;
+  const others = Object.keys(app.store.doc.media).filter((id) => id !== before);
+  assert(before, 'the sample comes with photos');
   app.ctx.select('p-mary');
   await pick(await imageFile('#36c', 'mary.png'));
   await pick(await imageFile('#c63', 'mary2.png'));
   assert(doc.querySelector('.avatar[data-id="p-mary"]'), 'avatar drawn on the card');
+  const current = app.store.doc.graphs['g-hanna'].nodes['p-mary'].attrs.photo;
 
   const saved = captureDownloads(win);
   byText(doc, 'Download').click();
   const html = await textOf(saved[0]);
   const media = JSON.parse(new DOMParser().parseFromString(html, 'text/html')
     .getElementById('famtee-data').textContent).media;
-  assertEqual(Object.keys(media).length, 1, 'the replaced photo is not saved');
-  assert(Object.values(media)[0].data.length < 40000, 'photo is small (shrunk to 256 px)');
+  assertEqual(Object.keys(media).sort(), [...others, current].sort(), 'the replaced photos are not saved');
+  assert(media[current].data.length < 120000 && media[current].thumb.data.length < 10000, 'photo is small (512 px and a 96 px miniature)');
 
   ({ win, doc, app } = await load({ srcdoc: html }));
   assert(doc.querySelector('.avatar[data-id="p-mary"]'), 'photo still there after reopening');

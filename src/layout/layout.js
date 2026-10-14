@@ -11,7 +11,7 @@
 // core layout always runs top-down, with card sizes swapped for 'LR', then is rotated.
 
 export const LAYOUT_DEFAULTS = {
-  cardWidth: 160,
+  cardWidth: 184, // room for the portrait, the name and a column of job/country badges
   cardHeight: 56,
   unionWidth: 32, // horizontal room for the union dot between partners
   gap: 24, // minimum horizontal gap between blocks
