@@ -41,7 +41,8 @@ A FamTee document is a **compound multi-graph**:
   },
   "links": [ ],
   "media": {                             // embedded photos, shared by id (ADR 0013)
-    "m-01JA...": { "mime": "image/jpeg", "data": "data:image/jpeg;base64,...", "width": 256, "height": 192 }
+    "m-01JA...": { "mime": "image/jpeg", "data": "data:image/jpeg;base64,...", "width": 512, "height": 384,  // medium
+                   "thumb": { "data": "data:image/jpeg;base64,...", "width": 96, "height": 72 } }  // optional miniature for card avatars
   }
 }
 ```

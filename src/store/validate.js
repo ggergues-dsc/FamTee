@@ -20,6 +20,9 @@ export function validate(doc) {
   const media = isObject(doc.media) ? doc.media : {};
   for (const [id, m] of Object.entries(media)) {
     if (!isObject(m) || !isSafeImageData(m.data)) fail('media-data', `media ${id}: must be an inline JPEG, PNG, WebP or GIF image`);
+    else if (m.thumb !== undefined && !(isObject(m.thumb) && isSafeImageData(m.thumb.data))) {
+      fail('media-data', `media ${id}: thumb must be an inline JPEG, PNG, WebP or GIF image`);
+    }
   }
   if (isObject(doc.meta) && !doc.graphs[doc.meta.rootGraph]) {
     fail('root-graph', `meta.rootGraph "${doc.meta?.rootGraph}" is not a graph`);

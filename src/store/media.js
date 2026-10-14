@@ -17,15 +17,26 @@ export function isSafeImageData(data) {
   return typeof data === 'string' && SAFE_IMAGE_DATA.test(data);
 }
 
-// Adds { mime, data, width, height } and returns its id. The same image added
-// twice gets the existing id.
+// Adds { mime, data, width, height, thumb? } and returns its id. `data` is the medium
+// size; the optional `thumb: { data, width, height }` is a miniature for small avatars.
+// The same image added twice gets the existing id.
 export function addMedia(doc, entry) {
   if (!isSafeImageData(entry.data)) throw new Error('Not a supported image');
+  if (entry.thumb && !isSafeImageData(entry.thumb.data)) throw new Error('Not a supported image');
   doc.media ??= {};
   for (const [id, m] of Object.entries(doc.media)) if (m.data === entry.data) return id;
   const id = newId('media');
   doc.media[id] = { mime: entry.mime, data: entry.data, width: entry.width, height: entry.height };
+  if (entry.thumb) doc.media[id].thumb = { data: entry.thumb.data, width: entry.thumb.width, height: entry.thumb.height };
   return id;
+}
+
+// The image data to show at a given size: the miniature for small avatars when there
+// is a safe one, otherwise the medium image (older files have only that). Null if unsafe.
+export function mediaData(media, size = 'medium') {
+  if (!media || !isSafeImageData(media.data)) return null;
+  if (size === 'thumb' && isSafeImageData(media.thumb?.data)) return media.thumb.data;
+  return media.data;
 }
 
 // Sets or (with null) clears a node's photo.
@@ -71,5 +82,5 @@ export function formatSize(bytes) {
 // { count, bytes } of the images that would be saved.
 export function mediaUsage(doc) {
   const media = Object.values(withoutUnusedMedia(doc).media ?? {});
-  return { count: media.length, bytes: media.reduce((n, m) => n + imageBytes(m.data), 0) };
+  return { count: media.length, bytes: media.reduce((n, m) => n + imageBytes(m.data) + (m.thumb?.data ? imageBytes(m.thumb.data) : 0), 0) };
 }

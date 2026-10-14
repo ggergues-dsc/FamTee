@@ -13,11 +13,13 @@ camera photos are 2–10 MB each. Two technical constraints:
 - **Drafts** are backed up in `localStorage`, which typically holds only about 5 MB per site.
 
 ## Decision
-- **Embed, shrunk.** On import, an image is decoded, scaled to at most **256 px** on its longer side and
-  re-encoded as **JPEG (quality 0.82)**, typically 10–30 KB. That is enough for the card avatar and the 96 px
-  panel preview. Re-encoding also strips metadata such as camera GPS location. Accepted input: JPEG, PNG, WebP
+- **Embed, shrunk, in two sizes.** On import, an image is decoded and re-encoded as **JPEG (quality 0.82)**
+  twice: a **medium** size of at most **512 px** on its longer side (typically 30–80 KB) for the panel preview
+  and the hover snapshot, and a **miniature** of at most **96 px** (a few KB) for the small card avatars, so
+  the canvas never decodes the larger image. (Until 2026-10 only one 256 px size was stored; those photos keep
+  working and are used at both sizes.) Re-encoding also strips metadata such as camera GPS location. Accepted input: JPEG, PNG, WebP
   and GIF; SVG is refused.
-- **One document-level store.** `doc.media = { [mediaId]: { mime, data, width, height } }`, and a node refers to
+- **One document-level store.** `doc.media = { [mediaId]: { mime, data, width, height, thumb: { data, width, height } } }` (`thumb` is the miniature, optional), and a node refers to
   its picture with `attrs.photo = mediaId`. Identical images are stored once, and a person copied into another
   graph (`copyPersonTo`) shares the image instead of duplicating it.
 - **Append-only while running.** Entries are added and never changed or removed during a session. Undo

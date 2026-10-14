@@ -10,7 +10,7 @@ import { displayName, lifespan } from '../render/format.js';
 import { isLiving } from '../privacy/living.js';
 import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion } from '../store/family.js';
 import { countryOf, flagMarkup } from '../render/flags.js';
-import { isSafeImageData } from '../store/media.js';
+import { mediaData } from '../store/media.js';
 
 const GAP = 12; // px between the card and the snapshot
 
@@ -54,7 +54,7 @@ export function personSummary(doc, graphId, personId, now = new Date()) {
     name: displayName(attrs),
     dates: lifespan(attrs),
     sex: attrs.sex,
-    photo: isSafeImageData(doc.media?.[attrs.photo]?.data) ? doc.media[attrs.photo].data : null,
+    photo: attrs.photo ? mediaData(doc.media?.[attrs.photo], 'medium') : null,
     living: isLiving(attrs, now),
     country: countryOf(attrs.birth?.place),
     rows,

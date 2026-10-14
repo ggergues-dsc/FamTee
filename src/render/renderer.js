@@ -6,7 +6,7 @@ import { layoutGraph } from '../layout/layout.js';
 import { parseEndpoint } from '../store/schema.js';
 import { displayName, lifespan, fitText } from './format.js';
 import { transformAttr } from '../ui/viewport.js';
-import { isSafeImageData } from '../store/media.js';
+import { mediaData } from '../store/media.js';
 import { portraitMarkup, iconMarkup, jobIconName, petIconName } from '../ui/icons.js';
 import { countryOf, flagMarkup } from './flags.js';
 
@@ -38,11 +38,12 @@ export function createRenderer(svg) {
   const patterns = new Map(); // media id → pattern element id
   function photoFill(doc, mediaId) {
     const media = doc.media?.[mediaId];
-    if (!media || !isSafeImageData(media.data)) return null;
+    const data = mediaData(media, 'thumb'); // cards show a small avatar: the miniature is enough
+    if (!data) return null;
     if (!patterns.has(mediaId)) {
       const id = `famtee-photo-${instance}-${patterns.size}`;
       const pattern = svgEl('pattern', { id, patternContentUnits: 'objectBoundingBox', width: 1, height: 1 }, defs);
-      svgEl('image', { href: media.data, width: 1, height: 1, preserveAspectRatio: 'xMidYMid slice' }, pattern);
+      svgEl('image', { href: data, width: 1, height: 1, preserveAspectRatio: 'xMidYMid slice' }, pattern);
       patterns.set(mediaId, id);
     }
     return `url(#${patterns.get(mediaId)})`;
