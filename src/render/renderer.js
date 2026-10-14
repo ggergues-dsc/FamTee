@@ -7,7 +7,8 @@ import { parseEndpoint } from '../store/schema.js';
 import { displayName, lifespan, fitText } from './format.js';
 import { transformAttr } from '../ui/viewport.js';
 import { isSafeImageData } from '../store/media.js';
-import { portraitMarkup } from '../ui/icons.js';
+import { portraitMarkup, iconMarkup, jobIconName, petIconName } from '../ui/icons.js';
+import { countryOf, flagMarkup } from './flags.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 export const LAYERS = ['background', 'edges', 'nodes', 'labels', 'annotations', 'overlay', 'ui'];
@@ -49,6 +50,9 @@ export function createRenderer(svg) {
   // Placeholder portraits (no photo) are clipped to the avatar circle.
   const portraitClip = `famtee-portrait-clip-${instance}`;
   svgEl('circle', { cx: 20, cy: 20, r: 19.5 }, svgEl('clipPath', { id: portraitClip }, defs));
+  const flagClip = `famtee-flag-clip-${instance}`;
+  svgEl('rect', { width: 15, height: 10, rx: 1 }, svgEl('clipPath', { id: flagClip }, defs));
+  const clips = { portrait: portraitClip, flag: flagClip };
   const viewport = svgEl('g', { class: 'viewport' }, svg);
   const layers = Object.fromEntries(LAYERS.map((name) => [name, svgEl('g', { class: `layer layer-${name}` }, viewport)]));
 
@@ -69,7 +73,7 @@ export function createRenderer(svg) {
 
     const groupBoxes = drawGroups(graph, layout, layers);
     drawEdges(graph, layout, layers.edges);
-    drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip);
+    drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clips);
     drawLinkBadges(doc, graphId, layout, layers.annotations);
     drawSelection(selection, layout, groupBoxes, layers.ui);
     if (connectHandle) drawConnectHandles(graph, selection, layout, layers.ui);
@@ -126,12 +130,12 @@ function drawEdges(graph, layout, layer) {
       // Out of the middle of the side facing the union, then square into the dot.
       const side = b.x >= a.x ? 1 : -1;
       d = `M ${a.x + (side * a.width) / 2} ${a.y} H ${b.x} V ${b.y}`;
-    } else if (edge.type === 'child' && lr) {
+    } else if ((edge.type === 'child' || edge.type === 'pet') && lr) {
       // Orthogonal "bus" to the right: out of the union, along, then into the child's left edge.
       const left = b.x - b.width / 2;
       const mid = Math.max(a.x + cardWidth / 2 + 6, left - rankGap / 2 + (lanes.get(edge.from) ?? 0));
       d = `M ${a.x} ${a.y} H ${mid} V ${b.y} H ${left}`;
-    } else if (edge.type === 'child') {
+    } else if (edge.type === 'child' || edge.type === 'pet') {
       // Orthogonal "bus": down from the union, across, down to the child's top edge.
       const top = b.y - b.height / 2;
       const mid = Math.max(a.y + cardHeight / 2 + 6, top - rankGap / 2 + (lanes.get(edge.from) ?? 0));
@@ -163,7 +167,7 @@ function busLanes(graph, layout) {
   for (const edge of graph.edges) {
     const u = layout.nodes[edge.from];
     const c = layout.nodes[edge.to];
-    if (edge.type !== 'child' || !u || !c) continue;
+    if ((edge.type !== 'child' && edge.type !== 'pet') || !u || !c) continue;
     const span = spans.get(edge.from) ?? { row: Math.round(u[across]), x0: u[along], x1: u[along] };
     span.x0 = Math.min(span.x0, c[along]);
     span.x1 = Math.max(span.x1, c[along]);
@@ -191,9 +195,58 @@ function busLanes(graph, layout) {
   return offsets;
 }
 
-function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip) {
+const PET_AVATAR_RADIUS = 15;
+const cap = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+// Links from each node of this graph to other graphs (each draws a badge in the
+// card's top-right corner, see drawLinkBadges).
+function linkBadgeCounts(doc, graphId) {
+  const counts = new Map();
+  for (const link of doc.links) {
+    const ends = [link.from, link.to].map(parseEndpoint);
+    ends.forEach((end, i) => {
+      const other = ends[1 - i];
+      if (end && other && end.graphId === graphId && other.graphId !== graphId) counts.set(end.nodeId, (counts.get(end.nodeId) ?? 0) + 1);
+    });
+  }
+  return counts;
+}
+
+// The shapes of a 24×24 icon drawn at (x, y) with the given size.
+function drawIcon(parent, name, x, y, size, cls) {
+  const g = svgEl('g', { class: cls, transform: `translate(${x} ${y}) scale(${size / 24})` }, parent);
+  g.innerHTML = iconMarkup(name);
+  return g;
+}
+
+// Job and country of birth: small badges in the card's top-right corner, left of any
+// cross-graph link badges. Returns whether any were drawn.
+function drawPersonBadges(node, pos, linkCount, layer, clips) {
+  const top = pos.y - pos.height / 2;
+  let right = pos.x + pos.width / 2 - (linkCount ? 17 + (linkCount - 1) * (2 * BADGE_RADIUS + 4) : 6);
+  let drawn = false;
+  const job = node.attrs.occupation?.trim();
+  if (job) {
+    const badge = svgEl('g', { class: 'job-badge' }, layer);
+    svgEl('circle', { cx: right - 7, cy: top + 11, r: 7 }, badge);
+    drawIcon(badge, jobIconName(job), right - 12, top + 6, 10, 'job-icon');
+    right -= 18;
+    drawn = true;
+  }
+  const country = countryOf(node.attrs.birth?.place);
+  if (country) {
+    const flag = svgEl('g', { class: 'flag', transform: `translate(${right - 13} ${top + 6.6}) scale(${13 / 15})` }, layer);
+    const art = svgEl('g', { 'clip-path': `url(#${clips.flag})` }, flag);
+    art.innerHTML = flagMarkup(country);
+    drawn = true;
+  }
+  return drawn;
+}
+
+function drawNodes(doc, graphId, graph, layout, layers, preview, photoFill, clips) {
   // People with no partner, parent, child or other line yet are drawn with a dashed outline.
   const connected = new Set(graph.edges.flatMap((e) => [e.from, e.to]));
+  const linkCounts = linkBadgeCounts(doc, graphId);
   for (const [id, node] of Object.entries(graph.nodes)) {
     const pos = layout.nodes[id];
     if (!pos) continue;
@@ -204,11 +257,12 @@ function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip)
 
     const left = pos.x - pos.width / 2;
     const top = pos.y - pos.height / 2;
-    // People get an avatar on the left (their photo, or a placeholder portrait by sex)
-    // and the text centres in the rest.
+    // People get an avatar on the left (their photo, or a placeholder portrait by sex),
+    // pets an animal icon; the text centres in the rest.
     const isPerson = node.type === 'person';
+    const isPet = node.type === 'pet';
     const photo = isPerson && node.attrs.photo ? photoFill(doc, node.attrs.photo) : null;
-    const textLeft = isPerson ? left + 8 + 2 * AVATAR_RADIUS : left;
+    const textLeft = isPerson ? left + 8 + 2 * AVATAR_RADIUS : isPet ? left + 6 + 2 * PET_AVATAR_RADIUS : left;
     const textX = (textLeft + left + pos.width) / 2;
     const textWidth = left + pos.width - textLeft - 20;
     let title;
@@ -220,6 +274,11 @@ function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip)
       subtitle = 'Open →';
       cls = 'card graph-ref';
       extra['data-ref-graph'] = node.attrs.graph;
+    } else if (isPet) {
+      title = node.attrs.name?.trim() || 'Unnamed pet';
+      const species = ['dog', 'cat'].includes(node.attrs.species) ? node.attrs.species : 'other';
+      subtitle = [species === 'other' ? 'Pet' : cap(species), lifespan(node.attrs).replace(/^b\. /, '')].filter(Boolean).join(' · ');
+      cls = `card pet species-${species}${connected.has(id) ? '' : ' unconnected'}`;
     } else {
       title = displayName(node.attrs);
       subtitle = lifespan(node.attrs);
@@ -230,9 +289,13 @@ function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip)
     if (preview?.[id]) cls += ' dragging';
     const card = svgEl('rect', {
       class: cls, 'data-id': id, ...extra,
-      x: left, y: top, width: pos.width, height: pos.height, rx: 8,
+      x: left, y: top, width: pos.width, height: pos.height, rx: isPet ? pos.height / 2 : 8,
     }, layers.nodes);
-    svgEl('title', {}, card).textContent = subtitle ? `${title}\n${subtitle}` : title;
+    // The badges don't take the pointer (taps go to the card), so the card's tooltip names them.
+    const country = isPerson ? countryOf(node.attrs.birth?.place) : null;
+    svgEl('title', {}, card).textContent = [title, subtitle, isPerson && node.attrs.occupation?.trim(),
+      country && `Born in ${country}`].filter(Boolean).join('\n');
+    let badges = false;
     if (isPerson) {
       const cx = left + 6 + AVATAR_RADIUS;
       svgEl('circle', {
@@ -241,17 +304,24 @@ function drawNodes(doc, graph, layout, layers, preview, photoFill, portraitClip)
       if (!photo) {
         const scale = AVATAR_RADIUS / 20;
         const g = svgEl('g', {
-          class: 'portrait-art', 'clip-path': `url(#${portraitClip})`,
+          class: 'portrait-art', 'clip-path': `url(#${clips.portrait})`,
           transform: `translate(${cx - AVATAR_RADIUS} ${pos.y - AVATAR_RADIUS}) scale(${scale})`,
         }, layers.labels);
         g.innerHTML = portraitMarkup(node.attrs.sex);
       }
+      badges = drawPersonBadges(node, pos, linkCounts.get(id) ?? 0, layers.labels, clips);
+    } else if (isPet) {
+      const cx = left + 5 + PET_AVATAR_RADIUS;
+      svgEl('circle', { class: 'pet-avatar', cx, cy: pos.y, r: PET_AVATAR_RADIUS }, layers.labels);
+      drawIcon(layers.labels, petIconName(node.attrs.species), cx - 10, pos.y - 10, 20, 'pet-icon');
     }
 
-    const name = svgEl('text', { class: 'name', x: textX, y: subtitle ? pos.y - 4 : pos.y + 5 }, layers.labels);
+    // With badges along the top, the name and dates move down a little to clear them.
+    const shift = badges ? 5 : 0;
+    const name = svgEl('text', { class: 'name', x: textX, y: (subtitle ? pos.y - 4 : pos.y + 5) + shift }, layers.labels);
     name.textContent = fitText(title, textWidth);
     if (subtitle) {
-      const sub = svgEl('text', { class: 'dates', x: textX, y: pos.y + 15 }, layers.labels);
+      const sub = svgEl('text', { class: 'dates', x: textX, y: pos.y + (isPet ? 12 : 15) + shift }, layers.labels);
       sub.textContent = fitText(subtitle, textWidth, 6.5);
     }
   }

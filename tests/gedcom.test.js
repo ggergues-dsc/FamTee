@@ -93,7 +93,8 @@ test('import maps people, families, kinds, notes and reports what it skipped', (
 
   assert(warnings.some((w) => w.includes('unknown child @I99@')));
   const skipped = warnings.find((w) => w.startsWith('Not imported'));
-  assert(skipped.includes('2 × SOUR') && skipped.includes('1 × OCCU'), skipped);
+  assert(skipped.includes('2 × SOUR') && !skipped.includes('OCCU'), skipped);
+  assertEqual(p['John Smith'].occupation, 'Engineer', 'OCCU becomes the job');
   assert(warnings.some((w) => w.includes('Line 63')));
 });
 

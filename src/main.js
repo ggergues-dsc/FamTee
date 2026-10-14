@@ -15,7 +15,7 @@ import { importGedcom, addImportedGraph, looksLikeGedcom, documentFromGedcom } f
 import { exportGedcom, exportGedcomMerged } from './io/gedcom/export.js';
 import { privatize } from './privacy/living.js';
 import { createDocument, updateNodeAttrs, removeNode } from './store/model.js';
-import { replaceDocument, removePerson } from './store/family.js';
+import { replaceDocument, removePerson, removePet } from './store/family.js';
 import { loadDocument, readEmbedded } from './store/serialize.js';
 import { Store } from './store/store.js';
 import { createRenderer } from './render/renderer.js';
@@ -549,10 +549,10 @@ async function boot() {
     } else if ((event.key === 'Delete' || event.key === 'Backspace') && !store.readOnly) {
       const [id] = view.selection;
       const type = id && store.doc.graphs[currentGraph()].nodes[id]?.type;
-      if (type === 'person' || type === 'group') {
+      if (type === 'person' || type === 'group' || type === 'pet') {
         event.preventDefault();
-        ctx.edit(type === 'person' ? 'Delete person' : 'Delete group', (d) =>
-          (type === 'person' ? removePerson(d, currentGraph(), id) : removeNode(d, currentGraph(), id)));
+        const remove = { person: removePerson, pet: removePet, group: removeNode }[type];
+        ctx.edit(`Delete ${type}`, (d) => remove(d, currentGraph(), id));
       }
     } else if (mod || event.altKey) {
       return;

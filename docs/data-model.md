@@ -1,4 +1,4 @@
-# FamTee Data Model (schemaVersion 1)
+# FamTee Data Model (schemaVersion 2)
 
 Decisions behind this format: [ADR 0004](adr/0004-compound-multi-graph-json-data-model.md),
 [ADR 0005](adr/0005-union-nodes-for-family-relations.md), [ADR 0009](adr/0009-overlay-layer-for-future-graphic-design.md).
@@ -20,7 +20,7 @@ A FamTee document is a **compound multi-graph**:
 ```jsonc
 {
   "format": "famtee",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "meta": {
     "id": "01J9Z6Q8X1K3V4...",          // document ULID, also the autosave key
     "title": "Gergues Family",
@@ -60,8 +60,10 @@ must not contain `:` since links use `graphId:nodeId`.
     "name": { "given": "Maria", "surname": "Garcia" },   // optional "suffix" (e.g. from GEDCOM "Jr.")
     "sex": "F",
     "status": "deceased",                // optional: "living" | "deceased"; absent = decided from dates (ADR 0018)
-    "birth": { "date": "1950-03-14", "place": "Cairo" },
+    "birth": { "date": "1950-03-14", "place": "Cairo, Egypt" },  // the place's last part names the country (its flag)
     "death": null,
+    "occupation": "Teacher",            // optional: job or profession (GEDCOM OCCU)
+    "employer": "Cairo University",     // optional: employer (GEDCOM OCCU › AGNC)
     "notes": "",
     "photo": "m-01JA...",                 // optional: id of an image in doc.media (ADR 0013)
     "nudge": { "dx": 40, "dy": 0 }     // optional: offset from the automatic layout, set by dragging (ADR 0012)
@@ -75,6 +77,7 @@ must not contain `:` since links use `graphId:nodeId`.
 | `union` | A partnership/family unit joining partners and their children (ADR 0005) |
 | `group` | Visual grouping inside a graph (household, branch) — has `attrs.members: [nodeId]` |
 | `graphRef` | Placeholder for another graph: `attrs.graph: "g-other"` — click to drill down |
+| `pet` | A pet: `attrs.name`, `attrs.species` (`dog` \| `cat` \| `other`), optional `birth`, `death`, `notes`. Not exported to GEDCOM |
 
 `attrs` is open: unknown keys are preserved on load/save so newer files survive older apps.
 
@@ -90,6 +93,7 @@ must not contain `:` since links use `graphId:nodeId`.
 | `partner` | person → union | married, partner, divorced, widowed |
 | `child` | union → person | biological, adopted, foster, step |
 | `custom` | any → any | free label (godparent, guardian, …) |
+| `pet` | union → pet | — (a person's own pets hang from a single-owner union, like a child alone) |
 
 ## Cross-graph links (document level)
 
@@ -122,6 +126,11 @@ is deleted, and copying a person into another graph creates a `same-as` link to 
 
 `schemaVersion` is an integer. On load, `migrations[n]` upgrades n → n+1 until current. The app refuses
 (read-only mode + warning) to save a file whose `schemaVersion` is newer than it understands.
+
+| Version | Change |
+|---|---|
+| 1 | Initial format |
+| 2 | Pets (`pet` node and edge types); person `occupation` and `employer`. Version 1 files load unchanged |
 
 ## Embedding in HTML
 

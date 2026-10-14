@@ -83,6 +83,9 @@ export function validate(doc) {
       if (edge.type === 'child' && (from.type !== 'union' || to.type !== 'person')) {
         fail('edge-endpoints', `${where}: child edges go union → person`);
       }
+      if (edge.type === 'pet' && (from.type !== 'union' || to.type !== 'pet')) {
+        fail('edge-endpoints', `${where}: pet edges go union → pet`);
+      }
     }
   }
 

@@ -1,10 +1,11 @@
 // Vocabulary of the native document format. See docs/data-model.md.
 
 export const FORMAT = 'famtee';
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
-export const NODE_TYPES = ['person', 'union', 'group', 'graphRef'];
-export const EDGE_TYPES = ['partner', 'child', 'custom'];
+export const NODE_TYPES = ['person', 'union', 'group', 'graphRef', 'pet'];
+export const EDGE_TYPES = ['partner', 'child', 'custom', 'pet'];
+export const PET_SPECIES = ['dog', 'cat', 'other'];
 export const LINK_TYPES = ['same-as', 'custom'];
 
 // Cross-graph endpoints are written "graphId:nodeId".

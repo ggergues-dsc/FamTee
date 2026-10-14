@@ -18,7 +18,7 @@ import {
 import {
   addPartnerTo, addChildTo, addParentTo, removePerson, copyPersonTo,
   unionsOfPerson, parentUnionsOf, partnersOfUnion, childrenOfUnion,
-  groupsOf, linksOf, sameAsIdentity, graphsContaining,
+  groupsOf, linksOf, sameAsIdentity, graphsContaining, addPetTo, petsOfUnion, ownersOfPet, removePet,
 } from '../store/family.js';
 import { endpoint } from '../store/schema.js';
 import { addMedia, setPhoto, isSafeImageData, mediaUsage, imageBytes, formatSize } from '../store/media.js';
@@ -29,7 +29,7 @@ import { icon, portrait } from './icons.js';
 const HEADING_ICONS = {
   Person: 'person', Partnership: 'partnership', Group: 'group', Family: 'family',
   'Add relative': 'addPerson', Partners: 'partners', Parents: 'parents', Children: 'children',
-  Members: 'parents', Groups: 'group', 'All attributes': 'list', 'In other graphs': 'families', Advanced: 'sliders',
+  Members: 'parents', Groups: 'group', Pet: 'paw', Pets: 'paw', Owners: 'parents', 'All attributes': 'list', 'In other graphs': 'families', Advanced: 'sliders',
 };
 const heading = (tag, text) => h(tag, {}, HEADING_ICONS[text] ? icon(HEADING_ICONS[text]) : null, text);
 
@@ -62,7 +62,17 @@ const PERSON_FIELDS = [
   { name: 'birth-place', label: 'Birthplace', ...nested('birth', 'place') },
   { name: 'death-date', label: 'Died', ...nested('death', 'date') },
   { name: 'death-place', label: 'Place of death', ...nested('death', 'place') },
+  { name: 'occupation', label: 'Job or profession', placeholder: 'e.g. Teacher', ...nested(null, 'occupation') },
+  { name: 'employer', label: 'Employer', placeholder: 'e.g. Leeds City Council', ...nested(null, 'employer') },
   { name: 'notes', label: 'Notes', multiline: true, ...nested(null, 'notes') },
+];
+
+const PET_FIELDS = [
+  { name: 'pet-name', label: 'Name', ...nested(null, 'name') },
+  { name: 'species', label: 'Animal', options: [['dog', 'Dog'], ['cat', 'Cat'], ['other', 'Other animal']], ...nested(null, 'species') },
+  { name: 'pet-born', label: 'Born', placeholder: 'e.g. 2019', ...nested('birth', 'date') },
+  { name: 'pet-died', label: 'Died', ...nested('death', 'date') },
+  { name: 'pet-notes', label: 'Notes', multiline: true, ...nested(null, 'notes') },
 ];
 
 const GROUP_FIELDS = [
@@ -76,6 +86,7 @@ export function nodeLabel(doc, graphId, nodeId) {
   if (node.type === 'person') return displayName(node.attrs);
   if (node.type === 'group') return node.attrs.label || 'Group';
   if (node.type === 'graphRef') return node.attrs.label || doc.graphs[node.attrs.graph]?.title || 'Graph';
+  if (node.type === 'pet') return node.attrs.name?.trim() || 'Unnamed pet';
   return 'Partnership';
 }
 
@@ -104,6 +115,7 @@ export function createPanel(container, ctx) {
       const body = node?.type === 'person' ? personPanel(graphId, selected)
         : node?.type === 'union' ? unionPanel(graphId, selected)
         : node?.type === 'group' ? groupPanel(graphId, selected)
+        : node?.type === 'pet' ? petPanel(graphId, selected)
         : graphPanel(graphId);
       container.replaceChildren(...body.filter(Boolean));
       if (readOnly) for (const el of container.querySelectorAll('input, select, textarea, button')) el.disabled = true;
@@ -392,6 +404,9 @@ export function createPanel(container, ctx) {
         (unions.length > 0 && unions.every((u) => partnersOfUnion(graph(), u).length >= 2));
     });
 
+    const speciesChoice = h('select', { name: 'pet-species', 'aria-label': 'Kind of animal' },
+      h('option', { value: 'dog' }, 'Dog'), h('option', { value: 'cat' }, 'Cat'), h('option', { value: 'other' }, 'Other animal'));
+
     const resetPosition = h('button', { type: 'button', onclick: () =>
       ctx.edit('Reset position', (doc) => updateNodeAttrs(doc, graphId, personId, { nudge: undefined })) }, 'Reset position');
     refreshers.push(() => { resetPosition.hidden = !attrs().nudge; });
@@ -409,10 +424,18 @@ export function createPanel(container, ctx) {
         h('div', { class: 'row' },
           h('button', { type: 'button', onclick: () => ctx.editAndSelect('Add child', (doc) =>
             addChildTo(doc, graphId, personId, unionChoice.value || null).personId) }, '+ Child'),
-          unionChoice)),
+          unionChoice),
+        h('div', { class: 'row' },
+          h('button', {
+            type: 'button', class: 'with-icon', title: 'Add a pet of this person (with the partner chosen for + Child)',
+            onclick: () => ctx.editAndSelect('Add pet', (doc) =>
+              addPetTo(doc, graphId, personId, unionChoice.value || null, { name: 'New pet', species: speciesChoice.value }).petId),
+          }, icon('paw'), '+ Pet'),
+          speciesChoice)),
       people('Partners', () => unionsOfPerson(graph(), personId).flatMap((u) => u.partners)),
       people('Parents', () => parentUnionsOf(graph(), personId).flatMap((u) => partnersOfUnion(graph(), u))),
       people('Children', () => unionsOfPerson(graph(), personId).flatMap((u) => u.children)),
+      people('Pets', () => unionsOfPerson(graph(), personId).flatMap((u) => petsOfUnion(graph(), u.unionId))),
       allAttributes(graphId, personId),
       advanced(
         linksSection(graphId, personId),
@@ -439,6 +462,23 @@ export function createPanel(container, ctx) {
       h('section', { class: 'row danger' },
         confirmButton('Delete partnership', 'Click again to delete', () => {
           ctx.edit('Delete partnership', (doc) => removeNode(doc, graphId, unionId));
+          ctx.select(null);
+        })),
+    ];
+  }
+
+  // --- pet ------------------------------------------------------------------
+
+  function petPanel(graphId, petId) {
+    const graph = () => ctx.store.doc.graphs[graphId];
+    return [
+      heading('h2', 'Pet'),
+      nodeForm(graphId, petId, PET_FIELDS, 'Edit pet'),
+      people('Owners', () => ownersOfPet(graph(), petId)),
+      allAttributes(graphId, petId),
+      h('section', { class: 'row danger' },
+        confirmButton('Delete pet', 'Click again to delete', () => {
+          ctx.edit('Delete pet', (doc) => removePet(doc, graphId, petId));
           ctx.select(null);
         })),
     ];

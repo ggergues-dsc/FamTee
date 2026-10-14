@@ -7,7 +7,7 @@ import { getGraph, addGraphRef, createDocument } from '../../store/model.js';
 import { parseGedcom, child, childrenOf, valueOf, unescapeValue } from './lines.js';
 import { dateFromGedcom, nameFromGedcom } from './convert.js';
 
-const INDI_TAGS = new Set(['NAME', 'SEX', 'BIRT', 'DEAT', 'NOTE', 'FAMC', 'FAMS', 'CHAN']);
+const INDI_TAGS = new Set(['NAME', 'SEX', 'BIRT', 'DEAT', 'OCCU', 'NOTE', 'FAMC', 'FAMS', 'CHAN']);
 const FAM_TAGS = new Set(['HUSB', 'WIFE', 'CHIL', 'MARR', 'DIV', 'NOTE', 'CHAN']);
 const PEDIGREE = { adopted: 'adopted', foster: 'foster', birth: 'biological' };
 
@@ -68,6 +68,11 @@ export function importGedcom(text, { title = 'Imported family' } = {}) {
       const ev = child(indi, tag);
       if (ev && Object.keys(event(ev)).length) attrs[key] = event(ev);
     }
+    // Occupation: the job title, with its agency (AGNC) as the employer.
+    const occu = child(indi, 'OCCU');
+    if (occu?.value.trim()) attrs.occupation = unescapeValue(occu.value.trim());
+    if (valueOf(occu, 'AGNC')) attrs.employer = unescapeValue(valueOf(occu, 'AGNC'));
+    for (let i = 1; i < childrenOf(indi, 'OCCU').length; i++) skip('OCCU (additional occupations)');
     const noteParts = childrenOf(indi, 'NOTE').map(noteText).filter((t) => t.trim());
     if (noteParts.length) attrs.notes = noteParts.join('\n\n');
     for (const famc of childrenOf(indi, 'FAMC')) {
