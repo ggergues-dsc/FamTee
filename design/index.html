@@ -127,6 +127,14 @@ button.with-icon .hi { width: 1.05em; height: 1.05em; }
 .panel .row select { flex: 1; }
 .panel .people { list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem; }
 .panel .photo-wrap { display: grid; justify-items: start; gap: .3rem; margin-bottom: .75rem; }
+.panel .photo-hint { font-size: .78rem; color: var(--muted); }
+.photo-sizes { display: grid; gap: 12px; }
+.photo-sizes figure { margin: 0; display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 12px; }
+.ph-frame { justify-self: center; display: grid; border-radius: 50%; overflow: hidden; border: 1px solid var(--card-stroke); }
+.photo-sample { display: block; }
+.photo-sizes figcaption { font-size: .8rem; color: var(--muted); line-height: 1.4; }
+.photo-sizes figcaption b { color: var(--fg); }
+.sheet-note { margin: 10px 0 0; font-size: .78rem; color: var(--muted); max-width: 48ch; }
 .panel .photo svg { width: 100%; height: 100%; display: block; }
 .panel .photo { overflow: hidden; background: var(--av-bg) !important; margin-bottom: 0 !important; display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; border: 1px solid var(--card-stroke);
   background: var(--card-u); font-size: .75rem; color: var(--muted); margin-bottom: .75rem; }
@@ -356,7 +364,7 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
           </div>
           <aside class="panel" aria-label="Details">
             <h2><svg class="hi" aria-hidden="true"><use href="#i-person"/></svg>Person</h2>
-            <div class="photo-wrap"><div class="photo"><svg class="av av-F" viewBox="0 0 40 40"><use href="#av-F"/></svg></div><button type="button" class="link" id="p-photo">Add photo</button></div>
+            <div class="photo-wrap"><div class="photo"><svg class="av av-F" viewBox="0 0 40 40"><use href="#av-F"/></svg></div><button type="button" class="link" id="p-photo">Add photo</button><span class="photo-hint">Stored at 512 px, plus a 96 px miniature for the card</span></div>
             <div class="form">
               <div class="two">
                 <label for="p-given"><span>Given name</span><input id="p-given" value="Sarah"></label>
@@ -476,6 +484,14 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
             <span class="save-state dirty">Kept in this browser 08:02 · not downloaded</span>
             <span class="save-state error">Not backed up · download to keep your work</span>
           </div>
+        </div>
+        <div>
+          <h3><svg class="hi" aria-hidden="true"><use href="#i-person"/></svg>Photo sizes</h3>
+          <div class="photo-sizes">
+            <figure><span class="ph-frame"><svg class="photo-sample" width="76" height="76" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="ph-bg-76" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9cc3e6"/><stop offset="1" stop-color="#e8d9c4"/></linearGradient></defs><rect width="40" height="40" fill="url(#ph-bg-76)"/><path d="M11.5 25c-1.2-2.5-1.5-5.5-1.5-8.5C10 10.5 14.3 6 20 6s10 4.5 10 10.5c0 3-.3 6-1.5 8.5z" fill="#5a3b2a"/><circle cx="20" cy="16.5" r="6.5" fill="#e9c4a6"/><path d="M7 41c0-8 5.8-13.5 13-13.5S33 33 33 41z" fill="#3e6fb0"/></svg></span><figcaption><b>Medium</b> · up to 512 px · typically 30–80 KB<br>Person panel and hover snapshot</figcaption></figure>
+            <figure><span class="ph-frame"><svg class="photo-sample" width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="ph-bg-38" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9cc3e6"/><stop offset="1" stop-color="#e8d9c4"/></linearGradient></defs><rect width="40" height="40" fill="url(#ph-bg-38)"/><path d="M11.5 25c-1.2-2.5-1.5-5.5-1.5-8.5C10 10.5 14.3 6 20 6s10 4.5 10 10.5c0 3-.3 6-1.5 8.5z" fill="#5a3b2a"/><circle cx="20" cy="16.5" r="6.5" fill="#e9c4a6"/><path d="M7 41c0-8 5.8-13.5 13-13.5S33 33 33 41z" fill="#3e6fb0"/></svg></span><figcaption><b>Miniature</b> · up to 96 px · a few KB<br>Card avatars, so the tree only loads the small image</figcaption></figure>
+          </div>
+          <p class="sheet-note">Both are made when a photo is added (re-encoded as JPEG, which also strips camera location data) and stored together. Older photos have one size, used for both.</p>
         </div>
         <div>
           <h3><svg class="hi" aria-hidden="true"><use href="#i-card"/></svg>Nodes</h3>
