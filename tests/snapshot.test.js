@@ -2,6 +2,7 @@ import { test, assert, assertEqual } from './harness.js';
 import { personSummary, createSnapshot } from '../src/ui/snapshot.js';
 import { addGroup, addLink, addGraph, addPerson, updateNodeAttrs } from '../src/store/model.js';
 import { endpoint } from '../src/store/schema.js';
+import { addMedia } from '../src/store/media.js';
 import { smallFamily } from './fixtures.js';
 
 test('person summary lists dates, family, groups and other graphs', () => {
@@ -53,6 +54,30 @@ test('snapshot sits beside the card and stays inside the canvas', () => {
     assertEqual(el.getAttribute('role'), 'tooltip');
     snap.hide();
     assertEqual(host.querySelectorAll('.snapshot').length, 0);
+  } finally {
+    host.remove();
+  }
+});
+
+test('snapshot shows a larger photo, or the placeholder portrait', () => {
+  const { doc, g, mum, kid } = smallFamily();
+  const JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+  updateNodeAttrs(doc, g, mum, { photo: addMedia(doc, { mime: 'image/jpeg', data: JPEG, width: 10, height: 10 }) });
+  assertEqual(personSummary(doc, g, mum).photo, JPEG);
+  assertEqual(personSummary(doc, g, kid).photo, null);
+  const host = document.createElement('div');
+  host.style.cssText = 'position: fixed; left: 0; top: 0; width: 900px; height: 500px;';
+  const card = document.createElement('div');
+  card.style.cssText = 'position: absolute; left: 40px; top: 100px; width: 160px; height: 56px;';
+  host.append(card);
+  document.body.append(host);
+  try {
+    const snap = createSnapshot(host);
+    snap.show(doc, g, mum, card);
+    assertEqual(host.querySelector('.snapshot-portrait img')?.getAttribute('src'), JPEG);
+    snap.hide();
+    snap.show(doc, g, kid, card);
+    assert(host.querySelector('.snapshot-portrait svg') && !host.querySelector('.snapshot-portrait img'));
   } finally {
     host.remove();
   }
