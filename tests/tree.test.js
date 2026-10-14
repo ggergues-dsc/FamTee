@@ -1,7 +1,8 @@
 import { test, assert, assertEqual } from './harness.js';
 import { treeStructure, treeFamilies } from '../src/render/tree.js';
 import { createRenderer } from '../src/render/renderer.js';
-import { createDocument, addPerson, addUnion, addChild } from '../src/store/model.js';
+import { createDocument, addPerson, addUnion, addChild, addGraph, addGroup, addEdge, addLink } from '../src/store/model.js';
+import { endpoint } from '../src/store/schema.js';
 import { addPetTo } from '../src/store/family.js';
 
 // Two families joined by a marriage: the Smiths' Sarah marries the Garcias' Luis.
@@ -44,6 +45,8 @@ test('tree: drawing shows trunks, forks, leaves, a graft and pets', () => {
     const result = createRenderer(svg).render(f.doc, f.g, { mode: 'tree', selection: new Set([f.mia]) });
     assertEqual(result.mode, 'tree');
     assertEqual(result.families.length, 2);
+    const trunkX = (fam) => Math.min(...[...svg.querySelectorAll('.tree-family')].filter((t) => t.textContent === fam.name).map((t) => Number(t.getAttribute('x'))));
+    assert(trunkX(result.families[0]) < trunkX(result.families[1]), 'families listed left to right');
     assertEqual(svg.querySelectorAll('.tree-person').length, 9);
     assert(svg.querySelector(`.tree-person.tree-leaf[data-id="${f.mia}"]`), 'Mia has no children: a leaf');
     assert(svg.querySelector(`.tree-person.tree-fork[data-id="${f.sarah}"]`), 'Sarah has a child: a fork');
@@ -86,4 +89,30 @@ test('tree: the same family always looks the same', () => {
     return [...svg.querySelectorAll('.tree-limb')].map((p) => p.getAttribute('d') ?? p.getAttribute('r')).join('|');
   };
   assertEqual(draw(), draw());
+});
+
+test('tree: groups, other relations and links to other graphs', () => {
+  const f = twoFamilies();
+  const g2 = addGraph(f.doc, { title: 'Garcia family' });
+  const copy = addPerson(f.doc, g2, { name: { given: 'Mia' } });
+  addLink(f.doc, { type: 'same-as', from: endpoint(f.g, f.mia), to: endpoint(g2, copy) });
+  addGroup(f.doc, f.g, [f.sarah, f.luis, f.mia], { label: 'Household' });
+  addEdge(f.doc, f.g, { type: 'custom', from: f.david, to: f.mia, attrs: { label: 'godparent' } });
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.append(svg);
+  try {
+    const renderer = createRenderer(svg);
+    renderer.render(f.doc, f.g, { mode: 'tree' });
+    assertEqual(svg.querySelectorAll('.tree-group').length, 1);
+    assertEqual(svg.querySelector('.group-label').textContent, 'Household');
+    assertEqual(svg.querySelectorAll('.tree-relation').length, 1);
+    assertEqual(svg.querySelector('.tree-relation-label').textContent, 'godparent');
+    const badge = svg.querySelector('.link-badge');
+    assert(badge && badge.dataset.linkGraph === g2 && badge.dataset.linkNode === copy, 'Mia links to her copy in the other graph');
+    renderer.render(f.doc, f.g, { mode: 'tree', hidden: new Set([f.smiths]) });
+    assertEqual(svg.querySelectorAll('.tree-relation').length, 0, 'David hidden: no relation line to him');
+    assertEqual(svg.querySelectorAll('.tree-group').length, 1, 'the group outlines the members still shown');
+  } finally {
+    svg.remove();
+  }
 });

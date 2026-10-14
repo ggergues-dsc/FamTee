@@ -217,18 +217,24 @@ test('copy a person into a sub-graph, follow the badge there and back; group via
   tap(win, doc.querySelector('.link-badge'));
   assertEqual([app.view.path.at(-1), [...app.view.selection][0]], ['g-hanna', 'p-nadia'], 'and back');
 
+  // The sample already has a group (Toronto household); start a new one for Nadia.
+  const nodes = () => app.store.doc.graphs['g-hanna'].nodes;
+  const choose = (value) => { const pick = doc.querySelector('[name="add-group"]'); pick.value = value; pick.dispatchEvent(new win.Event('change')); };
+  choose('');
   byText(doc, 'Add to group').click();
+  const created = Object.keys(nodes()).find((id) => nodes()[id].type === 'group' && nodes()[id].attrs.members.includes('p-nadia'));
   app.ctx.select('p-peter');
+  choose(created);
   byText(doc, 'Add to group').click();
-  const groups = Object.values(app.store.doc.graphs['g-hanna'].nodes).filter((n) => n.type === 'group');
-  assertEqual(groups.map((n) => n.attrs.members), [['p-nadia', 'p-peter']], 'joined the existing group');
-  const hull = doc.querySelector('rect.group');
+  assertEqual(nodes()[created].attrs.members, ['p-nadia', 'p-peter'], 'joined the existing group');
+  assertEqual(nodes()['grp-toronto'].attrs.members, ['p-youssef', 'p-dina', 'p-adam'], 'the other group is untouched');
+  const hull = doc.querySelector(`rect.group[data-id="${created}"]`);
   assert(hull, 'group drawn');
   tap(win, hull);
   assertEqual(doc.querySelector('#panel h2').textContent, 'Group');
   app.store.undo();
   app.store.undo();
-  assert(!doc.querySelector('rect.group'), 'undo removes the group');
+  assert(!doc.querySelector(`rect.group[data-id="${created}"]`), 'undo removes the group');
 });
 
 test('GEDCOM: export the graph, import it back as a new graph, undo', async () => {
@@ -526,33 +532,21 @@ test('View mode shows the family as a tree; family switches show or hide each tr
   tap(win, doc.querySelector('#canvas .tree-person[data-id="p-leo"] .tree-ring'));
   assertEqual([...app.view.selection], ['p-leo'], 'clicking someone opens their details');
   assert(doc.querySelector('[name="given"]').disabled, 'read-only details');
-  assert(doc.querySelector('.family-switches').hidden, 'one family: no family switches');
+  assert(doc.querySelector('#canvas .tree-group[data-id="grp-toronto"]'), 'groups are outlined');
+  assert([...doc.querySelectorAll('#canvas .tree-relation-label')].some((t) => t.textContent === 'godparent'), 'other relations are drawn');
 
-  // Add a second founding couple whose son marries Zoe: two trees with a graft.
-  const g = 'g-hanna';
-  app.store.apply('Add the Lees', (d) => {
-    const nodes = d.graphs[g].nodes;
-    nodes['p-tom'] = { type: 'person', attrs: { name: { given: 'Tom', surname: 'Lee' }, sex: 'M' } };
-    nodes['p-amy'] = { type: 'person', attrs: { name: { given: 'Amy', surname: 'Lee' }, sex: 'F' } };
-    nodes['p-ben'] = { type: 'person', attrs: { name: { given: 'Ben', surname: 'Lee' }, sex: 'M' } };
-    nodes['u-lee'] = { type: 'union', attrs: { kind: 'married' } };
-    nodes['u-ben-zoe'] = { type: 'union', attrs: { kind: 'married' } };
-    d.graphs[g].edges.push(
-      { id: 'e-l1', type: 'partner', from: 'p-tom', to: 'u-lee', attrs: {} },
-      { id: 'e-l2', type: 'partner', from: 'p-amy', to: 'u-lee', attrs: {} },
-      { id: 'e-l3', type: 'child', from: 'u-lee', to: 'p-ben', attrs: { kind: 'biological' } },
-      { id: 'e-l4', type: 'partner', from: 'p-ben', to: 'u-ben-zoe', attrs: {} },
-      { id: 'e-l5', type: 'partner', from: 'p-zoe', to: 'u-ben-zoe', attrs: {} });
-  });
+  // The sample has two founding couples: the Hannas and the Wrights (Emma's parents).
   const switches = () => [...doc.querySelectorAll('.family-switches .view-switch')];
-  assertEqual(switches().map((b) => b.textContent), ['Hanna', 'Lee']);
-  switches()[1].click(); // hide the Lees
-  assert(!people().includes('p-ben') && people().includes('p-zoe'));
+  assert(!doc.querySelector('.family-switches').hidden);
+  assertEqual(switches().map((b) => b.textContent), ['Hanna', 'Wright']);
+  switches()[1].click(); // hide the Wrights
+  assert(!people().includes('p-richard') && !people().includes('p-emma'), 'the Wrights are hidden');
+  assert(people().includes('p-leo'), 'Leo stays with his Hanna side');
   assertEqual(switches()[0].getAttribute('aria-disabled'), 'true', 'the last family shown can’t be hidden');
   switches()[0].click();
   assert(people().includes('p-george'), 'still shown');
   switches()[1].click();
-  assert(people().includes('p-ben'));
+  assert(people().includes('p-richard'));
   byText(doc, 'Edit').click();
   assert(doc.querySelector('#canvas rect.card.person') && !doc.querySelector('#canvas .tree-person'), 'Edit brings the cards back');
   assert(doc.querySelector('.family-switches').hidden);

@@ -145,7 +145,8 @@ export function treeFamilies(graph, structure = treeStructure(graph)) {
 // Returns { nodes: { id: { x, y, width, height } }, bounds, families }.
 export function drawTree({ doc, graph, layout, layers, selection = new Set(), hidden = new Set(), photoFill, clips }) {
   const s = treeStructure(graph);
-  const families = treeFamilies(graph, s);
+  // families left to right, as their trunks stand (so the switches read in the same order)
+  const families = treeFamilies(graph, s).sort((a, b) => (layout.nodes[a.id]?.x ?? 0) - (layout.nodes[b.id]?.x ?? 0));
   const toneOf = new Map(families.map((f, i) => [f.id, i % TONES]));
   const docKey = doc.meta?.id ?? '';
   const P = (id) => {
@@ -295,6 +296,38 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
       svgEl('text', { class: 'tree-dates', x: at.x, y: at.y + 27 }, layers.labels).textContent = graph.nodes[pet].attrs.name || 'Pet';
       nodes[pet] = { x: at.x, y: at.y, width: 28, height: 28 };
       points.push([at.x, at.y + 30]);
+    }
+  }
+
+  // Groups: a soft dashed outline around the members shown, with the group's name.
+  for (const [id, node] of Object.entries(graph.nodes)) {
+    if (node.type !== 'group') continue;
+    const members = (node.attrs.members ?? []).map((m) => nodes[m]).filter(Boolean);
+    if (!members.length) continue;
+    const pad = 16;
+    const x0 = Math.min(...members.map((n) => n.x - n.width / 2)) - pad - 34;
+    const x1 = Math.max(...members.map((n) => n.x + n.width / 2)) + pad + 34;
+    const y0 = Math.min(...members.map((n) => n.y - n.height / 2)) - pad - 14;
+    const y1 = Math.max(...members.map((n) => n.y + n.height / 2)) + pad + 26; // room for the names
+    const rect = svgEl('rect', { class: 'group tree-group', 'data-id': id, x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 24 }, layers.background);
+    svgEl('title', {}, rect).textContent = `${node.attrs.label || 'Group'} (click to edit)`;
+    svgEl('text', { class: 'group-label', x: x0 + 14, y: y0 + 15 }, layers.labels).textContent = node.attrs.label || 'Group';
+    if (selection.has(id)) svgEl('rect', { class: 'selection', x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 24 }, layers.ui);
+    points.push([x0, y0], [x1, y1]);
+  }
+
+  // Other relations (godparent…): a dotted arc above the two people, with its label.
+  for (const e of graph.edges) {
+    if (e.type !== 'custom' || !nodes[e.from] || !nodes[e.to]) continue;
+    const a = nodes[e.from];
+    const b = nodes[e.to];
+    const mx = (a.x + b.x) / 2;
+    const top = Math.min(a.y, b.y) - 70 - Math.abs(a.x - b.x) * 0.12;
+    svgEl('path', { class: 'edge edge-custom tree-relation', d: `M ${a.x} ${a.y - NODE_RADIUS} Q ${mx} ${top} ${b.x} ${b.y - NODE_RADIUS}` }, layers.edges);
+    if (e.attrs?.label) {
+      const y = (Math.min(a.y, b.y) - NODE_RADIUS + top) / 2 - 4;
+      svgEl('text', { class: 'edge-label tree-relation-label', x: mx, y }, layers.labels).textContent = e.attrs.label;
+      points.push([mx, y - 12]);
     }
   }
 
