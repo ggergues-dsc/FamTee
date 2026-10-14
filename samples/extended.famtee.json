@@ -383,6 +383,71 @@
             },
             "notes": "African grey parrot"
           }
+        },
+        "p-richard": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Richard",
+              "surname": "Wright"
+            },
+            "sex": "M",
+            "birth": {
+              "date": "1944",
+              "place": "Dublin, Ireland"
+            },
+            "occupation": "Mechanic",
+            "employer": "Wright Motors"
+          }
+        },
+        "p-joan": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Joan",
+              "surname": "Wright"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1946",
+              "place": "Cork, Ireland"
+            },
+            "occupation": "Teacher"
+          }
+        },
+        "u-richard-joan": {
+          "type": "union",
+          "attrs": {
+            "kind": "married",
+            "start": "1970"
+          }
+        },
+        "p-claire": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Claire",
+              "surname": "Wright"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "1977",
+              "place": "Dublin, Ireland"
+            },
+            "occupation": "Engineer",
+            "employer": "Intel"
+          }
+        },
+        "grp-toronto": {
+          "type": "group",
+          "attrs": {
+            "label": "Toronto household",
+            "members": [
+              "p-youssef",
+              "p-dina",
+              "p-adam"
+            ]
+          }
         }
       },
       "edges": [
@@ -631,6 +696,47 @@
           "from": "u-youssef-dina",
           "to": "pet-rio",
           "attrs": {}
+        },
+        {
+          "id": "e-w1",
+          "type": "partner",
+          "from": "p-richard",
+          "to": "u-richard-joan",
+          "attrs": {}
+        },
+        {
+          "id": "e-w2",
+          "type": "partner",
+          "from": "p-joan",
+          "to": "u-richard-joan",
+          "attrs": {}
+        },
+        {
+          "id": "e-w3",
+          "type": "child",
+          "from": "u-richard-joan",
+          "to": "p-emma",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-w4",
+          "type": "child",
+          "from": "u-richard-joan",
+          "to": "p-claire",
+          "attrs": {
+            "kind": "biological"
+          }
+        },
+        {
+          "id": "e-w5",
+          "type": "custom",
+          "from": "p-karim",
+          "to": "p-leo",
+          "attrs": {
+            "label": "godparent"
+          }
         }
       ]
     }

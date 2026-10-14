@@ -60,6 +60,8 @@ export function createRenderer(svg) {
       const layout = layoutGraph(graph, { ...layoutOptions, orientation: 'TB' });
       for (const layer of Object.values(layers)) layer.replaceChildren();
       const tree = drawTree({ doc, graph, layout, layers, selection, hidden, photoFill, clips });
+      // the same = / ↔ badges as on cards, on the portraits' top-right
+      drawLinkBadges(doc, graphId, { nodes: tree.nodes }, layers.annotations);
       return { ...tree, options: layout.options, mode: 'tree' };
     }
     const orientation = layoutOptions?.orientation ?? graph.layout?.orientation;
