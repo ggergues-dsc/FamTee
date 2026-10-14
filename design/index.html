@@ -495,7 +495,7 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
         </div>
         <div>
           <h3><svg class="hi" aria-hidden="true"><use href="#i-card"/></svg>Nodes</h3>
-          <svg class="g" viewBox="0 0 340 150" width="100%" style="max-width:340px"><g id="sheet-nodes"></g></svg>
+          <svg class="g" viewBox="0 0 380 150" width="100%" style="max-width:380px"><g id="sheet-nodes"></g></svg>
           <div class="av-legend" aria-label="Placeholder portraits"><span><svg class="av av-M" viewBox="0 0 40 40"><use href="#av-M"/></svg>Male</span><span><svg class="av av-F" viewBox="0 0 40 40"><use href="#av-F"/></svg>Female</span><span><svg class="av av-U" viewBox="0 0 40 40"><use href="#av-U"/></svg>Unknown</span></div>
           <div class="av-legend pet-legend" aria-label="Pet icons"><span><svg class="pet-glyph" viewBox="0 0 24 24"><use href="#i-dog"/></svg>Dog</span><span><svg class="pet-glyph" viewBox="0 0 24 24"><use href="#i-cat"/></svg>Cat</span><span><svg class="pet-glyph" viewBox="0 0 24 24"><use href="#i-paw"/></svg>Other animal</span></div>
           <div class="av-legend job-legend" aria-label="Job icons"><span><svg viewBox="0 0 24 24"><use href="#j-mechanic"/></svg>Mechanic</span><span><svg viewBox="0 0 24 24"><use href="#j-farmer"/></svg>Farmer</span><span><svg viewBox="0 0 24 24"><use href="#j-medical"/></svg>Doctor or nurse</span><span><svg viewBox="0 0 24 24"><use href="#j-teacher"/></svg>Teacher</span><span><svg viewBox="0 0 24 24"><use href="#j-engineer"/></svg>Engineer</span><span><svg viewBox="0 0 24 24"><use href="#j-electrician"/></svg>Electrician</span><span><svg viewBox="0 0 24 24"><use href="#j-carpenter"/></svg>Carpenter</span><span><svg viewBox="0 0 24 24"><use href="#j-student"/></svg>Student</span><span><svg viewBox="0 0 24 24"><use href="#j-other"/></svg>Any other job</span></div>
@@ -507,7 +507,7 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
 
 <script>
 const NS = 'http://www.w3.org/2000/svg';
-const W = 160, H = 56;
+const W = 184, H = 56; // 184: room for the portrait, the name and a column of badges
 function el(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
@@ -520,25 +520,32 @@ function person(g, cx, cy, p) {
   el('circle', { class: 'avatar', cx: cx - W / 2 + 26, cy, r: 19 }, g);
   // no photo: a placeholder portrait by sex (M, F, or neutral for U)
   el('use', { class: `av av-${p.sex}`, href: `#av-${p.sex}`, x: cx - W / 2 + 7, y: cy - 19, width: 38, height: 38 }, g);
-  text(g, { class: 'name', x: cx + 20, y: cy - 2 }, `${p.given} ${p.surname}`.trim());
-  text(g, { class: 'dates', x: cx + 20, y: cy + 15 }, p.dates);
-  // Job and country of birth sit together in the card's top-right corner, clear of the
-  // portrait (left of the cross-graph link badge when there is one).
-  let right = cx + W / 2 - (p.badge ? 26 : 8);
-  const top = cy - H / 2 + 4;
-  if (p.job) {
-    const jb = el('g', { class: 'job-badge', transform: `translate(${right - 7} ${top + 7})` }, g);
-    el('circle', { r: 7 }, jb);
-    el('use', { href: `#${jobIcon(p.job.title)}`, x: -5, y: -5, width: 10, height: 10 }, jb);
-    el('title', {}, jb).textContent = p.job.title;
-    right -= 18;
-  }
+  // Job and country of birth: a column on the card's right edge (a 28 px job badge above a
+  // 26×17 flag), left of the cross-graph link badge when there is one. The text centres
+  // between the portrait and the column.
   const country = countryOf(p.place);
-  if (country) {
-    const f = el('g', { class: 'flag', transform: `translate(${right - 13} ${top + 2.5}) scale(${13 / 15})` }, g);
-    f.innerHTML = flagMarkup(country);
-    el('title', {}, f).textContent = `Born in ${country}`;
+  let textRight = cx + W / 2;
+  if (p.job || country) {
+    const bx = cx + W / 2 - 4 - (p.badge ? 10 : 0) - 14; // column centre
+    const top = cy - H / 2;
+    if (p.job) {
+      const by = country ? top + 18 : cy;
+      const jb = el('g', { class: 'job-badge', transform: `translate(${bx} ${by})` }, g);
+      el('circle', { r: 14 }, jb);
+      el('use', { href: `#${jobIcon(p.job.title)}`, x: -10, y: -10, width: 20, height: 20 }, jb);
+      el('title', {}, jb).textContent = p.job.title;
+    }
+    if (country) {
+      const fy = p.job ? top + 35 : cy - 26 * 10 / 15 / 2;
+      const f = el('g', { class: 'flag', transform: `translate(${bx - 13} ${fy}) scale(${26 / 15})` }, g);
+      f.innerHTML = flagMarkup(country);
+      el('title', {}, f).textContent = `Born in ${country}`;
+    }
+    textRight = bx - 14 - 4;
   }
+  const textX = (cx - W / 2 + 46 + textRight) / 2;
+  text(g, { class: 'name', x: textX, y: cy - 2 }, `${p.given} ${p.surname}`.trim());
+  text(g, { class: 'dates', x: textX, y: cy + 15 }, p.dates);
   if (p.selected) el('rect', { class: 'sel', x: cx - W / 2 - 4, y: cy - H / 2 - 4, width: W + 8, height: H + 8, rx: 10 }, g);
 }
 
@@ -1100,10 +1107,10 @@ attachSnapshots(document.getElementById('ports-lr'));
 })();
 
 const s = document.getElementById('sheet-nodes');
-person(s, 90, 40, { given: 'Anne', surname: 'Smith', sex: 'F', dates: 'b. 1950', selected: true });
-el('rect', { class: 'ref', x: 190, y: 12, width: 140, height: H, rx: 8 }, s);
-text(s, { class: 'name', x: 260, y: 45 }, 'Garcia family ›');
-person(s, 90, 115, { given: 'Living', surname: '', sex: 'U', dates: 'details hidden' });
-text(s, { class: 'dates', x: 260, y: 112 }, 'Copy shared without');
-text(s, { class: 'dates', x: 260, y: 127 }, 'living people (ADR 0018)');
+person(s, 98, 40, { given: 'Anne', surname: 'Smith', sex: 'F', dates: 'b. 1950', selected: true, job: { title: 'Teacher' }, place: 'Cork, Ireland' });
+el('rect', { class: 'ref', x: 216, y: 12, width: 140, height: H, rx: 8 }, s);
+text(s, { class: 'name', x: 286, y: 45 }, 'Garcia family ›');
+person(s, 98, 115, { given: 'Living', surname: '', sex: 'U', dates: 'details hidden' });
+text(s, { class: 'dates', x: 286, y: 112 }, 'Copy shared without');
+text(s, { class: 'dates', x: 286, y: 127 }, 'living people (ADR 0018)');
 </script>
