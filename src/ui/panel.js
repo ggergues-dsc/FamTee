@@ -70,6 +70,8 @@ const PERSON_FIELDS = [
 const PET_FIELDS = [
   { name: 'pet-name', label: 'Name', ...nested(null, 'name') },
   { name: 'species', label: 'Animal', options: [['dog', 'Dog'], ['cat', 'Cat'], ['other', 'Other animal']], ...nested(null, 'species') },
+  { name: 'pet-sex', label: 'Sex', options: SEXES, ...nested(null, 'sex') },
+  { name: 'breed', label: 'Breed', placeholder: 'e.g. Labrador', ...nested(null, 'breed') },
   { name: 'pet-born', label: 'Born', placeholder: 'e.g. 2019', ...nested('birth', 'date') },
   { name: 'pet-died', label: 'Died', ...nested('death', 'date') },
   { name: 'pet-notes', label: 'Notes', multiline: true, ...nested(null, 'notes') },

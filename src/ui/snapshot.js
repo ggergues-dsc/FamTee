@@ -5,10 +5,10 @@
 // snapshot itself only places that summary next to the card.
 
 import { h } from './dom.js';
-import { portrait, icon, jobIconName } from './icons.js';
+import { portrait, icon, jobIconName, petIconName } from './icons.js';
 import { displayName, lifespan } from '../render/format.js';
 import { isLiving } from '../privacy/living.js';
-import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion } from '../store/family.js';
+import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion, ownersOfPet } from '../store/family.js';
 import { countryOf, flagMarkup } from '../render/flags.js';
 import { mediaData } from '../store/media.js';
 
@@ -76,6 +76,32 @@ function mark(label, text, s) {
   return null;
 }
 
+const SPECIES = { dog: 'Dog', cat: 'Cat', other: 'Other animal' };
+const SEX = { M: 'Male', F: 'Female' };
+
+// { name, dates, species, alive, rows } for a pet: what it is and its own dates, and who
+// it lives with, but no lineage (pets have no parents, partners or children here).
+export function petSummary(doc, graphId, petId) {
+  const graph = doc.graphs[graphId];
+  const attrs = graph.nodes[petId].attrs;
+  const species = SPECIES[attrs.species] ? attrs.species : 'other';
+  const rows = [
+    ['Type', SPECIES[species]],
+    ['Sex', SEX[attrs.sex] ?? 'Unknown'],
+    ['Breed', attrs.breed?.trim() ?? ''],
+    ['Born', attrs.birth?.date ?? ''],
+    ['Died', attrs.death?.date ?? ''],
+    ['Owners', [...new Set(ownersOfPet(graph, petId))].map((id) => displayName(graph.nodes[id].attrs)).join(', ')],
+  ].filter(([, text]) => text);
+  return {
+    name: attrs.name?.trim() || 'Unnamed pet',
+    dates: lifespan(attrs),
+    species,
+    alive: !attrs.death?.date,
+    rows,
+  };
+}
+
 // host: a positioned element the snapshot is placed in; area: the element it must stay
 // inside (the canvas, so it never covers the side panel).
 export function createSnapshot(host, area = host) {
@@ -91,8 +117,23 @@ export function createSnapshot(host, area = host) {
     const key = `${graphId}:${personId}`;
     if (current?.key === key) return;
     hide();
-    const s = personSummary(doc, graphId, personId);
-    const el = h('div', { class: 'snapshot', role: 'tooltip' },
+    const el = doc.graphs[graphId].nodes[personId]?.type === 'pet' ? petCard(petSummary(doc, graphId, personId)) : personCard(personSummary(doc, graphId, personId));
+    place(el, cardEl, key);
+  }
+
+  function petCard(s) {
+    const glyph = icon(petIconName(s.species));
+    return h('div', { class: 'snapshot snapshot-pet', role: 'tooltip' },
+      h('div', { class: 'snapshot-head' },
+        h('span', { class: 'snapshot-portrait snapshot-pet-portrait' }, glyph),
+        h('div', { class: 'snapshot-title' }, h('b', {}, s.name), s.dates ? h('span', {}, s.dates) : null,
+          h('span', { class: `chip ${s.alive ? 'living' : 'deceased'}` }, s.alive ? 'Alive' : 'Died'))),
+      h('dl', {}, s.rows.flatMap(([label, text]) => [h('dt', {}, label), h('dd', {}, text)])),
+      h('p', { class: 'snapshot-foot' }, 'Click to edit'));
+  }
+
+  function personCard(s) {
+    return h('div', { class: 'snapshot', role: 'tooltip' },
       h('div', { class: 'snapshot-head' },
         // A larger look at the photo (or placeholder portrait) than the card has room for.
         h('span', { class: 'snapshot-portrait' }, s.photo ? h('img', { src: s.photo, alt: '' }) : portrait(s.sex)),
@@ -100,6 +141,9 @@ export function createSnapshot(host, area = host) {
           h('span', { class: `chip ${s.living ? 'living' : 'deceased'}` }, s.living ? 'Living' : 'Deceased'))),
       s.rows.length ? h('dl', {}, s.rows.flatMap(([label, text]) => [h('dt', {}, label), h('dd', {}, mark(label, text, s), text)])) : null,
       h('p', { class: 'snapshot-foot' }, 'Click to edit'));
+  }
+
+  function place(el, cardEl, key) {
     host.append(el);
     current = { el, key };
 
