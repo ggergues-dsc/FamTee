@@ -10,6 +10,7 @@ import { displayName, lifespan } from '../render/format.js';
 import { isLiving } from '../privacy/living.js';
 import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion } from '../store/family.js';
 import { countryOf, flagMarkup } from '../render/flags.js';
+import { isSafeImageData } from '../store/media.js';
 
 const GAP = 12; // px between the card and the snapshot
 
@@ -53,6 +54,7 @@ export function personSummary(doc, graphId, personId, now = new Date()) {
     name: displayName(attrs),
     dates: lifespan(attrs),
     sex: attrs.sex,
+    photo: isSafeImageData(doc.media?.[attrs.photo]?.data) ? doc.media[attrs.photo].data : null,
     living: isLiving(attrs, now),
     country: countryOf(attrs.birth?.place),
     rows,
@@ -92,9 +94,10 @@ export function createSnapshot(host, area = host) {
     const s = personSummary(doc, graphId, personId);
     const el = h('div', { class: 'snapshot', role: 'tooltip' },
       h('div', { class: 'snapshot-head' },
-        h('span', { class: 'snapshot-portrait' }, portrait(s.sex)),
-        h('div', { class: 'snapshot-title' }, h('b', {}, s.name), s.dates ? h('span', {}, s.dates) : null),
-        h('span', { class: `chip ${s.living ? 'living' : 'deceased'}` }, s.living ? 'Living' : 'Deceased')),
+        // A larger look at the photo (or placeholder portrait) than the card has room for.
+        h('span', { class: 'snapshot-portrait' }, s.photo ? h('img', { src: s.photo, alt: '' }) : portrait(s.sex)),
+        h('div', { class: 'snapshot-title' }, h('b', {}, s.name), s.dates ? h('span', {}, s.dates) : null,
+          h('span', { class: `chip ${s.living ? 'living' : 'deceased'}` }, s.living ? 'Living' : 'Deceased'))),
       s.rows.length ? h('dl', {}, s.rows.flatMap(([label, text]) => [h('dt', {}, label), h('dd', {}, mark(label, text, s), text)])) : null,
       h('p', { class: 'snapshot-foot' }, 'Click to edit'));
     host.append(el);

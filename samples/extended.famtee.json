@@ -1,6 +1,6 @@
 {
   "format": "famtee",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "meta": {
     "id": "01JA0000000000000000000001",
     "title": "Hanna family (extended sample)",
@@ -25,11 +25,13 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1920"
+              "date": "1920",
+              "place": "Zahle, Lebanon"
             },
             "death": {
               "date": "1990"
-            }
+            },
+            "occupation": "Farmer"
           }
         },
         "p-mary": {
@@ -41,11 +43,13 @@
             },
             "sex": "F",
             "birth": {
-              "date": "1924"
+              "date": "1924",
+              "place": "Beirut, Lebanon"
             },
             "death": {
               "date": "2001"
-            }
+            },
+            "occupation": "Nurse"
           }
         },
         "u-george-mary": {
@@ -63,11 +67,14 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1946"
+              "date": "1946",
+              "place": "Cairo, Egypt"
             },
             "death": {
               "date": "2019"
-            }
+            },
+            "occupation": "Civil engineer",
+            "employer": "Arab Contractors"
           }
         },
         "p-nadia": {
@@ -79,8 +86,10 @@
             },
             "sex": "F",
             "birth": {
-              "date": "1948"
-            }
+              "date": "1948",
+              "place": "Alexandria, Egypt"
+            },
+            "occupation": "Teacher"
           }
         },
         "p-helen": {
@@ -92,8 +101,11 @@
             },
             "sex": "F",
             "birth": {
-              "date": "1952"
-            }
+              "date": "1952",
+              "place": "Cairo, Egypt"
+            },
+            "occupation": "Doctor",
+            "employer": "Kasr Al Ainy Hospital"
           }
         },
         "p-samir": {
@@ -105,8 +117,11 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1950"
-            }
+              "date": "1950",
+              "place": "Beirut, Lebanon"
+            },
+            "occupation": "Mechanic",
+            "employer": "Hanna Garage"
           }
         },
         "p-lina": {
@@ -118,8 +133,10 @@
             },
             "sex": "F",
             "birth": {
-              "date": "1954"
-            }
+              "date": "1954",
+              "place": "Beirut, Lebanon"
+            },
+            "occupation": "Accountant"
           }
         },
         "p-omar": {
@@ -131,8 +148,10 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1951"
-            }
+              "date": "1951",
+              "place": "Amman, Jordan"
+            },
+            "occupation": "Carpenter"
           }
         },
         "u-peter-nadia": {
@@ -169,8 +188,11 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1972"
-            }
+              "date": "1972",
+              "place": "London, England"
+            },
+            "occupation": "Software engineer",
+            "employer": "BBC"
           }
         },
         "p-sara": {
@@ -182,8 +204,10 @@
             },
             "sex": "F",
             "birth": {
-              "date": "1975"
-            }
+              "date": "1975",
+              "place": "Cairo, Egypt"
+            },
+            "occupation": "Pharmacist"
           }
         },
         "p-youssef": {
@@ -195,8 +219,10 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1984"
-            }
+              "date": "1984",
+              "place": "Toronto, Canada"
+            },
+            "occupation": "Electrician"
           }
         },
         "p-rami": {
@@ -208,8 +234,10 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1990"
-            }
+              "date": "1990",
+              "place": "Paris, France"
+            },
+            "occupation": "Architect"
           }
         },
         "p-dina": {
@@ -221,8 +249,11 @@
             },
             "sex": "F",
             "birth": {
-              "date": "1976"
-            }
+              "date": "1976",
+              "place": "Amman, Jordan"
+            },
+            "occupation": "Doctor",
+            "employer": "Toronto General Hospital"
           }
         },
         "p-karim": {
@@ -234,8 +265,10 @@
             },
             "sex": "M",
             "birth": {
-              "date": "1979"
-            }
+              "date": "1979",
+              "place": "Dubai, United Arab Emirates"
+            },
+            "occupation": "Teacher"
           }
         },
         "p-emma": {
@@ -247,8 +280,11 @@
             },
             "sex": "F",
             "birth": {
-              "date": "1974"
-            }
+              "date": "1974",
+              "place": "Dublin, Ireland"
+            },
+            "occupation": "Teacher",
+            "employer": "Leeds High School"
           }
         },
         "u-mark-emma": {
@@ -272,8 +308,11 @@
             },
             "sex": "M",
             "birth": {
-              "date": "2001"
-            }
+              "date": "2001",
+              "place": "Leeds, England"
+            },
+            "occupation": "Car mechanic",
+            "employer": "Hanna Motors"
           }
         },
         "p-zoe": {
@@ -285,8 +324,11 @@
             },
             "sex": "F",
             "birth": {
-              "date": "2004"
-            }
+              "date": "2004",
+              "place": "Leeds, England"
+            },
+            "occupation": "Student",
+            "employer": "University of Leeds"
           }
         },
         "p-adam": {
@@ -298,8 +340,41 @@
             },
             "sex": "M",
             "birth": {
-              "date": "2012"
+              "date": "2012",
+              "place": "Toronto, Canada"
+            },
+            "occupation": "School pupil"
+          }
+        },
+        "pet-biscuit": {
+          "type": "pet",
+          "attrs": {
+            "name": "Biscuit",
+            "species": "dog",
+            "birth": {
+              "date": "2019"
             }
+          }
+        },
+        "pet-miso": {
+          "type": "pet",
+          "attrs": {
+            "name": "Miso",
+            "species": "cat",
+            "birth": {
+              "date": "2021"
+            }
+          }
+        },
+        "pet-rio": {
+          "type": "pet",
+          "attrs": {
+            "name": "Rio",
+            "species": "other",
+            "birth": {
+              "date": "2018"
+            },
+            "notes": "African grey parrot"
           }
         }
       },
@@ -528,6 +603,27 @@
           "attrs": {
             "kind": "biological"
           }
+        },
+        {
+          "id": "e-pet-biscuit",
+          "type": "pet",
+          "from": "u-mark-emma",
+          "to": "pet-biscuit",
+          "attrs": {}
+        },
+        {
+          "id": "e-pet-miso",
+          "type": "pet",
+          "from": "u-mark-emma",
+          "to": "pet-miso",
+          "attrs": {}
+        },
+        {
+          "id": "e-pet-rio",
+          "type": "pet",
+          "from": "u-youssef-dina",
+          "to": "pet-rio",
+          "attrs": {}
         }
       ]
     }

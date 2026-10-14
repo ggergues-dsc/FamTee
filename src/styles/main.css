@@ -292,20 +292,20 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 }
 
 /* --- person snapshot on hover (src/ui/snapshot.js) --- */
-.snapshot { position: absolute; z-index: 5; width: 260px; padding: 0.65rem 0.75rem 0.55rem; border: 1px solid var(--card-stroke);
+.snapshot { position: absolute; z-index: 5; width: 280px; padding: 0.65rem 0.75rem 0.55rem; border: 1px solid var(--card-stroke);
   border-radius: 10px; background: var(--card-bg); color: var(--fg); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   font-size: 0.8rem; line-height: 1.4; pointer-events: none; }
 .snapshot::before { content: ""; position: absolute; top: calc(var(--arrow-y, 24px) - 6px); width: 10px; height: 10px;
   background: var(--card-bg); border: 1px solid var(--card-stroke); transform: rotate(45deg); }
 .snapshot.on-right::before { left: -6px; border-top-color: transparent; border-right-color: transparent; }
 .snapshot.on-left::before { right: -6px; border-bottom-color: transparent; border-left-color: transparent; }
-.snapshot-head { display: flex; align-items: center; gap: 0.55rem; padding-bottom: 0.5rem; margin-bottom: 0.45rem;
+.snapshot-head { display: flex; align-items: center; gap: 0.75rem; padding-bottom: 0.5rem; margin-bottom: 0.45rem;
   border-bottom: 1px solid var(--card-stroke); }
-.snapshot-portrait { width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; overflow: hidden; background: var(--av-bg);
+.snapshot-portrait { width: 76px; height: 76px; flex-shrink: 0; border-radius: 50%; overflow: hidden; background: var(--av-bg);
   border: 1px solid var(--card-stroke); }
-.snapshot-portrait svg { display: block; width: 100%; height: 100%; }
-.snapshot-title { display: grid; flex: 1; min-width: 0; }
-.snapshot-title b { font-size: 0.9rem; overflow-wrap: anywhere; }
+.snapshot-portrait svg, .snapshot-portrait img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.snapshot-title { display: grid; justify-items: start; gap: 0.15rem; flex: 1; min-width: 0; }
+.snapshot-title b { font-size: 0.95rem; overflow-wrap: anywhere; }
 .snapshot-title span { color: var(--muted); font-size: 0.75rem; }
 .snapshot .chip { align-self: start; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.68rem; font-weight: 650; }
 .snapshot .chip.living { background: var(--tile-bg); color: var(--tile-ink); }
