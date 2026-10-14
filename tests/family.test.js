@@ -2,6 +2,7 @@ import { test, assert, assertEqual, assertThrows } from './harness.js';
 import {
   addPartnerTo, addChildTo, addParentTo, removePerson, replaceDocument,
   unionsOfPerson, parentUnionsOf, partnersOfUnion, childrenOfUnion,
+  connectPartners, connectParent, connectChild, connectSibling, connectRelated,
 } from '../src/store/family.js';
 import { addPerson, createDocument } from '../src/store/model.js';
 import { validate } from '../src/store/validate.js';
@@ -72,4 +73,51 @@ test('replaceDocument swaps content in place', () => {
   assertEqual(doc, other);
   doc.meta.title = 'changed';
   assertEqual(other.meta.title, 'Other', 'deep copy');
+});
+
+test('connecting people already in the graph', () => {
+  const { doc, g, mum, dad, union, kid } = smallFamily();
+  const graph = doc.graphs[g];
+  const rosa = addPerson(doc, g, { name: { given: 'Rosa' } });
+  const u = connectPartners(doc, g, kid, rosa, { kind: 'partner', start: '2001' });
+  assertEqual(partnersOfUnion(graph, u).sort(), [kid, rosa].sort());
+  assertEqual(graph.nodes[u].attrs, { kind: 'partner', start: '2001' });
+  assertThrows(() => connectPartners(doc, g, rosa, kid), /already partners/);
+  assertThrows(() => connectPartners(doc, g, kid, kid), /themselves/);
+  assertThrows(() => connectPartners(doc, g, kid, union), /Only people/);
+
+  const sib = addPerson(doc, g);
+  assertEqual(connectSibling(doc, g, kid, sib), union);
+  assertEqual(childrenOfUnion(graph, union).sort(), [kid, sib].sort());
+  assertThrows(() => connectSibling(doc, g, kid, sib), /already has parents/);
+  assertThrows(() => connectSibling(doc, g, rosa, addPerson(doc, g)), /parents first/);
+
+  const baby = addPerson(doc, g);
+  assertEqual(connectChild(doc, g, rosa, baby, u), u);
+  assertThrows(() => connectChild(doc, g, mum, addPerson(doc, g), u), /not a partner/);
+  assertThrows(() => connectChild(doc, g, kid, baby, u), /already has parents/);
+  assertThrows(() => connectParent(doc, g, dad, kid), /Already a parent/);
+  assertThrows(() => connectParent(doc, g, addPerson(doc, g), kid), /already has two parents/);
+  assertEqual(validate(doc), []);
+});
+
+test('connectParent fills a parent union, or starts one', () => {
+  const { doc, g } = smallFamily();
+  const graph = doc.graphs[g];
+  const [child, p1, p2] = [addPerson(doc, g), addPerson(doc, g), addPerson(doc, g)];
+  const u = connectChild(doc, g, p1, child, null); // "child of p1 alone"
+  assertEqual(graph.nodes[u].attrs.kind, 'single');
+  assertThrows(() => connectParent(doc, g, p1, child), /Already a parent/);
+  assertEqual(connectParent(doc, g, p2, child), u, 'joins the union with room');
+  assertEqual(partnersOfUnion(graph, u).sort(), [p1, p2].sort());
+  assertEqual(graph.nodes[u].attrs.kind, 'married');
+  assertEqual(validate(doc), []);
+});
+
+test('connectRelated draws a labelled link outside the family lines', () => {
+  const { doc, g, mum, kid } = smallFamily();
+  const id = connectRelated(doc, g, mum, kid, 'godparent');
+  const edge = doc.graphs[g].edges.find((e) => e.id === id);
+  assertEqual([edge.type, edge.from, edge.to, edge.attrs], ['custom', mum, kid, { label: 'godparent' }]);
+  assertEqual(validate(doc), []);
 });

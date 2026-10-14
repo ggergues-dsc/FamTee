@@ -2,6 +2,7 @@
 // way to write to disk), Export ▾ and Open….
 
 import { h, menuButton } from './dom.js';
+import { icon } from './icons.js';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const mod = isMac ? '⌘' : 'Ctrl+';
@@ -9,8 +10,8 @@ const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', mi
 
 // actions: undo, redo, download, exportJson, exportGedcom, exportGedcomMerged, shareHtml, shareGedcom, openFile(File)
 export function createToolbar(container, actions) {
-  const undo = h('button', { type: 'button', title: `Undo (${mod}Z)`, onclick: actions.undo }, 'Undo');
-  const redo = h('button', { type: 'button', title: `Redo (${mod}Shift+Z)`, onclick: actions.redo }, 'Redo');
+  const undo = h('button', { type: 'button', class: 'with-icon', title: `Undo (${mod}Z)`, onclick: actions.undo }, icon('undo'), 'Undo');
+  const redo = h('button', { type: 'button', class: 'with-icon', title: `Redo (${mod}Shift+Z)`, onclick: actions.redo }, icon('redo'), 'Redo');
   const download = h('button', {
     type: 'button', class: 'primary', onclick: actions.download,
     title: `Download the family as a new file (${mod}S). Your disk is only written when you download.`,
@@ -47,7 +48,8 @@ export function createToolbar(container, actions) {
     type: 'button', onclick: () => fileInput.click(),
     title: 'Open a FamTee file (.html), FamTee data (.famtee.json) or GEDCOM (.ged) in place of this family. Undo brings this one back.',
   }, 'Open…');
-  const state = h('span', { class: 'save-state', 'aria-live': 'polite' });
+  const stateText = h('span', { class: 'save-text' });
+  const state = h('span', { class: 'save-state', 'aria-live': 'polite' }, stateText);
   container.replaceChildren(undo, redo, state, download, exportMenu.element, open, fileInput);
 
   // session: { draftAt, downloadedAt, downloadName, storageOk, multiGraph }
@@ -55,6 +57,7 @@ export function createToolbar(container, actions) {
     undo.disabled = store.readOnly || !store.canUndo;
     redo.disabled = store.readOnly || !store.canRedo;
     undo.title = store.canUndo ? `Undo ${store.undoStack.at(-1).label} (${mod}Z)` : 'Nothing to undo';
+    redo.title = store.canRedo ? `Redo (${mod}Shift+Z)` : 'Nothing to redo';
     open.disabled = store.readOnly;
     mergedItem.hidden = !session.multiGraph;
 
@@ -79,7 +82,7 @@ export function createToolbar(container, actions) {
       text = 'No unsaved changes';
       title = 'Nothing has changed since this family was opened';
     }
-    state.textContent = text;
+    stateText.textContent = text;
     state.title = title;
     state.className = `save-state ${kind}`.trim();
   }

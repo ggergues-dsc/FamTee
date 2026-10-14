@@ -152,3 +152,75 @@ export function replaceDocument(doc, next) {
   Object.assign(doc, structuredClone(next));
   doc.media ??= {}; // keep undo snapshots sharing one media object (ADR 0013)
 }
+
+// --- connecting people who are already in the graph ----------------------------
+// Used when someone was added on their own and is connected later (drag from one
+// card to another, then choose how they are related). Each returns the union or edge
+// it used. Store.apply validates afterwards, so e.g. making someone their own
+// ancestor is still rejected.
+
+function expectTwoPeople(doc, graphId, a, b) {
+  for (const id of [a, b]) {
+    if (getNode(doc, graphId, id).type !== 'person') throw new Error('Only people can be connected');
+  }
+  if (a === b) throw new Error('A person can’t be connected to themselves');
+}
+
+export function arePartners(graph, a, b) {
+  return unionsOfPerson(graph, a).some((u) => u.partners.includes(b));
+}
+
+// a and b become partners in a new union.
+export function connectPartners(doc, graphId, a, b, attrs = { kind: 'married' }) {
+  expectTwoPeople(doc, graphId, a, b);
+  if (arePartners(getGraph(doc, graphId), a, b)) throw new Error('They are already partners');
+  return addUnion(doc, graphId, [a, b], attrs);
+}
+
+// parentId becomes a parent of childId: joins the child's parent union when it has
+// room for a second partner, otherwise starts a single-parent union.
+export function connectParent(doc, graphId, parentId, childId) {
+  expectTwoPeople(doc, graphId, parentId, childId);
+  const graph = getGraph(doc, graphId);
+  const unions = parentUnionsOf(graph, childId);
+  if (unions.some((u) => partnersOfUnion(graph, u).includes(parentId))) throw new Error('Already a parent of this person');
+  const existing = unions.find((u) => partnersOfUnion(graph, u).length < 2);
+  if (!existing && unions.length) throw new Error('This person already has two parents');
+  if (existing) {
+    addEdge(doc, graphId, { type: 'partner', from: parentId, to: existing });
+    const union = getNode(doc, graphId, existing);
+    if (union.attrs.kind === 'single') union.attrs.kind = 'married';
+    return existing;
+  }
+  const unionId = addUnion(doc, graphId, [parentId], { kind: 'single' });
+  addChild(doc, graphId, unionId, childId);
+  return unionId;
+}
+
+// childId becomes a child of parentId's partnership `unionId` (null: of parentId alone).
+export function connectChild(doc, graphId, parentId, childId, unionId = null) {
+  if (unionId === null) return connectParent(doc, graphId, parentId, childId);
+  expectTwoPeople(doc, graphId, parentId, childId);
+  const graph = getGraph(doc, graphId);
+  if (!partnersOfUnion(graph, unionId).includes(parentId)) throw new Error(`${parentId} is not a partner in ${unionId}`);
+  if (parentUnionsOf(graph, childId).length) throw new Error('This person already has parents');
+  addChild(doc, graphId, unionId, childId);
+  return unionId;
+}
+
+// siblingId joins personId's parents as their child.
+export function connectSibling(doc, graphId, personId, siblingId) {
+  expectTwoPeople(doc, graphId, personId, siblingId);
+  const graph = getGraph(doc, graphId);
+  const [unionId] = parentUnionsOf(graph, personId);
+  if (!unionId) throw new Error('Add their parents first');
+  if (parentUnionsOf(graph, siblingId).length) throw new Error('This person already has parents');
+  addChild(doc, graphId, unionId, siblingId);
+  return unionId;
+}
+
+// Any other relation ("godparent"): a labelled custom edge, outside the family lines.
+export function connectRelated(doc, graphId, a, b, label = '') {
+  expectTwoPeople(doc, graphId, a, b);
+  return addEdge(doc, graphId, { type: 'custom', from: a, to: b, attrs: label ? { label } : {} });
+}

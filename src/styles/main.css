@@ -14,6 +14,15 @@
   --edge: #8a8f98;
   --group-bg: rgba(47, 111, 219, 0.05);
   --group-stroke: rgba(47, 111, 219, 0.35);
+  --on-accent: #ffffff;
+  --tile-bg: #eef3fc;
+  --tile-stroke: #d3e0f7;
+  --tile-ink: #1d4fa8;
+  --warn-ink: #8a5400;
+  --error-bg: #fdecea;
+  --av-bg: #ffffff;
+  --av-ink: #a3a9b3;
+  --av-hair: #868d99;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -22,6 +31,8 @@
     --card-bg: #22252b; --card-stroke: #3c4048; --card-m: #1f2a3d; --card-f: #3a2430; --card-u: #2a2c30;
     --ref-bg: #3a3020; --ref-stroke: #b48a35; --edge: #7d828b;
     --group-bg: rgba(122, 167, 255, 0.06); --group-stroke: rgba(122, 167, 255, 0.35);
+    --on-accent: #0f1624; --tile-bg: #1c2433; --tile-stroke: #2c3a55; --tile-ink: #a9c5ff;
+    --warn-ink: #f2c46b; --error-bg: #3a1f1d; --av-bg: #2e3239; --av-ink: #737a86; --av-hair: #5d636e;
   }
 }
 
@@ -41,12 +52,23 @@ body {
 .topbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.25rem 1.25rem;
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--card-stroke);
 }
-.topbar h1 { margin: 0; font-size: 1.15rem; }
+.topbar h1 { margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem; }
+.title-icon { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 8px;
+  background: var(--tile-bg); border: 1px solid var(--tile-stroke); color: var(--accent); }
+.title-icon .icon-svg { width: 1.15rem; height: 1.15rem; }
+#breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--muted); }
+#breadcrumb > span, #breadcrumb > button { display: inline-flex; align-items: center; gap: 0.3rem; }
+#breadcrumb > span:not(.crumb-sep) { color: var(--fg); font-weight: 500; }
+
+/* Line icons (src/ui/icons.js): original drawings, shipped without attribution. */
+.icon-svg { width: 1.1em; height: 1.1em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round; }
+button.with-icon { display: inline-flex; align-items: center; gap: 0.35em; }
 .topbar p { margin: 0; }
 
 #app { flex: 1; min-height: 0; }
@@ -81,11 +103,15 @@ body {
 .famtee-canvas text { fill: var(--fg); text-anchor: middle; font-size: 13px; }
 .famtee-canvas .name { font-weight: 600; }
 .famtee-canvas .avatar { stroke: var(--card-stroke); stroke-width: 1; }
+.famtee-canvas .avatar.placeholder { fill: var(--av-bg); }
+.portrait { fill: var(--av-ink); }
+.portrait-hair { fill: var(--av-hair); }
+.portrait-collar { fill: none; stroke: var(--av-bg); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .famtee-canvas .dates { fill: var(--muted); font-size: 11px; }
 .famtee-canvas .group-label { text-anchor: start; fill: var(--accent); font-size: 11px; }
 .famtee-canvas .link-badge { cursor: pointer; }
 .famtee-canvas .link-badge circle { fill: var(--accent); }
-.famtee-canvas .link-badge text { fill: #fff; font-size: 12px; font-weight: 700; }
+.famtee-canvas .link-badge text { fill: var(--on-accent); font-size: 12px; font-weight: 700; }
 .famtee-canvas .selection { fill: none; stroke: var(--accent); stroke-width: 2.5; pointer-events: none; }
 
 /* --- app chrome --- */
@@ -101,10 +127,10 @@ button {
 }
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: 0.45; cursor: default; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 button.link { border: 0; padding: 0; background: none; color: var(--accent); font-size: inherit; }
 button.link:hover { text-decoration: underline; }
-button.armed { background: var(--error); border-color: var(--error); color: #fff; }
+button.armed { background: var(--error); border-color: var(--error); color: var(--on-accent); }
 input, select, textarea {
   font: inherit;
   font-size: 0.9rem;
@@ -134,9 +160,14 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 }
 .menu button { border: 0; text-align: left; background: none; padding: 0.45rem 0.6rem; }
 .menu button:hover, .menu button:focus-visible { background: var(--bg); outline: none; }
-.save-state { font-size: 0.8rem; color: var(--muted); margin: 0 0.4rem; }
-.save-state.dirty { color: var(--ref-stroke); }
-.save-state.error { color: var(--error); font-weight: 600; }
+/* Every state has the same box (padding, border, weight), so changing state never moves the layout. */
+.save-state { display: inline-flex; align-items: center; gap: 0.4em; font-size: 0.8rem; font-weight: 700; line-height: 1.4;
+  color: var(--muted); margin: 0 0.4rem; padding: 0.15rem 0.6rem; border: 1px solid transparent; border-radius: 999px; }
+.save-state.dirty { color: var(--warn-ink); background: var(--ref-bg); border-color: var(--ref-stroke); }
+.save-state.dirty::before { content: ""; width: 0.5em; height: 0.5em; border-radius: 50%; background: currentColor; }
+.save-state.error { color: var(--error); background: var(--error-bg); border-color: var(--error); }
+.save-state.error::before { content: "!"; display: grid; place-items: center; width: 1.1em; height: 1.1em; border-radius: 50%;
+  background: var(--error); color: var(--error-bg); font-size: 0.75em; }
 
 .notice {
   display: flex;
@@ -169,10 +200,19 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
   border-left: 1px solid var(--card-stroke);
   background: var(--card-bg);
 }
-.panel h2 { margin: 0 0 0.75rem; font-size: 1rem; }
-.panel h3 { margin: 1rem 0 0.4rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.panel h2 { margin: 0 0 0.75rem; font-size: 1rem; display: flex; align-items: center; gap: 0.45em; }
+.panel h2 .icon-svg { color: var(--accent); }
+.panel h3 { margin: 1.1rem 0 0.45rem; font-size: 0.8rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--fg); display: flex; align-items: center; gap: 0.45em; }
+.panel h3 .icon-svg, .panel .advanced > summary .icon-svg { color: var(--accent); }
 .panel .form { display: grid; gap: 0.5rem; }
 .panel label { display: grid; gap: 0.15rem; font-size: 0.8rem; color: var(--muted); }
+/* Form fields sit on tiles so their labels read clearly. */
+.panel .form > label { gap: 0.25rem; padding: 0.45rem 0.55rem 0.55rem; border-radius: 8px;
+  background: var(--tile-bg); border: 1px solid var(--tile-stroke); }
+.panel .form > label > span { font-size: 0.78rem; font-weight: 650; letter-spacing: 0.02em; color: var(--tile-ink); }
+.panel .form > label:focus-within { border-color: var(--accent); }
+.panel .form > label input, .panel .form > label select, .panel .form > label textarea { font-size: 0.95rem; }
 .panel .row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
 .panel .row select { flex: 1; }
 .panel .danger { margin-top: 1.5rem; }
@@ -186,8 +226,8 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .panel .row select { min-width: 0; }
 .panel .hint { font-size: 0.85rem; }
 .panel .advanced { margin-top: 1.25rem; border-top: 1px solid var(--card-stroke); padding-top: 0.5rem; }
-.panel .advanced > summary { cursor: pointer; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--muted); padding: 0.25rem 0; }
+.panel .advanced > summary { cursor: pointer; font-size: 0.8rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--fg); padding: 0.25rem 0; display: flex; align-items: center; gap: 0.45em; }
 .panel .advanced[open] > summary { margin-bottom: 0.25rem; }
 .panel .attrs { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 0.75rem; margin: 0; font-size: 0.8rem; }
 .panel .attrs dt { color: var(--muted); }
@@ -197,7 +237,8 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .panel .photo-frame.drop { outline-color: var(--accent); }
 .panel .photo { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
   border: 1px solid var(--card-stroke); background: var(--card-u); }
-.panel .photo.placeholder { font-size: 0.75rem; color: var(--muted); }
+.panel .photo.placeholder { background: var(--av-bg); overflow: hidden; }
+.panel .photo.placeholder svg { width: 100%; height: 100%; display: block; }
 
 @media (max-width: 700px) {
   #app { flex-direction: column; }
@@ -223,9 +264,78 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .start-choices { display: grid; gap: 0.75rem; }
 .start-choice { padding: 0.9rem 1.1rem; border: 1px solid var(--card-stroke); border-radius: 10px; background: var(--card-bg); }
 .start-choice.primary { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.start-choice h2 { margin: 0 0 0.2rem; font-size: 1.05rem; }
+.start-choice h2 { margin: 0; font-size: 1.05rem; }
+.start-choice-head { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.35rem; }
+.start-choice-icon { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px;
+  background: var(--card-u); color: var(--muted); }
+.start-choice-icon .icon-svg { width: 20px; height: 20px; }
+.start-choice.primary .start-choice-icon { background: var(--card-m); color: var(--accent); }
 .start-choice p { margin: 0 0 0.5rem; font-size: 0.9rem; }
 .start-choice .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .start-choice .row input[type="text"] { flex: 1; min-width: 10rem; }
 .start-warning { color: var(--error); }
 .start-error { color: var(--error); font-weight: 600; }
+.panel .advanced > summary { list-style: none; }
+.panel .advanced > summary::-webkit-details-marker { display: none; }
+.panel .advanced > summary::after { content: "▸"; color: var(--muted); }
+.panel .advanced[open] > summary::after { content: "▾"; }
+
+/* Wide screens: the header stays on one line; the status shortens with "…" (the tooltip explains the state)
+   rather than wrapping the toolbar and resizing the canvas whenever the save state changes. */
+@media (min-width: 701px) {
+  .topbar { flex-wrap: nowrap; }
+  .topbar h1, #breadcrumb { flex-shrink: 0; white-space: nowrap; }
+  .toolbar { flex-wrap: nowrap; min-width: 0; }
+  .toolbar > * { flex-shrink: 0; }
+  .toolbar > .save-state { flex-shrink: 1; min-width: 4rem; overflow: hidden; }
+  .save-state .save-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+}
+
+/* --- person snapshot on hover (src/ui/snapshot.js) --- */
+.snapshot { position: absolute; z-index: 5; width: 260px; padding: 0.65rem 0.75rem 0.55rem; border: 1px solid var(--card-stroke);
+  border-radius: 10px; background: var(--card-bg); color: var(--fg); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  font-size: 0.8rem; line-height: 1.4; pointer-events: none; }
+.snapshot::before { content: ""; position: absolute; top: calc(var(--arrow-y, 24px) - 6px); width: 10px; height: 10px;
+  background: var(--card-bg); border: 1px solid var(--card-stroke); transform: rotate(45deg); }
+.snapshot.on-right::before { left: -6px; border-top-color: transparent; border-right-color: transparent; }
+.snapshot.on-left::before { right: -6px; border-bottom-color: transparent; border-left-color: transparent; }
+.snapshot-head { display: flex; align-items: center; gap: 0.55rem; padding-bottom: 0.5rem; margin-bottom: 0.45rem;
+  border-bottom: 1px solid var(--card-stroke); }
+.snapshot-portrait { width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; overflow: hidden; background: var(--av-bg);
+  border: 1px solid var(--card-stroke); }
+.snapshot-portrait svg { display: block; width: 100%; height: 100%; }
+.snapshot-title { display: grid; flex: 1; min-width: 0; }
+.snapshot-title b { font-size: 0.9rem; overflow-wrap: anywhere; }
+.snapshot-title span { color: var(--muted); font-size: 0.75rem; }
+.snapshot .chip { align-self: start; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.68rem; font-weight: 650; }
+.snapshot .chip.living { background: var(--tile-bg); color: var(--tile-ink); }
+.snapshot .chip.deceased { background: var(--card-u); color: var(--muted); }
+.snapshot dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.2rem 0.7rem; margin: 0; }
+.snapshot dt { padding-top: 0.1rem; color: var(--tile-ink); font-size: 0.72rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; }
+.snapshot dd { margin: 0; overflow-wrap: anywhere; }
+.snapshot-foot { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.72rem; }
+
+/* --- connecting people (src/ui/connect.js) --- */
+.famtee-canvas .person.unconnected { stroke-dasharray: 5 4; stroke-width: 1.5; }
+.famtee-canvas .edge-label { fill: var(--muted); font-size: 11px; }
+.famtee-canvas .connect-handle { cursor: crosshair; }
+.famtee-canvas .connect-handle circle { fill: var(--card-bg); stroke: var(--accent); stroke-width: 1.5; }
+.famtee-canvas .connect-handle path { stroke: var(--accent); stroke-width: 1.5; }
+.famtee-canvas .connect-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.famtee-canvas .connect-end { fill: var(--accent); pointer-events: none; }
+.famtee-canvas .card.connect-target, .famtee-canvas .card.connect-source { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: none; }
+.famtee-canvas.picking .card.person { cursor: crosshair; }
+.connect { position: absolute; z-index: 6; width: 300px; padding: 0.8rem 0.9rem 0.75rem; display: grid; gap: 0.55rem;
+  border: 1px solid var(--card-stroke); border-radius: 10px; background: var(--card-bg); color: var(--fg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); font-size: 0.85rem; }
+.connect h4 { margin: 0; font-size: 0.95rem; line-height: 1.3; text-wrap: balance; }
+.connect .field { display: grid; gap: 0.25rem; padding: 0.45rem 0.55rem 0.55rem; border-radius: 8px;
+  background: var(--tile-bg); border: 1px solid var(--tile-stroke); }
+.connect .field > span { font-size: 0.78rem; font-weight: 650; color: var(--tile-ink); }
+.connect .field:focus-within { border-color: var(--accent); }
+.connect .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.connect-extra:empty { display: none; }
+.connect-preview { margin: 0; padding-top: 0.5rem; border-top: 1px solid var(--card-stroke); font-size: 0.82rem; }
+.connect-actions { display: flex; align-items: center; gap: 0.4rem; }
+.connect-actions .muted { margin-left: auto; font-size: 0.75rem; }
+.notice.hint { background: var(--tile-bg); border-color: var(--tile-stroke); color: var(--tile-ink); }

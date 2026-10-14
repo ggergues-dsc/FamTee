@@ -23,6 +23,15 @@ import {
 import { endpoint } from '../store/schema.js';
 import { addMedia, setPhoto, isSafeImageData, mediaUsage, imageBytes, formatSize } from '../store/media.js';
 import { photoFromFile, ACCEPTED_TYPES } from '../io/photo.js';
+import { icon, portrait } from './icons.js';
+
+// Section headings with their icon.
+const HEADING_ICONS = {
+  Person: 'person', Partnership: 'partnership', Group: 'group', Family: 'family',
+  'Add relative': 'addPerson', Partners: 'partners', Parents: 'parents', Children: 'children',
+  Members: 'parents', Groups: 'group', 'All attributes': 'list', 'In other graphs': 'families', Advanced: 'sliders',
+};
+const heading = (tag, text) => h(tag, {}, HEADING_ICONS[text] ? icon(HEADING_ICONS[text]) : null, text);
 
 const UNION_KINDS = ['married', 'partner', 'divorced', 'widowed', 'single'];
 const SEXES = [['U', 'Unknown'], ['F', 'Female'], ['M', 'Male']];
@@ -132,7 +141,7 @@ export function createPanel(container, ctx) {
   // A collapsed "Advanced" section; whether it is open is remembered for the session.
   function advanced(...children) {
     const section = h('details', { class: 'advanced', open: !!ctx.view.advancedOpen },
-      h('summary', {}, 'Advanced'), ...children);
+      heading('summary', 'Advanced'), ...children);
     section.addEventListener('toggle', () => { ctx.view.advancedOpen = section.open; });
     return section;
   }
@@ -147,7 +156,7 @@ export function createPanel(container, ctx) {
       list.replaceChildren(...attributeRows(doc, graphId, nodeId, node).flatMap(([label, value]) =>
         [h('dt', {}, label), h('dd', {}, value)]));
     });
-    return h('section', { class: 'all-attributes' }, h('h3', {}, 'All attributes'), list);
+    return h('section', { class: 'all-attributes' }, heading('h3', 'All attributes'), list);
   }
 
   // A <select> whose options are rebuilt after every edit. It defaults to the first
@@ -169,7 +178,7 @@ export function createPanel(container, ctx) {
   // `remove` (optional) adds a × button per item: { label, run(id) }.
   function people(title, ids, remove = null) {
     const list = h('ul', { class: 'people' });
-    const section = h('section', {}, h('h3', {}, title), list);
+    const section = h('section', {}, heading('h3', title), list);
     let shown = null;
     refreshers.push(() => {
       const { doc } = ctx.store;
@@ -199,7 +208,7 @@ export function createPanel(container, ctx) {
   function photoSection(graphId, personId) {
     const attrs = () => ctx.store.doc.graphs[graphId]?.nodes[personId]?.attrs ?? {};
     const img = h('img', { class: 'photo', alt: '' });
-    const empty = h('span', { class: 'photo placeholder' }, 'No photo');
+    const empty = h('span', { class: 'photo placeholder', title: 'No photo' });
     const size = h('span', { class: 'muted hint' });
     const input = h('input', { type: 'file', accept: ACCEPTED_TYPES.join(','), hidden: true, name: 'photo-file' });
     const choose = h('button', { type: 'button', onclick: () => input.click() }, 'Add photo…');
@@ -240,6 +249,10 @@ export function createPanel(container, ctx) {
       const ok = media && isSafeImageData(media.data);
       img.hidden = !ok;
       empty.hidden = !!ok;
+      if (!ok && empty.dataset.sex !== (attrs().sex ?? 'U')) {
+        empty.dataset.sex = attrs().sex ?? 'U';
+        empty.replaceChildren(portrait(attrs().sex));
+      }
       if (ok && img.src !== media.data) img.src = media.data;
       choose.textContent = ok ? 'Change…' : 'Add photo…';
       remove.hidden = !ok;
@@ -336,7 +349,7 @@ export function createPanel(container, ctx) {
       fillPeople();
     });
 
-    return h('section', { class: 'links' }, h('h3', {}, 'In other graphs'), list, none, form, noGraphs);
+    return h('section', { class: 'links' }, heading('h3', 'In other graphs'), list, none, form, noGraphs);
   }
 
   // --- groups (person) -----------------------------------------------------------
@@ -384,11 +397,11 @@ export function createPanel(container, ctx) {
     refreshers.push(() => { resetPosition.hidden = !attrs().nudge; });
 
     return [
-      h('h2', {}, 'Person'),
+      heading('h2', 'Person'),
       photoSection(graphId, personId),
       nodeForm(graphId, personId, PERSON_FIELDS, 'Edit person'),
       h('section', { class: 'actions' },
-        h('h3', {}, 'Add relative'),
+        heading('h3', 'Add relative'),
         h('div', { class: 'row' },
           h('button', { type: 'button', onclick: () =>
             ctx.editAndSelect('Add partner', (doc) => addPartnerTo(doc, graphId, personId).personId) }, '+ Partner'),
@@ -418,7 +431,7 @@ export function createPanel(container, ctx) {
   function unionPanel(graphId, unionId) {
     const graph = () => ctx.store.doc.graphs[graphId];
     return [
-      h('h2', {}, 'Partnership'),
+      heading('h2', 'Partnership'),
       nodeForm(graphId, unionId, UNION_FIELDS, 'Edit partnership'),
       people('Partners', () => partnersOfUnion(graph(), unionId)),
       people('Children', () => childrenOfUnion(graph(), unionId)),
@@ -436,7 +449,7 @@ export function createPanel(container, ctx) {
   function groupPanel(graphId, groupId) {
     const members = () => ctx.store.doc.graphs[graphId].nodes[groupId]?.attrs.members ?? [];
     return [
-      h('h2', {}, 'Group'),
+      heading('h2', 'Group'),
       nodeForm(graphId, groupId, GROUP_FIELDS, 'Rename group'),
       people('Members', members, {
         label: 'Remove',
@@ -470,7 +483,7 @@ export function createPanel(container, ctx) {
       if (file) ctx.addGedcomGraph(file);
     });
     return [
-      h('h2', {}, 'Family'),
+      heading('h2', 'Family'),
       form(docFields, () => ctx.store.doc.meta, (field, value) =>
         ctx.edit('Rename family', (d) => { d.meta.title = value.trim() || 'Untitled family'; })),
       h('section', { class: 'actions' },

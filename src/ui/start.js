@@ -9,6 +9,7 @@
 //   { kind: 'file' }  { kind: 'continue' }  { kind: 'new', title }  { kind: 'open', doc, name }
 
 import { h } from './dom.js';
+import { icon } from './icons.js';
 import { shortHash } from '../persist/revision.js';
 
 const count = (doc) => Object.values(doc.graphs).reduce(
@@ -43,6 +44,7 @@ export function startScreen(host, { embedded = null, draft = null, relation = 'o
       if (rev) facts.push(`fingerprint ${shortHash(rev.hash)}`);
       choices.push(card({
         name: 'start-file',
+        glyph: 'fileTree',
         title: `Open “${doc.meta.title}”`,
         detail: facts.join(' · '),
         warning: embedded.integrity === 'modified'
@@ -60,6 +62,7 @@ export function startScreen(host, { embedded = null, draft = null, relation = 'o
       const discard = h('button', { type: 'button', class: 'link' }, 'Discard it');
       const draftCard = card({
         name: 'start-continue',
+        glyph: 'resume',
         title: relation === 'other' && embedded?.doc
           ? `Continue your unsaved session of “${draft.doc.meta.title}”`
           : 'Continue your unsaved session',
@@ -89,6 +92,7 @@ export function startScreen(host, { embedded = null, draft = null, relation = 'o
     titleInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') startNew(); });
     choices.push(card({
       name: 'start-new',
+      glyph: 'sprout',
       title: 'Start a new tree',
       detail: 'An empty family. You can add people right away.',
       action: 'Start',
@@ -109,6 +113,7 @@ export function startScreen(host, { embedded = null, draft = null, relation = 'o
     });
     choices.push(card({
       name: 'start-open',
+      glyph: 'folder',
       title: 'Open another file…',
       detail: 'A FamTee file (.html), FamTee data (.famtee.json) or a GEDCOM file (.ged) from other genealogy software.',
       action: 'Choose file…',
@@ -130,9 +135,9 @@ export function startScreen(host, { embedded = null, draft = null, relation = 'o
   });
 }
 
-function card({ name, title, detail, warning = '', action, onClick, primary = false, extra = null }) {
+function card({ name, glyph, title, detail, warning = '', action, onClick, primary = false, extra = null }) {
   return h('section', { class: `start-choice${primary ? ' primary' : ''}`, dataset: { choice: name } },
-    h('h2', {}, title),
+    h('div', { class: 'start-choice-head' }, h('span', { class: 'start-choice-icon' }, icon(glyph)), h('h2', {}, title)),
     h('p', { class: 'muted' }, detail),
     warning ? h('p', { class: 'start-warning' }, warning) : null,
     h('div', { class: 'row' },
