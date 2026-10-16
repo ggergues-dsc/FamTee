@@ -7,7 +7,7 @@ import { getGraph, addGraphRef, createDocument } from '../../store/model.js';
 import { parseGedcom, child, childrenOf, valueOf, unescapeValue } from './lines.js';
 import { dateFromGedcom, nameFromGedcom } from './convert.js';
 
-const INDI_TAGS = new Set(['NAME', 'SEX', 'BIRT', 'DEAT', 'OCCU', 'NOTE', 'FAMC', 'FAMS', 'CHAN']);
+const INDI_TAGS = new Set(['NAME', 'SEX', 'BIRT', 'DEAT', 'OCCU', 'NOTE', 'FAMC', 'FAMS', 'CHAN', 'ASSO']);
 const FAM_TAGS = new Set(['HUSB', 'WIFE', 'CHIL', 'MARR', 'DIV', 'NOTE', 'CHAN']);
 const PEDIGREE = { adopted: 'adopted', foster: 'foster', birth: 'biological' };
 
@@ -41,6 +41,7 @@ export function importGedcom(text, { title = 'Imported family' } = {}) {
   const edges = [];
   const personIds = new Map(); // GEDCOM xref → FamTee id
   const pedigree = new Map(); // `${famXref} ${indiXref}` → child kind
+  const twinLinks = []; // [xref, other xref, identical]
   const event = (node) => {
     const date = valueOf(node, 'DATE');
     const place = valueOf(node, 'PLAC');
@@ -75,6 +76,13 @@ export function importGedcom(text, { title = 'Imported family' } = {}) {
     for (let i = 1; i < childrenOf(indi, 'OCCU').length; i++) skip('OCCU (additional occupations)');
     const noteParts = childrenOf(indi, 'NOTE').map(noteText).filter((t) => t.trim());
     if (noteParts.length) attrs.notes = noteParts.join('\n\n');
+    // Twins: GEDCOM has no twin record, so they are written as an association (ASSO)
+    // with RELA "Twin" or "Identical twin"; other associations aren't kept.
+    for (const asso of childrenOf(indi, 'ASSO')) {
+      const rela = valueOf(asso, 'RELA');
+      if (/twin/i.test(rela)) twinLinks.push([indi.xref, asso.value.trim(), /identical/i.test(rela)]);
+      else skip('ASSO (associations other than twins)');
+    }
     for (const famc of childrenOf(indi, 'FAMC')) {
       const kind = PEDIGREE[valueOf(famc, 'PEDI').toLowerCase()];
       if (kind) pedigree.set(`${famc.value.trim()} ${indi.xref}`, kind);
@@ -119,6 +127,20 @@ export function importGedcom(text, { title = 'Imported family' } = {}) {
       edges.push({ id: newId('edge'), type: 'child', from: unionId, to: kidId, attrs: { kind } });
     }
     families++;
+  }
+
+  // Twins: both must be children of the same family; their child edges share a birth group.
+  for (const [a, b, identical] of twinLinks) {
+    const [ea, eb] = [personIds.get(a), personIds.get(b)].map((id) => edges.find((e) => e.type === 'child' && e.to === id));
+    if (!ea || !eb || ea.from !== eb.from) {
+      warnings.push(`Twins ${a} and ${b} aren't children of the same family, so they weren't marked as twins`);
+      continue;
+    }
+    const group = ea.attrs.birthGroup ?? eb.attrs.birthGroup ?? `birth-${ea.id}`;
+    for (const e of [ea, eb]) {
+      e.attrs.birthGroup = group;
+      if (identical) e.attrs.identical = true;
+    }
   }
 
   for (const r of records) {

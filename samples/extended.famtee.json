@@ -451,8 +451,40 @@
             "members": [
               "p-youssef",
               "p-dina",
-              "p-adam"
+              "p-adam",
+              "p-ava",
+              "p-isla"
             ]
+          }
+        },
+        "p-ava": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Ava",
+              "surname": "Hanna"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "2015",
+              "place": "Toronto, Canada"
+            },
+            "occupation": "School pupil"
+          }
+        },
+        "p-isla": {
+          "type": "person",
+          "attrs": {
+            "name": {
+              "given": "Isla",
+              "surname": "Hanna"
+            },
+            "sex": "F",
+            "birth": {
+              "date": "2015",
+              "place": "Toronto, Canada"
+            },
+            "occupation": "School pupil"
           }
         }
       },
@@ -742,6 +774,28 @@
           "to": "p-leo",
           "attrs": {
             "label": "godparent"
+          }
+        },
+        {
+          "id": "e-t1",
+          "type": "child",
+          "from": "u-youssef-dina",
+          "to": "p-ava",
+          "attrs": {
+            "kind": "biological",
+            "birthGroup": "birth-ava-isla",
+            "identical": true
+          }
+        },
+        {
+          "id": "e-t2",
+          "type": "child",
+          "from": "u-youssef-dina",
+          "to": "p-isla",
+          "attrs": {
+            "kind": "biological",
+            "birthGroup": "birth-ava-isla",
+            "identical": true
           }
         }
       ]

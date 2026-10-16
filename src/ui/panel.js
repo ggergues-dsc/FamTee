@@ -19,6 +19,7 @@ import {
   addPartnerTo, addChildTo, addParentTo, removePerson, copyPersonTo,
   unionsOfPerson, parentUnionsOf, partnersOfUnion, childrenOfUnion,
   groupsOf, linksOf, sameAsIdentity, graphsContaining, addPetTo, petsOfUnion, ownersOfPet, removePet,
+  possibleTwins, twinsOf, setTwin, clearTwin, setTwinsIdentical,
 } from '../store/family.js';
 import { endpoint } from '../store/schema.js';
 import { addMedia, setPhoto, isSafeImageData, mediaUsage, imageBytes, formatSize } from '../store/media.js';
@@ -29,7 +30,7 @@ import { icon, portrait, PET_KINDS } from './icons.js';
 const HEADING_ICONS = {
   Person: 'person', Partnership: 'partnership', Group: 'group', Family: 'family',
   'Add relative': 'addPerson', Partners: 'partners', Parents: 'parents', Children: 'children',
-  Members: 'parents', Groups: 'group', Pet: 'paw', Pets: 'paw', Owners: 'parents', 'All attributes': 'list', 'In other graphs': 'families', Advanced: 'sliders',
+  Members: 'parents', Groups: 'group', Pet: 'paw', Pets: 'paw', Owners: 'parents', Twin: 'parents', 'All attributes': 'list', 'In other graphs': 'families', Advanced: 'sliders',
 };
 const heading = (tag, text) => h(tag, {}, HEADING_ICONS[text] ? icon(HEADING_ICONS[text]) : null, text);
 
@@ -487,6 +488,7 @@ export function createPanel(container, ctx) {
       people('Parents', () => parentUnionsOf(graph(), personId).flatMap((u) => partnersOfUnion(graph(), u))),
       people('Children', () => unionsOfPerson(graph(), personId).flatMap((u) => u.children)),
       people('Pets', () => unionsOfPerson(graph(), personId).flatMap((u) => petsOfUnion(graph(), u.unionId))),
+      twinSection(graphId, personId),
       allAttributes(graphId, personId),
       advanced(
         linksSection(graphId, personId),
@@ -516,6 +518,50 @@ export function createPanel(container, ctx) {
           ctx.select(null);
         })),
     ];
+  }
+
+  // --- twins (person) -------------------------------------------------------------
+  // "Twin of" lists only brothers and sisters with the same parents; picking one makes
+  // them twins (picking a third makes triplets). "Identical" applies to the whole group.
+
+  function twinSection(graphId, personId) {
+    const graph = () => ctx.store.doc.graphs[graphId];
+    const of = h('select', { id: 'f-twin-of', name: 'twin-of' });
+    const identical = h('input', { id: 'f-twin-identical', name: 'twin-identical', type: 'checkbox' });
+    const others = h('p', { class: 'muted hint' });
+    of.addEventListener('change', () => {
+      if (of.value) ctx.edit('Mark as twins', (d) => setTwin(d, graphId, personId, of.value));
+      else ctx.edit('Not a twin', (d) => clearTwin(d, graphId, personId));
+    });
+    identical.addEventListener('change', () => {
+      ctx.edit(identical.checked ? 'Identical twins' : 'Not identical twins', (d) => setTwinsIdentical(d, graphId, personId, identical.checked));
+    });
+    const section = h('section', { class: 'twin' }, heading('h3', 'Twin'),
+      h('div', { class: 'form' },
+        h('label', { for: 'f-twin-of' }, h('span', {}, 'Twin of'), of),
+        h('label', { class: 'check', for: 'f-twin-identical' }, identical, h('span', {}, 'Identical'))),
+      others);
+    let shown = null;
+    refreshers.push(() => {
+      const candidates = possibleTwins(graph(), personId);
+      const twins = twinsOf(graph(), personId);
+      section.hidden = candidates.length === 0;
+      const signature = JSON.stringify([candidates.map((id) => [id, nodeLabel(ctx.store.doc, graphId, id)]), twins]);
+      if (signature === shown) return;
+      shown = signature;
+      of.replaceChildren(h('option', { value: '' }, 'Not a twin'),
+        ...candidates.map((id) => h('option', { value: id }, nodeLabel(ctx.store.doc, graphId, id))));
+      of.value = twins?.twins[0] ?? '';
+      identical.checked = !!twins?.identical;
+      identical.disabled = viewOnly() || !twins;
+      // with three or more, name them all (the dropdown can only show one)
+      const kind = { 3: 'triplets', 4: 'quadruplets' }[(twins?.twins.length ?? 0) + 1] ?? 'a multiple birth';
+      others.textContent = twins && twins.twins.length > 1
+        ? `${twins.identical ? 'Identical ' : ''}${kind} with ${twins.twins.map((id) => nodeLabel(ctx.store.doc, graphId, id)).join(' and ')}`
+        : '';
+      others.hidden = !others.textContent;
+    });
+    return section;
   }
 
   // --- pet ------------------------------------------------------------------

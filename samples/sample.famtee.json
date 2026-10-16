@@ -33,7 +33,8 @@
         "u-tom-amy": { "type": "union", "attrs": { "kind": "married", "start": "1974" } },
         "p-kim": { "type": "person", "attrs": { "name": { "given": "Kim", "surname": "Smith" }, "sex": "F", "birth": { "date": "1977", "place": "Vancouver, Canada" }, "occupation": "Architect", "employer": "Leeds City Council" } },
         "u-david-kim": { "type": "union", "attrs": { "kind": "married", "start": "2004" } },
-        "p-noah": { "type": "person", "attrs": { "name": { "given": "Noah", "surname": "Smith" }, "sex": "M", "birth": { "date": "2008", "place": "Leeds, England" }, "occupation": "School pupil" } }
+        "p-noah": { "type": "person", "attrs": { "name": { "given": "Noah", "surname": "Smith" }, "sex": "M", "birth": { "date": "2008", "place": "Leeds, England" }, "occupation": "School pupil" } },
+        "p-lily": { "type": "person", "attrs": { "name": { "given": "Lily", "surname": "Smith" }, "sex": "F", "birth": { "date": "2008", "place": "Leeds, England" }, "occupation": "School pupil" } }
       },
       "edges": [
         { "id": "e-1", "type": "partner", "from": "p-john", "to": "u-john-anne", "attrs": {} },
@@ -46,7 +47,8 @@
         { "id": "e-s3", "type": "child", "from": "u-tom-amy", "to": "p-kim", "attrs": { "kind": "biological" } },
         { "id": "e-s4", "type": "partner", "from": "p-david", "to": "u-david-kim", "attrs": {} },
         { "id": "e-s5", "type": "partner", "from": "p-kim", "to": "u-david-kim", "attrs": {} },
-        { "id": "e-s6", "type": "child", "from": "u-david-kim", "to": "p-noah", "attrs": { "kind": "biological" } },
+        { "id": "e-s6", "type": "child", "from": "u-david-kim", "to": "p-noah", "attrs": { "kind": "biological", "birthGroup": "birth-noah-lily" } },
+        { "id": "e-s8", "type": "child", "from": "u-david-kim", "to": "p-lily", "attrs": { "kind": "biological", "birthGroup": "birth-noah-lily" } },
         { "id": "e-s7", "type": "custom", "from": "p-sarah", "to": "p-noah", "attrs": { "label": "godparent" } }
       ]
     },

@@ -168,7 +168,7 @@ function familiesOf(graph) {
   const add = (map, k, v) => (map.get(k) ?? map.set(k, []).get(k)).push(v);
   for (const e of graph.edges) {
     if (e.type === 'partner') add(partners, e.to, e.from);
-    if (e.type === 'child') add(children, e.from, { key: e.to, kind: e.attrs?.kind });
+    if (e.type === 'child') add(children, e.from, { key: e.to, kind: e.attrs?.kind, twins: e.attrs?.birthGroup ?? null, identical: e.attrs?.identical === true });
   }
   return Object.entries(graph.nodes)
     .filter(([id, n]) => n.type === 'union' && (partners.has(id) || children.has(id)))
@@ -255,6 +255,16 @@ function writeModel({ people, families }, lost, now) {
       if (a.employer) tag(2, 'AGNC', text(a.employer));
     }
     if (a.notes) tag(1, 'NOTE', text(a.notes));
+    // Twins: an association with each other twin of the same family (GEDCOM has no twin record).
+    for (const fam of families) {
+      const me = fam.children.find((c) => c.key === person.key);
+      if (!me?.twins) continue;
+      for (const other of fam.children) {
+        if (other.key === person.key || other.twins !== me.twins || !indiRef.has(other.key)) continue;
+        tag(1, 'ASSO', indiRef.get(other.key));
+        tag(2, 'RELA', me.identical && other.identical ? 'Identical twin' : 'Twin');
+      }
+    }
     for (const fam of families) {
       const asChild = fam.children.find((c) => c.key === person.key);
       if (!asChild) continue;

@@ -92,7 +92,7 @@ must not contain `:` since links use `graphId:nodeId`.
 | `type` | from → to | `attrs.kind` examples |
 |---|---|---|
 | `partner` | person → union | married, partner, divorced, widowed |
-| `child` | union → person | biological, adopted, foster, step |
+| `child` | union → person | biological, adopted, foster, step. Twins (or triplets…): the same `attrs.birthGroup` on each twin's child edge from the same union, and `attrs.identical: true` across the group when identical |
 | `custom` | any → any | free label (godparent, guardian, …) |
 | `pet` | union → pet | — (a person's own pets hang from a single-owner union, like a child alone) |
 

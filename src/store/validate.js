@@ -89,6 +89,14 @@ export function validate(doc) {
       if (edge.type === 'pet' && (from.type !== 'union' || to.type !== 'pet')) {
         fail('edge-endpoints', `${where}: pet edges go union → pet`);
       }
+      const group = edge.attrs?.birthGroup;
+      if (group !== undefined) {
+        // twins: a birth group on child edges, all from the same union
+        if (edge.type !== 'child' || typeof group !== 'string' || !group) fail('twins', `${where}: birthGroup belongs on child edges`);
+        else if (graph.edges.some((e) => e.attrs?.birthGroup === group && e.from !== edge.from)) {
+          fail('twins', `${where}: twins must be children of the same parents`);
+        }
+      }
     }
   }
 

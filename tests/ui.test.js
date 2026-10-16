@@ -456,3 +456,29 @@ test('h() treats strings as text, never markup', () => {
   b.click();
   assertEqual(ran, 1);
 });
+
+test('person panel: Twin of lists brothers and sisters; Identical applies to the pair', () => {
+  const s = setup();
+  const sib = s.store.apply('Add sibling', (d) => {
+    const id = addPerson(d, s.g, { name: { given: 'Dee' } });
+    d.graphs[s.g].edges.push({ id: 'e-sib', type: 'child', from: s.union, to: id, attrs: { kind: 'biological' } });
+    return id;
+  });
+  s.ctx.select(s.kid);
+  const of = field(s.container, 'twin-of');
+  assertEqual([...of.options].map((o) => o.textContent), ['Not a twin', 'Dee']);
+  assert(field(s.container, 'twin-identical').disabled, 'Identical needs a twin first');
+  change(of, sib);
+  assertEqual(s.store.undoStack.at(-1).label, 'Mark as twins');
+  const identical = field(s.container, 'twin-identical');
+  assert(!identical.disabled && !identical.checked);
+  identical.checked = true;
+  identical.dispatchEvent(new Event('change'));
+  const edges = s.store.doc.graphs[s.g].edges.filter((e) => e.attrs?.birthGroup);
+  assertEqual(edges.map((e) => e.attrs.identical), [true, true]);
+  change(field(s.container, 'twin-of'), '');
+  assertEqual(s.store.doc.graphs[s.g].edges.filter((e) => e.attrs?.birthGroup).length, 0, 'Not a twin clears the pair');
+  s.ctx.select(s.mum);
+  assert(s.container.querySelector('section.twin').hidden, 'no brothers or sisters here: no Twin section');
+  s.container.remove();
+});
