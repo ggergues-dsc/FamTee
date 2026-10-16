@@ -3,6 +3,12 @@
 FamTee's versions (see [ADR 0020](docs/adr/0020-versions-and-release-labels.md)): a fix raises
 the patch number, a feature the minor number, a change older apps can't follow the major number.
 
+## 1.1.16 — 2026-10-16
+
+- Fixed: in the tree, founding couples hung below the fork at the top of their trunk, so
+  their limbs looked like branches growing downward. They now sit on the trunk, side by side
+  with their names to either side, and every branch grows upward from the fork above them.
+
 ## 1.1.15 — 2026-10-16
 
 The first numbered version. FamTee can now:

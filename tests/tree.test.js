@@ -140,3 +140,27 @@ test('tree: couples’ branches meet above them, and every branch climbs', () =>
     svg.remove();
   }
 });
+
+test('tree: founders sit on their trunk; no branch ever grows downward', () => {
+  const f = twoFamilies();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.append(svg);
+  try {
+    const r = createRenderer(svg).render(f.doc, f.g, { mode: 'tree' });
+    const [john, anne] = [r.nodes[f.john], r.nodes[f.anne]];
+    assertEqual(john.y, anne.y, 'side by side');
+    assertEqual(Math.round(anne.x - john.x), 44, 'touching, either side of the trunk');
+    assert(john.y > r.nodes[f.sarah].y + 60, 'well below their children, on the trunk');
+    // Every branch outline climbs from where it starts to where it ends (only roots go down).
+    for (const path of svg.querySelectorAll('path.tree-limb')) {
+      const pts = path.getAttribute('d').match(/-?[\d.]+ -?[\d.]+/g).map((p) => p.split(' ').map(Number));
+      const edge = pts.slice(0, Math.floor(pts.length / 2));
+      edge.slice(1).forEach(([, y], i) => assert(y <= edge[i][1] + 0.6, `a branch grows downward: ${path.getAttribute('d').slice(0, 60)}…`));
+    }
+    assert(svg.querySelectorAll('path.tree-root').length >= 3, 'roots are the only downward parts');
+    const label = [...svg.querySelectorAll('.tree-name')].find((t) => t.textContent === 'John Smith');
+    assert(label.getAttribute('style').includes('end'), 'the left founder’s name sits to the left of the trunk');
+  } finally {
+    svg.remove();
+  }
+});

@@ -181,10 +181,14 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
       t.members.forEach((m, k) => yShift.set(m, ((t.members.length - 1) / 2 - k) * 22)); // left lower, right higher
     }
   }
-  const P = (id) => {
+  const rawP = (id) => {
     const n = layout.nodes[id];
     return n ? { x: n.x, y: -n.y + (yShift.get(id) ?? 0) } : null;
   };
+  // Founding couples sit on their trunk (set below, once the ground is known), so no
+  // branch ever hangs down to them; everyone else is where the layout put them.
+  const founderAt = new Map();
+  const P = (id) => founderAt.get(id) ?? rawP(id);
   const fork = (u) => ({ x: P(u).x, y: P(u).y - FORK_RISE });
   const shown = (p) => [...s.familiesOf(p)].some((t) => !hidden.has(t));
   const tone = (p) => toneOf.get([...s.familiesOf(p)].find((t) => !hidden.has(t)) ?? [...s.familiesOf(p)][0]) ?? 0;
@@ -195,15 +199,28 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     s.partners(id).some((p) => visible.has(p)));
   if (!people.length) return { nodes: {}, bounds: { x: 0, y: 0, width: 0, height: 0 }, families };
 
-  const ys = people.map((p) => P(p).y);
+  const ys = people.map((p) => rawP(p).y);
   const ground = Math.max(...ys) + TRUNK_HEIGHT;
+  // The founders of each trunk: side by side on the trunk, halfway between the ground and
+  // the fork where its first branches start (a name plate on the trunk, not a low branch).
+  const founderSide = new Map(); // founder → -1 left / 1 right / 0 alone
+  for (const t of s.trunks) {
+    if (hidden.has(t) || graph.nodes[t].type !== 'union' || !rawP(t)) continue;
+    const f = fork(t);
+    const founders = s.partners(t).filter((p) => visible.has(p)).sort((a, b) => rawP(a).x - rawP(b).x);
+    founders.forEach((p, k) => {
+      const offset = k - (founders.length - 1) / 2;
+      founderAt.set(p, { x: f.x + offset * (2 * NODE_RADIUS + 4), y: f.y + (ground - f.y) * 0.5 });
+      founderSide.set(p, Math.sign(offset));
+    });
+  }
   const canopy = svgEl('g', { class: 'tree-canopy' }, layers.background);
   const wood = svgEl('g', { class: 'tree-wood' }, layers.edges);
   const nodes = {};
   const points = [];
 
   // A tapered limb along a cubic curve, as a filled outline; `caps` rounds its ends.
-  function limb(rand, p0, c1, c2, p1, w0, w1, caps = 'both') {
+  function limb(rand, p0, c1, c2, p1, w0, w1, caps = 'both', cls = 'tree-limb') {
     const at = (t) => {
       const u = 1 - t;
       return [0, 1].map((i) => u * u * u * p0[i] + 3 * u * u * t * c1[i] + 3 * u * t * t * c2[i] + t * t * t * p1[i]);
@@ -222,7 +239,7 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     }
     const shade = (rand() * 2 - 1) * 5;
     const fill = `color-mix(in srgb, var(--bark) ${(100 - Math.abs(shade)).toFixed(1)}%, ${shade < 0 ? '#000' : '#fff'} ${Math.abs(shade).toFixed(1)}%)`;
-    svgEl('path', { class: 'tree-limb', d: `M ${left.join(' L ')} L ${right.reverse().join(' L ')} Z`, style: `fill: ${fill}` }, wood);
+    svgEl('path', { class: cls, d: `M ${left.join(' L ')} L ${right.reverse().join(' L ')} Z`, style: `fill: ${fill}` }, wood);
     if (caps === 'both' || caps === 'start') svgEl('circle', { class: 'tree-limb', cx: p0[0], cy: p0[1], r: w0 / 2, style: `fill: ${fill}` }, wood);
     if (caps === 'both' || caps === 'end') svgEl('circle', { class: 'tree-limb', cx: p1[0], cy: p1[1], r: w1 / 2, style: `fill: ${fill}` }, wood);
   }
@@ -251,9 +268,9 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     for (const dx of [-1, 1]) {
       const ex = top.x + vary(rand, dx * w * 1.15, 0.1);
       limb(rand, [top.x + dx * w * 0.15, ground - 12], [top.x + dx * w * 0.4, ground - 7], [ex - dx * 10, ground + 4], [ex, ground + 6],
-        vary(rand, w * 0.5), vary(rand, 2.5), 'none');
+        vary(rand, w * 0.5), vary(rand, 2.5), 'none', 'tree-root');
     }
-    limb(rand, [top.x, ground - 8], [top.x, ground - 4], [top.x, ground + 6], [vary(rand, top.x, 0.002), ground + 11], vary(rand, w * 0.45), 3, 'none');
+    limb(rand, [top.x, ground - 8], [top.x, ground - 4], [top.x, ground + 6], [vary(rand, top.x, 0.002), ground + 11], vary(rand, w * 0.45), 3, 'none', 'tree-root');
     branch(`${t}:trunk`, { x: top.x, y: ground }, top, w, 'end');
     points.push([top.x, ground + 30]);
   }
@@ -265,7 +282,8 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     const lineages = ps.filter((p) => s.hasParents(p));
     const kids = s.children(u).filter((c) => visible.has(c) && P(c));
     const weight = kids.reduce((sum, c) => sum + s.grows(c), 0);
-    for (const p of ps) {
+    // founders sit on their trunk, which carries their branches: no limbs to them
+    for (const p of s.trunks.includes(u) ? [] : ps) {
       // someone with parents here carries the branch on to the partnership; a founder or
       // someone who married in joins it with a short limb
       const w = s.hasParents(p) ? width(weight + 1) * 0.9 : Math.max(5, width(weight) * 0.45);
@@ -353,10 +371,17 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     }
     svgEl('title', {}, g).textContent = [displayName(node.attrs), lifespan(node.attrs)].filter(Boolean).join('\n');
     if (selection.has(p)) svgEl('circle', { class: 'selection', cx: at.x, cy: at.y, r: NODE_RADIUS + 5 }, layers.ui);
-    const name = svgEl('text', { class: 'tree-name', x: at.x, y: at.y + NODE_RADIUS + 15 }, layers.labels);
+    // names go below, except a founding couple's, beside them on either side of the trunk
+    const side = founderSide.get(p) ?? 0;
+    const label = side
+      ? { x: at.x + side * (NODE_RADIUS + 6), y: at.y - 1, anchor: side < 0 ? 'end' : 'start', gap: 13 }
+      : { x: at.x, y: at.y + NODE_RADIUS + 15, anchor: 'middle', gap: 13 };
+    const name = svgEl('text', { class: 'tree-name', x: label.x, y: label.y, style: `text-anchor: ${label.anchor}` }, layers.labels);
     name.textContent = fitText(displayName(node.attrs), 120);
     const dates = lifespan(node.attrs);
-    if (dates) svgEl('text', { class: 'tree-dates', x: at.x, y: at.y + NODE_RADIUS + 28 }, layers.labels).textContent = dates;
+    if (dates) {
+      svgEl('text', { class: 'tree-dates', x: label.x, y: label.y + label.gap, style: `text-anchor: ${label.anchor}` }, layers.labels).textContent = dates;
+    }
     nodes[p] = { x: at.x, y: at.y, width: 2 * NODE_RADIUS, height: 2 * NODE_RADIUS };
     points.push([at.x - 70, at.y - CANOPY_RADIUS - 10], [at.x + 70, at.y + NODE_RADIUS + 34]);
   }
