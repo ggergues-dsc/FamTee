@@ -553,6 +553,30 @@ test('View mode shows the family as a tree; family switches show or hide each tr
   assert(doc.querySelector('.family-switches').hidden);
 });
 
+test('the version shows in the corner, opens an About box, and is recorded in downloads', async () => {
+  const { win, doc } = await load({ srcdoc: savedHtml });
+  const label = doc.querySelector('.app-version');
+  assert(/^FamTee \d+\.\d+\.\d+$/.test(label.textContent), label.textContent);
+  label.click();
+  const about = doc.querySelector('.about');
+  assert(!about.hidden);
+  const rows = Object.fromEntries([...about.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling.textContent]));
+  assertEqual(rows.Version, label.textContent.replace('FamTee ', ''));
+  assertEqual(rows['File format'], '2');
+  assert(rows['This family'].startsWith('last saved with FamTee '), rows['This family']);
+  byText(doc, 'Close').click();
+  assert(about.hidden);
+  byText(doc, 'View').click();
+  assert(!doc.querySelector('.app-version').hidden, 'the same in View');
+  byText(doc, 'Edit').click();
+  const saved = captureDownloads(win);
+  byText(doc, 'Download').click();
+  const html = await textOf(saved[0]);
+  const meta = JSON.parse(new DOMParser().parseFromString(html, 'text/html').getElementById('famtee-data').textContent).meta;
+  assertEqual(meta.savedWith.version, label.textContent.replace('FamTee ', ''), 'the download records the version that saved it');
+  assert(html.includes(`<meta name="famtee-version" content="${meta.savedWith.version}">`), 'and the saved app carries it');
+});
+
 run();
 </script>
 </body>

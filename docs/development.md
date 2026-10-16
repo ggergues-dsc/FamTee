@@ -167,3 +167,13 @@ Not supported (the build fails with a clear message): default imports/exports, `
   may not fit (a notice says so).
 - ANSEL-encoded GEDCOM files are read as UTF-8 (a warning says so). FamTee keeps one name per person; extra
   GEDCOM names are reported on import, not stored.
+
+## Versions and releases
+
+`VERSION` holds the product version (`MAJOR.MINOR.PATCH`); every PR raises it (a fix: patch, a
+feature: minor, a change older apps can't follow: major) and adds a line to `CHANGELOG.md`. The
+merge gate refuses a PR that doesn't (`devops/merge.sh <pr> --same-version` for docs-only
+changes) and tags the merged commit `v<VERSION>`. The app shows the version in the canvas's
+bottom-right corner (click it for build, file format and the version that last saved the family);
+release folders are named `<commit time>-<commit>-v<VERSION>`. See [ADR 0020](adr/0020-versions-and-release-labels.md).
+

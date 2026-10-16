@@ -5,7 +5,8 @@
 #   devops/merge.sh <pr-number> [--dry-run] [--delete-branch] [--no-uat] [--selftest] [--method merge|squash|rebase]
 #
 # Steps:
-#   1. fetch the PR head and origin/main; refuse if the PR isn't open against main
+#   1. fetch the PR head and origin/main; refuse if the PR isn't open against main, or
+#      if it doesn't raise VERSION above main's (--same-version allows that, e.g. for docs)
 #   2. compute the merge result locally (git merge-tree), without touching the working copy
 #   3. run devops/ci.sh on that exact tree; stop if red
 #   4. if the PR changes devops/ (or with --selftest): run that tree's own devops
@@ -14,6 +15,7 @@
 #   6. deliver releases/<version>/ for the new main commit: promote the tested run if
 #      main's tree is exactly what was tested, otherwise run the pipeline again on main
 #   7. deploy that release to UAT and verify it (ADR 0016); --no-uat skips this
+#   8. tag the merged commit v<VERSION> on GitHub (skipped with --same-version)
 # --dry-run stops after step 4. Nothing is posted to GitHub except the merge itself.
 set -euo pipefail
 
@@ -24,6 +26,7 @@ dry_run=0
 delete_branch=0
 uat=1
 selftest=0
+same_version=0
 method=merge
 while (($#)); do
   case $1 in
@@ -31,6 +34,7 @@ while (($#)); do
     --delete-branch) delete_branch=1; shift ;;
     --no-uat) uat=0; shift ;;
     --selftest) selftest=1; shift ;;
+    --same-version) same_version=1; shift ;;
     --method) method=${2:?--method needs a value}; shift 2 ;;
     -h | --help) usage ;;
     [0-9]*) pr=$1; shift ;;
@@ -59,6 +63,18 @@ if ! merged_tree=$(git merge-tree --write-tree origin/main "$head"); then
   exit 1
 fi
 echo "== merge result: tree ${merged_tree:0:7} (origin/main $(git rev-parse --short origin/main) + PR head ${head:0:7})"
+
+# Versions: every merge raises VERSION (MAJOR.MINOR.PATCH) above main's, and is tagged with it.
+new_version=$(git show "$merged_tree:VERSION" 2>/dev/null | tr -d '[:space:]' || true)
+old_version=$(git show origin/main:VERSION 2>/dev/null | tr -d '[:space:]' || true)
+[[ $new_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION must be MAJOR.MINOR.PATCH (it is '${new_version}')" >&2; exit 1; }
+if ((!same_version)); then
+  if [[ $new_version == "$old_version" || $(printf '%s\n%s\n' "${old_version:-0.0.0}" "$new_version" | sort -V | tail -1) != "$new_version" ]]; then
+    echo "PR #$pr leaves VERSION at $new_version (main has ${old_version:-none}). Raise it (a fix: patch, a feature: minor), or pass --same-version" >&2
+    exit 1
+  fi
+  echo "== version: ${old_version:-none} → $new_version"
+fi
 
 if ! "$ci" --ref "$merged_tree"; then
   echo "== NOT merged: the pipeline is red for PR #$pr" >&2
@@ -90,6 +106,15 @@ if [[ $(git rev-parse 'origin/main^{tree}') == "$merged_tree" ]]; then
 else
   echo "== main's tree differs from the tested merge result (it moved meanwhile); re-running the pipeline on main"
   "$ci" --ref origin/main --release
+fi
+
+if ((!same_version)); then
+  if git ls-remote --exit-code --tags origin "refs/tags/v$new_version" >/dev/null 2>&1; then
+    echo "== tag v$new_version already exists on GitHub; not moving it" >&2
+  else
+    git tag -a "v$new_version" -m "FamTee $new_version (PR #$pr)" origin/main
+    git push -q origin "v$new_version" && echo "== tagged $(git rev-parse --short origin/main) as v$new_version"
+  fi
 fi
 
 if ((delete_branch)); then

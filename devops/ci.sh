@@ -55,6 +55,11 @@ deliver() {
   # (two merges a few seconds apart once shared a minute), and the same commit always
   # gets the same version.
   version="$(TZ=UTC git show -s --format=%cd --date=format-local:%Y.%m.%d.%H.%M.%S "$commit")-${commit:0:7}"
+  # Labelled with the product version (VERSION at that commit), after the time so
+  # releases still sort by time: 2026.10.16.02.21.24-7eefa04-v1.1.15
+  local app_version
+  app_version=$(git show "$commit:VERSION" 2>/dev/null | tr -d '[:space:]' || true)
+  [[ -n $app_version ]] && version="$version-v$app_version"
   dest="releases/$version"
   rm -rf "$dest"
   mkdir -p "$dest"
@@ -63,6 +68,8 @@ deliver() {
   cat > "$dest/manifest.json" <<JSON
 {
   "version": "$version",
+  "app_version": "${app_version:-}",
+  "build": "${tree:0:7}",
   "commit": "$commit",
   "tree": "$tree",
   "subject": $(git show -s --format=%s "$commit" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
@@ -130,6 +137,10 @@ if [[ $ref == HEAD && -n $(git status --porcelain --untracked-files=no) ]]; then
 fi
 
 stage "export source" bash -c "git archive '$tree' | tar -x -C '$run_dir/src' && echo \"\$(git ls-tree -r '$tree' | wc -l) files from tree ${tree:0:7}\""
+# The build id stamped into the app: the source tree's short hash. The merge gate tests
+# the merge result before the merge commit exists and then promotes that build, so the
+# tree (identical before and after merging) names it, not the commit.
+echo "${tree:0:7}" > "$run_dir/src/BUILD"
 stage "prepare image" "${compose[@]}" build --quiet tests
 stage "test" "${compose[@]}" run --rm tests
 stage "build" "${compose[@]}" run --rm build

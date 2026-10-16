@@ -211,9 +211,31 @@ def embed_data(html: str, data_text: str) -> str:
     return DATA_BLOCK_RE.sub(lambda m: m[1] + payload + m[3], html, count=1)
 
 
+VERSION_META_RE = re.compile(r'(<meta name="famtee-version" content=")[^"]*(")')
+BUILD_META_RE = re.compile(r'(<meta name="famtee-build" content=")[^"]*(")')
+
+
+def app_version(root: Path = ROOT) -> tuple[str, str]:
+    """(version, build): the product version from VERSION, and the build id the CI pipeline
+    writes to BUILD (the source tree's short hash); "local" for a build made by hand."""
+    version = (root / "VERSION").read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise BuildError(f"VERSION must be MAJOR.MINOR.PATCH, got {version!r}")
+    build_file = root / "BUILD"
+    build = build_file.read_text(encoding="utf-8").strip() if build_file.is_file() else "local"
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,40}", build):
+        raise BuildError(f"BUILD must be a short id, got {build!r}")
+    return version, build
+
+
 def build_html(html_path: Path, data_path: Path | None = None) -> str:
     html = html_path.read_text(encoding="utf-8")
     base = html_path.parent
+
+    # Stamp the version and build into the page (the app shows them; downloads keep them).
+    version, build = app_version()
+    html = VERSION_META_RE.sub(lambda m: f"{m[1]}{version}{m[2]}", html, count=1)
+    html = BUILD_META_RE.sub(lambda m: f"{m[1]}{build}{m[2]}", html, count=1)
 
     scripts = MODULE_SCRIPT_RE.findall(html)
     if len(scripts) != 1:

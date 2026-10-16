@@ -26,6 +26,8 @@ import { h } from './ui/dom.js';
 import { icon } from './ui/icons.js';
 import { createSnapshot } from './ui/snapshot.js';
 import { loadViewPrefs, saveViewPrefs } from './ui/prefs.js';
+import { appVersion, versionLabel } from './version.js';
+import { CURRENT_SCHEMA_VERSION } from './store/schema.js';
 import { createConnectDialog, applyConnection, CONNECT_LABELS } from './ui/connect.js';
 import { svgEl } from './render/svg.js';
 import { createInteraction } from './ui/interaction.js';
@@ -215,7 +217,9 @@ async function boot() {
       return;
     }
     const now = new Date();
-    const stamped = stampRevision(store.doc, { now, parent: session.baseHash });
+    // Each download records which version of FamTee saved it (part of the content hash).
+    const savedWith = appVersion();
+    const stamped = stampRevision({ ...store.doc, meta: { ...store.doc.meta, savedWith } }, { now, parent: session.baseHash });
     const filename = downloadName(stamped, FORMATS[kind].ext, now);
     try {
       downloadFile({ contents: documentContents(kind, stamped, TEMPLATE), kind, filename });
@@ -223,7 +227,9 @@ async function boot() {
       showNotice(`Download failed: ${e.message}`, 'error');
       return;
     }
-    store.doc.meta.revision = stamped.meta.revision; // shown in "All attributes"; not part of the content hash
+    // Keep exactly the metadata that was written (revision is shown in "All attributes" and
+    // isn't part of the content hash; savedWith is), so the open family matches the file.
+    store.doc.meta = stamped.meta;
     Object.assign(session, { baseHash: stamped.meta.revision.hash, downloadedAt: now.toISOString(), downloadName: filename });
     if (storage) {
       clearDraft(storage, store.doc);
@@ -572,6 +578,50 @@ async function boot() {
     }));
   }
   ctx.refreshCanvas = () => renderCanvas();
+
+  // The version, small in the canvas's bottom-right corner (the same in View and Edit).
+  // Clicking it opens an About box with the details and a button to copy them.
+  const version = appVersion();
+  const aboutBox = h('div', { class: 'about', role: 'dialog', 'aria-label': 'About FamTee', hidden: true });
+  const versionButton = h('button', {
+    type: 'button', class: 'app-version', 'aria-haspopup': 'dialog', 'aria-expanded': 'false',
+    title: `${versionLabel(version)}${version.build ? ` · build ${version.build}` : ''} · file format ${CURRENT_SCHEMA_VERSION}`,
+    onclick: () => (aboutBox.hidden ? openAbout() : closeAbout()),
+  }, versionLabel(version));
+  function aboutRows() {
+    const saved = store.doc.meta.savedWith;
+    return [
+      ['Version', version.version],
+      ['Build', version.build || '—'],
+      ['File format', String(CURRENT_SCHEMA_VERSION)],
+      ['This family', saved ? `last saved with FamTee ${saved.version}${saved.build ? ` (build ${saved.build})` : ''}` : 'not saved with a versioned FamTee yet'],
+    ];
+  }
+  function openAbout() {
+    const rows = aboutRows();
+    const copy = h('button', { type: 'button', onclick: async () => {
+      try {
+        await navigator.clipboard.writeText(rows.map(([k, v]) => `${k}: ${v}`).join('\n'));
+        copy.textContent = 'Copied';
+      } catch {
+        copy.textContent = 'Copy not allowed here';
+      }
+    } }, 'Copy details');
+    aboutBox.replaceChildren(
+      h('h4', {}, 'FamTee'),
+      h('dl', {}, rows.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
+      h('div', { class: 'row' }, copy, h('button', { type: 'button', onclick: closeAbout }, 'Close')));
+    aboutBox.hidden = false;
+    versionButton.setAttribute('aria-expanded', 'true');
+  }
+  function closeAbout() {
+    aboutBox.hidden = true;
+    versionButton.setAttribute('aria-expanded', 'false');
+  }
+  aboutBox.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') { event.stopPropagation(); closeAbout(); versionButton.focus(); }
+  });
+  svg.after(h('div', { class: 'version-corner' }, aboutBox, versionButton));
   svg.after(h('div', { class: 'zoom-controls' },
     zoomButton('+', 'Zoom in (+)', () => zoomBy(1.25)),
     zoomButton('−', 'Zoom out (−)', () => zoomBy(0.8)),
