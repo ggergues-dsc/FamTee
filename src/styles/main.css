@@ -432,3 +432,22 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .famtee-canvas .tree-twin-knot { fill: var(--bg); stroke: var(--tone-0); stroke-width: 2.5; }
 .panel .form > label.check { display: flex; align-items: center; gap: 0.5rem; }
 .panel .form > label.check input { width: auto; }
+
+/* --- version label and About box (bottom-right of the canvas) --- */
+.version-corner { position: absolute; right: 0.75rem; bottom: 0.75rem; display: grid; justify-items: end; gap: 0.4rem; z-index: 4; }
+.app-version { border: 0; background: color-mix(in srgb, var(--bg) 80%, transparent); padding: 0.15rem 0.4rem; font-size: 0.72rem;
+  color: var(--muted); border-radius: 4px; }
+.app-version:hover { color: var(--fg); }
+.about { width: 270px; padding: 0.75rem 0.85rem; border: 1px solid var(--card-stroke); border-radius: 10px; background: var(--card-bg);
+  color: var(--fg); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); font-size: 0.82rem; }
+.about h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.about dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 0.75rem; margin: 0 0 0.6rem; }
+.about dt { color: var(--muted); }
+.about dd { margin: 0; overflow-wrap: anywhere; }
+.about .row { display: flex; gap: 0.4rem; }
+/* the corner of the canvas, not of the panel beside it */
+#app .version-corner { right: calc(300px + 0.75rem); }
+#app:has(.panel.collapsed) .version-corner { right: calc(2.6rem + 0.75rem); }
+@media (max-width: 700px) {
+  #app .version-corner, #app:has(.panel.collapsed) .version-corner { position: static; padding: 0.2rem 0.75rem; }
+}

@@ -41,6 +41,7 @@ export function startScreen(host, { embedded = null, draft = null, relation = 'o
       const doc = embedded.doc;
       const rev = doc.meta.revision;
       const facts = [people(count(doc)), rev ? `saved ${when(rev.savedAt)}` : 'never downloaded from FamTee'];
+      if (doc.meta.savedWith?.version) facts.push(`with FamTee ${doc.meta.savedWith.version}`);
       if (rev) facts.push(`fingerprint ${shortHash(rev.hash)}`);
       choices.push(card({
         name: 'start-file',

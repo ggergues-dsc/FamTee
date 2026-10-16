@@ -138,3 +138,33 @@ class HtmlTests(TempModules):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VersionTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_version_and_build(self):
+        (self.root / "VERSION").write_text("1.2.3\n", encoding="utf-8")
+        self.assertEqual(build.app_version(self.root), ("1.2.3", "local"), "no BUILD file: a local build")
+        (self.root / "BUILD").write_text("7eefa04\n", encoding="utf-8")
+        self.assertEqual(build.app_version(self.root), ("1.2.3", "7eefa04"))
+
+    def test_bad_version_or_build_fails(self):
+        (self.root / "VERSION").write_text("1.2\n", encoding="utf-8")
+        with self.assertRaises(build.BuildError):
+            build.app_version(self.root)
+        (self.root / "VERSION").write_text("1.2.3\n", encoding="utf-8")
+        (self.root / "BUILD").write_text('"><script>\n', encoding="utf-8")
+        with self.assertRaises(build.BuildError):
+            build.app_version(self.root)
+
+    def test_real_app_is_stamped(self):
+        version, _ = build.app_version()
+        html = build.build_html(build.ROOT / "src" / "index.html")
+        self.assertIn(f'<meta name="famtee-version" content="{version}">', html)
+        self.assertNotIn('content="dev"', html)
