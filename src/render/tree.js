@@ -25,6 +25,9 @@ const TRUNK_HEIGHT = 84;
 // A couple's branches meet at a fork point this far above them, so partners' limbs rise
 // to it instead of running sideways, and children grow up from it.
 const FORK_RISE = 58;
+// A founder sits this far out from the trunk and this much above where their twig leaves it.
+const FOUNDER_REACH = 54;
+const FOUNDER_LIFT = 20;
 // The tree's own layout: narrower slots and taller generations than the cards, so
 // branches climb steeply instead of spreading sideways.
 export const TREE_LAYOUT = { orientation: 'TB', cardWidth: 124, unionWidth: 12, rankGap: 190 };
@@ -201,17 +204,20 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
 
   const ys = people.map((p) => rawP(p).y);
   const ground = Math.max(...ys) + TRUNK_HEIGHT;
-  // The founders of each trunk: side by side on the trunk, halfway between the ground and
-  // the fork where its first branches start (a name plate on the trunk, not a low branch).
-  const founderSide = new Map(); // founder → -1 left / 1 right / 0 alone
+  // The founders of each trunk: either side of it, low down, each on a short twig that
+  // grows up and out from the trunk (so they hang from the tree, not stuck onto it, and
+  // no branch grows down to them). A lone founder of a partnership sits on the left.
+  const founderTwig = new Map(); // founder → where its twig leaves the trunk
   for (const t of s.trunks) {
     if (hidden.has(t) || graph.nodes[t].type !== 'union' || !rawP(t)) continue;
     const f = fork(t);
     const founders = s.partners(t).filter((p) => visible.has(p)).sort((a, b) => rawP(a).x - rawP(b).x);
+    const attachY = f.y + (ground - f.y) * 0.62;
     founders.forEach((p, k) => {
-      const offset = k - (founders.length - 1) / 2;
-      founderAt.set(p, { x: f.x + offset * (2 * NODE_RADIUS + 4), y: f.y + (ground - f.y) * 0.5 });
-      founderSide.set(p, Math.sign(offset));
+      const side = founders.length === 1 ? -1 : k < founders.length / 2 ? -1 : 1;
+      const step = founders.length > 2 ? Math.abs(k - (founders.length - 1) / 2) - 0.5 : 0; // a third founder goes further out
+      founderAt.set(p, { x: f.x + side * (FOUNDER_REACH + step * (2 * NODE_RADIUS + 8)), y: attachY - FOUNDER_LIFT });
+      founderTwig.set(p, { x: f.x + side * 4, y: attachY });
     });
   }
   const canopy = svgEl('g', { class: 'tree-canopy' }, layers.background);
@@ -272,6 +278,10 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     }
     limb(rand, [top.x, ground - 8], [top.x, ground - 4], [top.x, ground + 6], [vary(rand, top.x, 0.002), ground + 11], vary(rand, w * 0.45), 3, 'none', 'tree-root');
     branch(`${t}:trunk`, { x: top.x, y: ground }, top, w, 'end');
+    // each founder's short twig, up and out from the trunk
+    for (const p of graph.nodes[t].type === 'union' ? s.partners(t) : []) {
+      if (founderTwig.has(p)) branch(`${t}:${p}:twig`, founderTwig.get(p), founderAt.get(p), Math.max(5, w * 0.3));
+    }
     points.push([top.x, ground + 30]);
   }
 
@@ -371,11 +381,8 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
     }
     svgEl('title', {}, g).textContent = [displayName(node.attrs), lifespan(node.attrs)].filter(Boolean).join('\n');
     if (selection.has(p)) svgEl('circle', { class: 'selection', cx: at.x, cy: at.y, r: NODE_RADIUS + 5 }, layers.ui);
-    // names go below, except a founding couple's, beside them on either side of the trunk
-    const side = founderSide.get(p) ?? 0;
-    const label = side
-      ? { x: at.x + side * (NODE_RADIUS + 6), y: at.y - 1, anchor: side < 0 ? 'end' : 'start', gap: 13 }
-      : { x: at.x, y: at.y + NODE_RADIUS + 15, anchor: 'middle', gap: 13 };
+    // names go below everyone, founders included (beside them, neighbouring families' names collide)
+    const label = { x: at.x, y: at.y + NODE_RADIUS + 15, anchor: 'middle', gap: 13 };
     const name = svgEl('text', { class: 'tree-name', x: label.x, y: label.y, style: `text-anchor: ${label.anchor}` }, layers.labels);
     name.textContent = fitText(displayName(node.attrs), 120);
     const dates = lifespan(node.attrs);

@@ -3,6 +3,11 @@
 FamTee's versions (see [ADR 0020](docs/adr/0020-versions-and-release-labels.md)): a fix raises
 the patch number, a feature the minor number, a change older apps can't follow the major number.
 
+## 1.1.17 — 2026-10-16
+
+- In the tree, founding couples now hang from their trunk on short twigs (one either side,
+  growing up and out) instead of sitting on the trunk itself, with their names below them.
+
 ## 1.1.16 — 2026-10-16
 
 - Fixed: in the tree, founding couples hung below the fork at the top of their trunk, so
