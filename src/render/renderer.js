@@ -119,6 +119,25 @@ function drawEdges(graph, layout, layer) {
   const { cardWidth, cardHeight, rankGap } = layout.options;
   const lr = layout.options.orientation === 'LR';
   const lanes = busLanes(graph, layout);
+  // Twins (same birth group from the same union) share one point on the family line;
+  // their lines split from it in a V. `along` is the coordinate along the family line.
+  const along = (n) => (lr ? n.y : n.x);
+  const twinGroups = new Map(); // `${union}|${group}` → { edges, at, identical }
+  for (const e of graph.edges) {
+    const group = e.attrs?.birthGroup;
+    if (e.type !== 'child' || !group || !layout.nodes[e.to]) continue;
+    const key = `${e.from}|${group}`;
+    if (!twinGroups.has(key)) twinGroups.set(key, { edges: [], identical: true });
+    const g = twinGroups.get(key);
+    g.edges.push(e);
+    g.identical &&= e.attrs.identical === true;
+  }
+  for (const [key, g] of twinGroups) {
+    if (g.edges.length < 2) twinGroups.delete(key);
+    else g.at = g.edges.reduce((sum, e) => sum + along(layout.nodes[e.to]), 0) / g.edges.length;
+  }
+  const twinGroupOf = (edge) => (edge.attrs?.birthGroup ? twinGroups.get(`${edge.from}|${edge.attrs.birthGroup}`) : null);
+  const legs = []; // [group, point on the family line, child end] for identical bars
   for (const edge of graph.edges) {
     const a = layout.nodes[edge.from];
     const b = layout.nodes[edge.to];
@@ -139,12 +158,16 @@ function drawEdges(graph, layout, layer) {
       // Orthogonal "bus" to the right: out of the union, along, then into the child's left edge.
       const left = b.x - b.width / 2;
       const mid = Math.max(a.x + cardWidth / 2 + 6, left - rankGap / 2 + (lanes.get(edge.from) ?? 0));
-      d = `M ${a.x} ${a.y} H ${mid} V ${b.y} H ${left}`;
+      const twins = twinGroupOf(edge);
+      d = twins ? `M ${a.x} ${a.y} H ${mid} V ${twins.at} L ${left} ${b.y}` : `M ${a.x} ${a.y} H ${mid} V ${b.y} H ${left}`;
+      if (twins) legs.push([twins, [mid, twins.at], [left, b.y]]);
     } else if (edge.type === 'child' || edge.type === 'pet') {
       // Orthogonal "bus": down from the union, across, down to the child's top edge.
       const top = b.y - b.height / 2;
       const mid = Math.max(a.y + cardHeight / 2 + 6, top - rankGap / 2 + (lanes.get(edge.from) ?? 0));
-      d = `M ${a.x} ${a.y} V ${mid} H ${b.x} V ${top}`;
+      const twins = twinGroupOf(edge);
+      d = twins ? `M ${a.x} ${a.y} V ${mid} H ${twins.at} L ${b.x} ${top}` : `M ${a.x} ${a.y} V ${mid} H ${b.x} V ${top}`;
+      if (twins) legs.push([twins, [twins.at, mid], [b.x, top]]);
     } else {
       const mx = (a.x + b.x) / 2;
       const my = Math.min(a.y, b.y) - 40;
@@ -155,7 +178,15 @@ function drawEdges(graph, layout, layer) {
         label.textContent = edge.attrs.label;
       }
     }
-    svgEl('path', { class: cls, d, 'data-id': edge.id }, layer);
+    svgEl('path', { class: twinGroupOf(edge) ? `${cls} twin` : cls, d, 'data-id': edge.id }, layer);
+  }
+  // Identical twins: a short bar across their V, part-way down the legs.
+  for (const g of new Set(legs.map(([group]) => group))) {
+    if (!g.identical) continue;
+    const ends = legs.filter(([group]) => group === g).map(([, from, to]) => [0, 1].map((i) => from[i] + (to[i] - from[i]) * 0.45));
+    ends.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+    const [p, q] = [ends[0], ends.at(-1)];
+    svgEl('path', { class: 'edge twin-bar', d: `M ${p[0]} ${p[1]} L ${q[0]} ${q[1]}` }, layer);
   }
 }
 

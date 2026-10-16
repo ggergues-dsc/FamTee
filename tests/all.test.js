@@ -26,5 +26,6 @@ import './snapshot.test.js';
 import './connect.test.js';
 import './pets-jobs.test.js';
 import './tree.test.js';
+import './twins.test.js';
 
 run();

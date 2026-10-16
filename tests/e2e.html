@@ -219,6 +219,7 @@ test('copy a person into a sub-graph, follow the badge there and back; group via
 
   // The sample already has a group (Toronto household); start a new one for Nadia.
   const nodes = () => app.store.doc.graphs['g-hanna'].nodes;
+  const toronto = [...nodes()['grp-toronto'].attrs.members];
   const choose = (value) => { const pick = doc.querySelector('[name="add-group"]'); pick.value = value; pick.dispatchEvent(new win.Event('change')); };
   choose('');
   byText(doc, 'Add to group').click();
@@ -227,7 +228,7 @@ test('copy a person into a sub-graph, follow the badge there and back; group via
   choose(created);
   byText(doc, 'Add to group').click();
   assertEqual(nodes()[created].attrs.members, ['p-nadia', 'p-peter'], 'joined the existing group');
-  assertEqual(nodes()['grp-toronto'].attrs.members, ['p-youssef', 'p-dina', 'p-adam'], 'the other group is untouched');
+  assertEqual(nodes()['grp-toronto'].attrs.members, toronto, 'the other group is untouched');
   const hull = doc.querySelector(`rect.group[data-id="${created}"]`);
   assert(hull, 'group drawn');
   tap(win, hull);

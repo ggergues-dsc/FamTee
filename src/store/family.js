@@ -3,6 +3,7 @@
 
 import { getGraph, getNode, addPerson, addPet, addUnion, addChild, addEdge, addLink, removeNode } from './model.js';
 import { endpoint, parseEndpoint } from './schema.js';
+import { newId } from './ids.js';
 
 // --- queries --------------------------------------------------------------
 
@@ -263,4 +264,76 @@ export function connectSibling(doc, graphId, personId, siblingId) {
 export function connectRelated(doc, graphId, a, b, label = '') {
   expectTwoPeople(doc, graphId, a, b);
   return addEdge(doc, graphId, { type: 'custom', from: a, to: b, attrs: label ? { label } : {} });
+}
+
+// --- twins (and triplets…) --------------------------------------------------------
+// Twins are marked on their child edges: the same attrs.birthGroup (an id) on each
+// twin's edge from their parents' union, and attrs.identical: true across the group
+// when they are identical. Only children of the same union can share a group.
+
+const childEdge = (graph, personId) => graph.edges.find((e) => e.type === 'child' && e.to === personId);
+
+// The brothers and sisters who could be someone's twin: children of the same union.
+export function possibleTwins(graph, personId) {
+  const edge = childEdge(graph, personId);
+  if (!edge) return [];
+  return graph.edges.filter((e) => e.type === 'child' && e.from === edge.from && e.to !== personId).map((e) => e.to);
+}
+
+// { group, identical, twins: [the other people in the group] }, or null.
+export function twinsOf(graph, personId) {
+  const edge = childEdge(graph, personId);
+  const group = edge?.attrs?.birthGroup;
+  if (!group) return null;
+  const members = graph.edges.filter((e) => e.type === 'child' && e.from === edge.from && e.attrs?.birthGroup === group);
+  const twins = members.map((e) => e.to).filter((id) => id !== personId);
+  if (!twins.length) return null;
+  return { group, identical: members.every((e) => e.attrs.identical === true), twins };
+}
+
+// personId and otherId become twins: otherId joins personId's group (or a new one).
+export function setTwin(doc, graphId, personId, otherId) {
+  const graph = getGraph(doc, graphId);
+  if (personId === otherId) throw new Error('A person can’t be their own twin');
+  if (!possibleTwins(graph, personId).includes(otherId)) throw new Error('Twins must be children of the same parents');
+  const a = childEdge(graph, personId);
+  const b = childEdge(graph, otherId);
+  const group = a.attrs.birthGroup ?? b.attrs.birthGroup ?? newId('edge').replace(/^e-/, 'birth-');
+  const identical = twinsOf(graph, personId)?.identical ?? false;
+  // otherId leaves any group it was in; a group left with one member dissolves
+  if (b.attrs.birthGroup && b.attrs.birthGroup !== group) clearTwin(doc, graphId, otherId);
+  for (const e of [a, b]) {
+    e.attrs = { ...e.attrs, birthGroup: group };
+    if (identical) e.attrs.identical = true;
+    else delete e.attrs.identical;
+  }
+  return group;
+}
+
+// personId is no longer a twin; if only one twin is left in the group, it dissolves.
+export function clearTwin(doc, graphId, personId) {
+  const graph = getGraph(doc, graphId);
+  const edge = childEdge(graph, personId);
+  const group = edge?.attrs?.birthGroup;
+  if (!group) return;
+  const strip = (e) => {
+    const { birthGroup, identical, ...rest } = e.attrs;
+    e.attrs = rest;
+  };
+  strip(edge);
+  const left = graph.edges.filter((e) => e.type === 'child' && e.from === edge.from && e.attrs?.birthGroup === group);
+  if (left.length === 1) strip(left[0]);
+}
+
+// Marks a person's twin group as identical (or not).
+export function setTwinsIdentical(doc, graphId, personId, identical) {
+  const graph = getGraph(doc, graphId);
+  const edge = childEdge(graph, personId);
+  const group = edge?.attrs?.birthGroup;
+  if (!group) throw new Error('Not a twin');
+  for (const e of graph.edges) {
+    if (e.type !== 'child' || e.from !== edge.from || e.attrs?.birthGroup !== group) continue;
+    if (identical) e.attrs.identical = true;
+    else delete e.attrs.identical;
+  }
 }

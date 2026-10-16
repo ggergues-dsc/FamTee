@@ -155,9 +155,35 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
   const families = treeFamilies(graph, s).sort((a, b) => (layout.nodes[a.id]?.x ?? 0) - (layout.nodes[b.id]?.x ?? 0));
   const toneOf = new Map(families.map((f, i) => [f.id, i % TONES]));
   const docKey = doc.meta?.id ?? '';
+  // Twins: children of one union sharing a birth group. Fraternal twins sit at slightly
+  // different heights (their fork is uneven); identical twins sit level.
+  const twinGroups = new Map(); // union → [{ members (left to right), identical }]
+  {
+    const byKey = new Map();
+    for (const e of graph.edges) {
+      const g = e.attrs?.birthGroup;
+      if (e.type !== 'child' || !g || !layout.nodes[e.to]) continue;
+      const key = `${e.from}|${g}`;
+      if (!byKey.has(key)) byKey.set(key, { union: e.from, members: [], identical: true });
+      byKey.get(key).members.push(e.to);
+      byKey.get(key).identical &&= e.attrs.identical === true;
+    }
+    for (const t of byKey.values()) {
+      if (t.members.length < 2) continue;
+      t.members.sort((a, b) => layout.nodes[a].x - layout.nodes[b].x);
+      (twinGroups.get(t.union) ?? twinGroups.set(t.union, []).get(t.union)).push(t);
+    }
+  }
+  const yShift = new Map();
+  for (const groups of twinGroups.values()) {
+    for (const t of groups) {
+      if (t.identical) continue;
+      t.members.forEach((m, k) => yShift.set(m, ((t.members.length - 1) / 2 - k) * 22)); // left lower, right higher
+    }
+  }
   const P = (id) => {
     const n = layout.nodes[id];
-    return n ? { x: n.x, y: -n.y } : null;
+    return n ? { x: n.x, y: -n.y + (yShift.get(id) ?? 0) } : null;
   };
   const fork = (u) => ({ x: P(u).x, y: P(u).y - FORK_RISE });
   const shown = (p) => [...s.familiesOf(p)].some((t) => !hidden.has(t));
@@ -245,7 +271,11 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
       const w = s.hasParents(p) ? width(weight + 1) * 0.9 : Math.max(5, width(weight) * 0.45);
       branch(`${u}:${p}`, P(p), at, w);
     }
-    for (const c of kids) branch(`${u}>${c}`, at, P(c), width(s.grows(c)));
+    const groups = (twinGroups.get(u) ?? []).map((t) => ({ ...t, members: t.members.filter((m) => kids.includes(m)) }))
+      .filter((t) => t.members.length >= 2);
+    const inGroup = new Set(groups.flatMap((t) => t.members));
+    for (const c of kids) if (!inGroup.has(c)) branch(`${u}>${c}`, at, P(c), width(s.grows(c)));
+    for (const t of groups) drawTwins(u, at, t);
     for (const pet of s.pets(u)) {
       const q = P(pet);
       if (q) branch(`${u}>${pet}`, at, q, 3);
@@ -254,6 +284,42 @@ export function drawTree({ doc, graph, layout, layers, selection = new Set(), hi
       svgEl('circle', { class: 'tree-graft', cx: at.x, cy: at.y, r: 8 }, layers.labels);
       svgEl('title', {}, layers.labels.lastChild).textContent = 'Two families joined by this partnership';
     }
+  }
+
+  // Twins grow from one shared twig. Identical twins: it splits at a single point into
+  // mirror-image twigs (same length and thickness, no variation) and a small link joins
+  // them. Fraternal twins: an uneven fork, each branching off the twig at its own height.
+  function drawTwins(u, at, t) {
+    const pts = t.members.map(P);
+    const n = t.members.reduce((sum, m) => sum + s.grows(m), 0);
+    const meanX = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+    const meanY = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+    const split = { x: meanX, y: at.y - (at.y - meanY) * 0.55 };
+    if (t.identical) {
+      branch(`${u}>twins:${t.members[0]}`, at, split, width(n) * 0.95);
+      const w = width(s.grows(t.members[0]));
+      const rand = randomFor(`${docKey}${u}:identical`);
+      for (const p of pts) {
+        const dx = p.x - split.x;
+        const dy = split.y - p.y;
+        limb(rand, [split.x, split.y], [split.x + dx * 0.15, split.y - dy * 0.34], [p.x - dx * 0.12, p.y + dy * 0.32], [p.x, p.y], w, w * 0.72);
+      }
+      for (let k = 1; k < pts.length; k++) {
+        const [a, b] = [pts[k - 1], pts[k]];
+        svgEl('path', { class: 'tree-twin-link', d: `M ${a.x + NODE_RADIUS + 2} ${a.y} L ${b.x - NODE_RADIUS - 2} ${b.y}` }, wood);
+        svgEl('circle', { class: 'tree-twin-knot', cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, r: 5 }, wood);
+      }
+      return;
+    }
+    // fraternal: the twig climbs past each twin in turn, from the lowest to the highest
+    const low = { x: meanX - 6, y: split.y + 14 };
+    const high = { x: meanX + 8, y: split.y - 22 };
+    const along = (k) => (pts.length === 1 ? low : { x: low.x + ((high.x - low.x) * k) / (pts.length - 1), y: low.y + ((high.y - low.y) * k) / (pts.length - 1) });
+    branch(`${u}>twins:${t.members[0]}`, at, low, width(n) * 0.95);
+    t.members.forEach((m, k) => {
+      if (k > 0) branch(`${u}>twins:${m}:twig`, along(k - 1), along(k), width(n - k) * 0.85);
+      branch(`${u}>${m}`, along(k), P(m), width(s.grows(m)));
+    });
   }
 
   // Canopy: soft foliage around everyone above the founders, in their family's colour.

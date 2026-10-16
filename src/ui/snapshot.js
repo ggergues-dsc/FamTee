@@ -8,11 +8,21 @@ import { h } from './dom.js';
 import { portrait, icon, jobIconName, petIconName, petKind, petKindLabel } from './icons.js';
 import { displayName, lifespan } from '../render/format.js';
 import { isLiving } from '../privacy/living.js';
-import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion, ownersOfPet } from '../store/family.js';
+import { unionsOfPerson, parentUnionsOf, partnersOfUnion, groupsOf, linksOf, petsOfUnion, ownersOfPet, twinsOf } from '../store/family.js';
 import { countryOf, flagMarkup } from '../render/flags.js';
 import { mediaData } from '../store/media.js';
 
 const GAP = 12; // px between the card and the snapshot
+
+// "Twin of Lily", "Identical twin of Isla", "Triplets with Ava and Isla".
+function twinText(graph, personId) {
+  const t = twinsOf(graph, personId);
+  if (!t) return '';
+  const others = names(graph, t.twins).replace(/, ([^,]*)$/, ' and $1');
+  if (t.twins.length === 1) return `${t.identical ? 'Identical twin' : 'Twin'} of ${others}`;
+  const kind = { 2: 'triplets', 3: 'quadruplets' }[t.twins.length] ?? 'multiple birth';
+  return `${t.identical ? 'Identical ' : ''}${kind} with ${others}`.replace(/^./, (c) => c.toUpperCase());
+}
 
 const place = (event) => [event?.date, event?.place].filter(Boolean).join(' · ');
 const names = (graph, ids) => ids.map((id) => displayName(graph.nodes[id]?.attrs)).join(', ');
@@ -43,6 +53,7 @@ export function personSummary(doc, graphId, personId, now = new Date()) {
     ['Died', place(attrs.death)],
     ['Job', attrs.occupation?.trim() ?? ''],
     ['Employer', attrs.employer?.trim() ?? ''],
+    ['Twin', twinText(graph, personId)],
     ['Parents', names(graph, parents)],
     [partners.length > 1 ? 'Partners' : 'Partner', partners.join('; ')],
     ['Children', names(graph, children)],
@@ -73,6 +84,7 @@ function mark(label, text, s) {
     return flag;
   }
   if (label === 'Job') return icon(jobIconName(text));
+  if (label === 'Twin') return icon(/identical/i.test(text) ? 'twinsIdentical' : 'twins');
   return null;
 }
 

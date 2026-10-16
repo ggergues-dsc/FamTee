@@ -427,3 +427,8 @@ button.icon:hover:not(:disabled) { color: var(--error); border-color: var(--erro
 .famtee-canvas .tree-relation-label { paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
 .snapshot-pet-portrait { display: grid; place-items: center; background: var(--pet-bg); border-color: var(--pet-stroke); color: var(--pet-ink); }
 .snapshot .snapshot-pet-portrait .icon-svg { width: 46px; height: 46px; }
+.famtee-canvas .twin-bar { stroke-width: 1.5; }
+.famtee-canvas .tree-twin-link { fill: none; stroke: var(--tone-0); stroke-width: 3; stroke-linecap: round; }
+.famtee-canvas .tree-twin-knot { fill: var(--bg); stroke: var(--tone-0); stroke-width: 2.5; }
+.panel .form > label.check { display: flex; align-items: center; gap: 0.5rem; }
+.panel .form > label.check input { width: auto; }
