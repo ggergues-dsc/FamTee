@@ -299,6 +299,25 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
 .tv .tv-dates { font-size: 10px; fill: var(--muted); }
 .tv .tv-family { font-size: 13px; font-weight: 650; fill: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
 
+
+/* twins proposal */
+.twins-fig { margin: 0; width: 1260px; }
+.twins-fig figcaption { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; padding: .55rem 1rem; font-size: .8rem; font-weight: 650; border-bottom: 1px solid var(--card-stroke); }
+.tw-key { display: inline-flex; align-items: center; gap: .4rem; font-weight: 400; color: var(--muted); }
+.tw-key-line { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+#twins-cards { display: block; width: 100%; height: auto; background: var(--bg); }
+#twins-tree { height: auto; }
+.g .twin-bar { stroke: var(--edge); stroke-width: 1.5; }
+.twins-details { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.twin-snap { position: static; width: 300px; box-shadow: var(--shadow); }
+.twin-snap .snap-head > div { display: grid; justify-items: start; gap: .15rem; }
+.twin-mark { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: .35rem; vertical-align: -4px; border-radius: 50%; background: var(--tile-bg); }
+.twin-mark svg { width: 13px; height: 13px; fill: none; stroke: var(--tile-ink); stroke-width: 2; stroke-linecap: round; }
+.twin-panel { width: 300px; border: 1px solid var(--board-line); border-radius: 10px; box-shadow: var(--shadow); padding: 1rem 1.1rem; }
+.twin-panel .tw-check { display: flex; align-items: center; gap: .5rem; }
+.twin-panel .tw-check span { font-size: .85rem; font-weight: 650; color: var(--tile-ink); }
+.tv .twin-link { fill: none; stroke: var(--tone-link, var(--leaf-a)); stroke-width: 3; stroke-linecap: round; }
+
 /* start screen */
 .start-wrap { flex: 1; display: grid; place-items: center; padding: 1.5rem 1rem; overflow-y: auto; }
 .start { width: min(40rem, 100%); }
@@ -461,6 +480,40 @@ kbd { font-family: var(--font-mono); font-size: .78em; padding: .05rem .35rem; b
           <div class="tv-controls"><span class="tv-zoom" aria-hidden="true"><b>+</b><b>−</b><b>Fit</b></span><div class="view-switches" id="tv-families" role="group" aria-label="Families shown"></div></div>
         </div>
       </figure>
+    </div>
+  </section>
+
+  <section class="artboard">
+    <div class="ab-label"><h2><svg class="hi" aria-hidden="true"><use href="#i-parents"/></svg>Twins · proposal</h2><span>cards, tree view and details</span></div>
+    <p class="ab-note">Twins usually share a surname and birth year, so on the cards they look like any two siblings. The proposal shows the bond in the shape of the tree, using the convention genealogists already know. Twins’ lines leave the family line from one point and split in a V. Identical twins get a short bar across the V. In the tree, twins grow from one shared twig. Identical twins fork from a single point into two mirror-image twigs, sitting level and linked. Fraternal twins fork unevenly, one branching off lower than the other. The data marks each twin’s link to the parents with the same birth group, plus an optional “identical” flag, so twins are never guessed from birth dates.</p>
+    <div class="scroller">
+      <figure class="app twins-fig">
+        <figcaption>Cards (Edit) <span class="tw-key"><svg width="44" height="16" aria-hidden="true"><path d="M22 1 L6 15 M22 1 L38 15" class="tw-key-line"/></svg>twins <svg width="44" height="16" aria-hidden="true"><path d="M22 1 L6 15 M22 1 L38 15 M14 8 H30" class="tw-key-line"/></svg>identical twins</span></figcaption>
+        <svg class="g" id="twins-cards" viewBox="0 0 1260 330" role="img" aria-label="Two families on cards: fraternal twins Noah and Lily, and identical twins Ava and Isla"></svg>
+      </figure>
+    </div>
+    <div class="scroller">
+      <figure class="app twins-fig">
+        <figcaption>Tree (View) <span class="tw-key"><svg width="40" height="22" aria-hidden="true"><path d="M20 21 V13 M20 13 L8 3 M20 13 L32 3" class="tw-key-line"/></svg>identical: one point, mirror-image twigs, linked <svg width="40" height="22" aria-hidden="true"><path d="M18 21 V15 L7 6 M18 15 L24 9 L34 1" class="tw-key-line"/></svg>fraternal: an uneven fork</span></figcaption>
+        <svg class="tv" id="twins-tree" viewBox="0 0 1260 420" role="img" aria-label="The same families as trees: each pair of twins grows from one twig that forks in two"></svg>
+      </figure>
+    </div>
+    <div class="twins-details">
+      <div class="snap twin-snap">
+        <div class="snap-head"><span class="snap-av"><svg class="av av-F" viewBox="0 0 40 40"><use href="#av-F"/></svg></span>
+          <div><b>Ava Hanna</b><span>b. 2012</span><span class="chip live">Living</span></div></div>
+        <dl><dt>Born</dt><dd>2012 · Toronto, Canada</dd><dt>Twin</dt><dd><span class="twin-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 L5 20 M12 3 L19 20 M8.5 11.5 H15.5"/></svg></span>Identical twin of Isla</dd><dt>Parents</dt><dd>Youssef Hanna, Dina Khalil</dd></dl>
+        <p class="snap-foot">Hover card</p>
+      </div>
+      <div class="panel twin-panel">
+        <h3><svg class="hi" aria-hidden="true"><use href="#i-parents"/></svg>Twin</h3>
+        <div class="form">
+          <label for="tw-of"><span>Twin of</span><select id="tw-of"><option>Isla Hanna</option><option>Not a twin</option></select></label>
+          <label class="tw-check" for="tw-identical"><input type="checkbox" id="tw-identical" checked><span>Identical</span></label>
+        </div>
+        <p class="muted hint">Lists only brothers and sisters with the same parents. Triplets and more: pick each one.</p>
+        <p class="snap-foot">Person panel (Edit)</p>
+      </div>
     </div>
   </section>
 
@@ -1353,6 +1406,132 @@ attachSnapshots(document.getElementById('ports-lr'));
     svg.setAttribute('viewBox', `${x0} 0 ${x1 - x0} 560`); // room below the ground for the controls
   }
   apply();
+})();
+
+// --- twins proposal ------------------------------------------------------------------
+(function twins() {
+  // Cards: two families. Lines run down from the partnership to a family line; a single
+  // child gets its own drop, twins share one point on the family line and split in a V.
+  const cards = document.getElementById('twins-cards');
+  const edges = el('g', {}, cards), nodes = el('g', {}, cards);
+  const family = (parents, kids, union, bus, identical) => {
+    const [a, b] = parents;
+    const uy = 70;
+    el('path', { class: 'edge', d: `M ${a.x + W / 2} ${uy} H ${b.x - W / 2}` }, edges);
+    el('circle', { class: 'union', cx: union, cy: uy, r: 5 }, nodes);
+    el('path', { class: 'edge', d: `M ${union} ${uy} V ${bus}` }, edges);
+    const top = 250 - H / 2;
+    const drops = kids.map((k) => (k.twin ? k.twinAt : k.x));
+    el('path', { class: 'edge', d: `M ${Math.min(union, ...drops)} ${bus} H ${Math.max(union, ...drops)}` }, edges);
+    for (const k of kids) {
+      if (k.twin) {
+        el('path', { class: 'edge', d: `M ${k.twinAt} ${bus} L ${k.x} ${top}` }, edges);
+      } else {
+        el('path', { class: 'edge', d: `M ${k.x} ${bus} V ${top}` }, edges);
+      }
+      person(nodes, k.x, 250, k);
+    }
+    if (identical) {
+      const [t1, t2] = kids.filter((k) => k.twin);
+      const f = 0.45;
+      const y = bus + (top - bus) * f;
+      el('path', { class: 'twin-bar', d: `M ${t1.twinAt + (t1.x - t1.twinAt) * f} ${y} H ${t2.twinAt + (t2.x - t2.twinAt) * f}` }, edges);
+    }
+    for (const p of parents) person(nodes, p.x, uy, p);
+  };
+  // Fraternal twins Noah and Lily, with their older brother Leo.
+  family([{ x: 160, given: 'Mark', surname: 'Hanna', sex: 'M', dates: 'b. 1972' }, { x: 380, given: 'Emma', surname: 'Wright', sex: 'F', dates: 'b. 1974' }],
+    [{ x: 110, given: 'Leo', surname: 'Hanna', sex: 'M', dates: 'b. 2001' },
+     { x: 320, given: 'Noah', surname: 'Hanna', sex: 'M', dates: 'b. 2006', twin: true, twinAt: 425 },
+     { x: 530, given: 'Lily', surname: 'Hanna', sex: 'F', dates: 'b. 2006', twin: true, twinAt: 425 }],
+    270, 160, false);
+  text(nodes, { class: 'group-label', x: 18, y: 318 }, 'Fraternal twins: one point, a V');
+  // Identical twins Ava and Isla.
+  family([{ x: 800, given: 'Youssef', surname: 'Hanna', sex: 'M', dates: 'b. 1984' }, { x: 1020, given: 'Dina', surname: 'Khalil', sex: 'F', dates: 'b. 1976' }],
+    [{ x: 805, given: 'Ava', surname: 'Hanna', sex: 'F', dates: 'b. 2012', twin: true, twinAt: 910 },
+     { x: 1015, given: 'Isla', surname: 'Hanna', sex: 'F', dates: 'b. 2012', twin: true, twinAt: 910 }],
+    910, 160, true);
+  text(nodes, { class: 'group-label', x: 700, y: 318 }, 'Identical twins: a bar across the V');
+
+  // Tree: the same families. Twins grow from one twig that forks into two.
+  const tree = document.getElementById('twins-tree');
+  const wood = el('g', {}, tree), crown = el('g', {}, tree), people = el('g', {}, tree), labels = el('g', {}, tree);
+  const GROUND = 370;
+  let seed = 7;
+  const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const vary = (v, a = 0.05) => v * (1 + (rand() * 2 - 1) * a);
+  const limb = (a, b, w0, w1) => {
+    const dx = b[0] - a[0];
+    const dy = a[1] - b[1];
+    const c1 = [a[0] + dx * 0.15, a[1] - dy * 0.34];
+    const c2 = [b[0] - dx * 0.12, b[1] + dy * 0.32];
+    const at = (t) => { const u = 1 - t; return [0, 1].map((i) => u * u * u * a[i] + 3 * u * u * t * c1[i] + 3 * u * t * t * c2[i] + t * t * t * b[i]); };
+    const L = [], R = [];
+    for (let i = 0; i <= 14; i++) {
+      const t = i / 14;
+      const [x, y] = at(t);
+      const [xa, ya] = at(Math.max(0, t - 0.01));
+      const [xb, yb] = at(Math.min(1, t + 0.01));
+      const len = Math.hypot(xb - xa, yb - ya) || 1;
+      const h = (w0 + (w1 - w0) * t) / 2;
+      L.push(`${x - ((yb - ya) / len) * h} ${y + ((xb - xa) / len) * h}`);
+      R.push(`${x + ((yb - ya) / len) * h} ${y - ((xb - xa) / len) * h}`);
+    }
+    el('path', { d: `M ${L.join(' L ')} L ${R.reverse().join(' L ')} Z`, fill: 'var(--bark)' }, wood);
+    el('circle', { cx: b[0], cy: b[1], r: w1 / 2, fill: 'var(--bark)' }, wood);
+  };
+  const node = (x, y, p, leaf, tone = 'a') => {
+    if (leaf) {
+      el('circle', { class: `leaf-halo-${tone}`, cx: x, cy: y, r: 29 }, people);
+      el('circle', { class: `leaf-ring-${tone}`, cx: x, cy: y, r: 19 }, people);
+    } else el('circle', { class: 'medal', cx: x, cy: y, r: 19 }, people);
+    el('use', { href: `#av-${p.sex}`, x: x - 18, y: y - 18, width: 36, height: 36, class: `av av-${p.sex}` }, people);
+    text(labels, { class: 'tv-name', x, y: y + 33 }, p.name);
+    text(labels, { class: 'tv-dates', x, y: y + 46 }, p.dates);
+  };
+  el('path', { class: 'ground', d: `M 0 ${GROUND + 4} Q 630 ${GROUND - 14} 1260 ${GROUND + 4} V ${GROUND + 18} Q 630 ${GROUND + 8} 0 ${GROUND + 18} Z` }, wood);
+  const treeFor = (cx, parents, single, twins, identical, label) => {
+    const fork = [cx, 230];
+    for (const c of [[cx - 120, 200, 70], [cx + 120, 200, 70], [cx, 120, 95], [cx - 60, 80, 70], [cx + 70, 85, 70]]) el('circle', { class: 'canopy-a', cx: c[0], cy: c[1], r: vary(c[2], 0.1) }, crown);
+    limb([cx, GROUND], fork, vary(26), vary(19));
+    limb([parents[0].x, 290], fork, 7, 6);
+    limb([parents[1].x, 290], fork, 7, 6);
+    if (single) limb(fork, [single.x, 120], vary(9), vary(6.5));
+    // twins: one shared twig, then the fork that tells the kind of twins apart
+    if (identical) {
+      // identical: one split point, two mirror-image twigs (same length and thickness,
+      // no variation), so the two portraits sit level
+      const split = [twins.at, 150];
+      limb(fork, split, 13, 10);
+      limb(split, [twins.a.x, 60], 7, 5);
+      limb(split, [twins.b.x, 60], 7, 5);
+    } else {
+      // fraternal: an uneven fork. One twin branches off lower, the twig carries on,
+      // and the other branches off higher, with a different length and thickness
+      const low = [twins.at - 8, 168];
+      const high = [twins.at + 10, 124];
+      limb(fork, low, vary(13), vary(10.5));
+      limb(low, [twins.a.x, twins.a.y], vary(7.5), vary(5.5));
+      limb(low, high, vary(9), vary(7.5));
+      limb(high, [twins.b.x, twins.b.y], vary(6), vary(4.2));
+    }
+    for (const p of parents) node(p.x, 290, p, false);
+    if (single) node(single.x, 120, single, true);
+    node(twins.a.x, twins.a.y ?? 60, twins.a, true, 'a');
+    node(twins.b.x, twins.b.y ?? 60, twins.b, true, identical ? 'a' : 'b');
+    if (identical) {
+      // a small link between identical twins' portraits
+      el('path', { class: 'twin-link', d: `M ${twins.a.x + 22} 60 H ${twins.b.x - 22}` }, people);
+      el('circle', { cx: (twins.a.x + twins.b.x) / 2, cy: 60, r: 6, class: 'leaf-ring-a' }, people);
+    }
+    text(labels, { class: 'tv-family', x: cx, y: GROUND + 34 }, label);
+  };
+  treeFor(330, [{ x: 270, name: 'Mark Hanna', sex: 'M', dates: 'b. 1972' }, { x: 390, name: 'Emma Wright', sex: 'F', dates: 'b. 1974' }],
+    { x: 200, name: 'Leo', sex: 'M', dates: 'b. 2001' },
+    { at: 400, a: { x: 350, y: 78, name: 'Noah', sex: 'M', dates: 'b. 2006' }, b: { x: 458, y: 50, name: 'Lily', sex: 'F', dates: 'b. 2006' } }, false, 'Fraternal twins');
+  treeFor(930, [{ x: 870, name: 'Youssef Hanna', sex: 'M', dates: 'b. 1984' }, { x: 990, name: 'Dina Khalil', sex: 'F', dates: 'b. 1976' }],
+    null,
+    { at: 930, a: { x: 880, name: 'Ava', sex: 'F', dates: 'b. 2012' }, b: { x: 980, name: 'Isla', sex: 'F', dates: 'b. 2012' } }, true, 'Identical twins');
 })();
 
 const s = document.getElementById('sheet-nodes');
