@@ -148,9 +148,18 @@ test('tree: founders sit on their trunk; no branch ever grows downward', () => {
   try {
     const r = createRenderer(svg).render(f.doc, f.g, { mode: 'tree' });
     const [john, anne] = [r.nodes[f.john], r.nodes[f.anne]];
-    assertEqual(john.y, anne.y, 'side by side');
-    assertEqual(Math.round(anne.x - john.x), 44, 'touching, either side of the trunk');
-    assert(john.y > r.nodes[f.sarah].y + 60, 'well below their children, on the trunk');
+    assertEqual(john.y, anne.y, 'level, either side of the trunk');
+    const trunkX = (john.x + anne.x) / 2;
+    assertEqual(Math.round(trunkX - john.x), Math.round(anne.x - trunkX), 'the same distance out on each side');
+    assert(anne.x - john.x > 4 * 20, 'clear of the trunk, not stuck onto it');
+    assert(john.y > r.nodes[f.sarah].y + 60, 'low down, well below their children');
+    // a short twig from the trunk to each founder: a limb that ends at the founder
+    const endsAt = (n) => [...svg.querySelectorAll('path.tree-limb')].some((path) => {
+      const pts = path.getAttribute('d').match(/-?[\d.]+ -?[\d.]+/g).map((p) => p.split(' ').map(Number));
+      const [x, y] = pts[Math.floor(pts.length / 2) - 1];
+      return Math.hypot(x - n.x, y - n.y) < 8;
+    });
+    assert(endsAt(john) && endsAt(anne), 'each founder has a twig to the trunk');
     // Every branch outline climbs from where it starts to where it ends (only roots go down).
     for (const path of svg.querySelectorAll('path.tree-limb')) {
       const pts = path.getAttribute('d').match(/-?[\d.]+ -?[\d.]+/g).map((p) => p.split(' ').map(Number));
@@ -159,7 +168,7 @@ test('tree: founders sit on their trunk; no branch ever grows downward', () => {
     }
     assert(svg.querySelectorAll('path.tree-root').length >= 3, 'roots are the only downward parts');
     const label = [...svg.querySelectorAll('.tree-name')].find((t) => t.textContent === 'John Smith');
-    assert(label.getAttribute('style').includes('end'), 'the left founder’s name sits to the left of the trunk');
+    assert(Number(label.getAttribute('y')) > john.y && Number(label.getAttribute('x')) === john.x, 'the name sits below the founder');
   } finally {
     svg.remove();
   }
